@@ -5,7 +5,7 @@ import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { mockDaiConfig, mockWethConfig, mockWbtcConfig, mockPlsConfig } from '../contract-config';
 
 const Header = ({ onFaucetClick }) => {
-    const { isConnected } = useAccount();
+    const { isConnected, address } = useAccount();
     const { open } = useWeb3Modal();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isListingsDropdownOpen, setIsListingsDropdownOpen] = useState(false);
@@ -14,6 +14,15 @@ const Header = ({ onFaucetClick }) => {
 
     const navigate = useNavigate();
 
+    function trimAddress(address, front = 4, back = 4) {
+        if (!address || typeof address !== 'string') return '';
+        if (!address.startsWith('0x') || address.length < (front + back + 2)) return address;
+
+        const start = address.slice(0, front + 2); // include "0x"
+        const end = address.slice(-back);
+        return `${start}...${end}`;
+    }
+
     const handleNavigate = (path) => {
         navigate(path);
         setIsMobileMenuOpen(false);
@@ -21,7 +30,7 @@ const Header = ({ onFaucetClick }) => {
         setIsVendorsDropdownOpen(false);
         setIsFaucetMenuOpen(false);
     };
-    
+
     const handleDropdownBlur = (setter) => {
         setTimeout(() => {
             setter(false);
@@ -99,7 +108,7 @@ const Header = ({ onFaucetClick }) => {
                     <button onClick={() => handleNavigate('/create-listing')} className="bg-teal-800 text-stone-100 py-2 px-4 rounded-md hover:bg-teal-900 transition duration-300 font-bold">
                         Create a Listing
                     </button>
-                    <button onClick={() => open()} className="bg-blue-600 text-white py-2 px-4 rounded-md font-bold hover:bg-blue-700 transition">Connect Wallet</button>
+                    <button onClick={() => open()} className="bg-blue-600 text-white py-2 px-4 rounded-md font-bold hover:bg-blue-700 transition">{!isConnected ? "Connect Wallet" : trimAddress(address)}</button>
                 </div>
                 <div className="md:hidden relative">
                     <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-zinc-800 focus:outline-none">
@@ -116,7 +125,7 @@ const Header = ({ onFaucetClick }) => {
                             <a onClick={() => handleNavigate('/create-listing')} className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer">Create a Listing</a>
                             <a onClick={() => { onFaucetClick(); setIsMobileMenuOpen(false); }} className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer">Faucet</a>
                             <div className="px-2 py-2">
-                                <button onClick={() => {open(); setIsMobileMenuOpen(false);}} className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-bold hover:bg-blue-700 transition">Connect Wallet</button>
+                                <button onClick={() => { open(); setIsMobileMenuOpen(false); }} className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-bold hover:bg-blue-700 transition">{!isConnected ? "Connect Wallet" : trimAddress(address)}</button>
                             </div>
                         </div>
                     )}

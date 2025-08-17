@@ -4,6 +4,7 @@ import { parseEther } from 'viem';
 import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { listingManagerConfig, lmktConfig } from '../contract-config';
 import { forSaleCategories, serviceCategories } from '../data/categories';
+import { filesToBase64Array, validateImageFiles, compressImage } from '../utils/imageUtils';
 
 const CreateListingPage = ({ addListing, listings }) => {
     const navigate = useNavigate();
@@ -32,7 +33,8 @@ const CreateListingPage = ({ addListing, listings }) => {
     const { data: createListingHash, writeContract: createListing } = useWriteContract();
     const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
     const { isSuccess: isCreated } = useWaitForTransactionReceipt({ hash: createListingHash });
-    const signatureRef = useRef(null); 
+    const signatureRef = useRef(null);
+    const ipfsHashRef = useRef(null); 
 
     useEffect(() => {
         setCategory('');
@@ -53,27 +55,97 @@ const CreateListingPage = ({ addListing, listings }) => {
             alert("Please connect your wallet.");
             return;
         }
+
+        // Validate photos if provided
+        if (photos.length > 0) {
+            try {
+                validateImageFiles(photos.map(p => p.file));
+            } catch (error) {
+                alert(`Photo validation error: ${error.message}`);
+                return;
+            }
+        }
+
         setIsLoading(true);
-        setStatusMessage('Requesting signature from server...');
+        setStatusMessage('Uploading images to IPFS...');
 
         try {
+            let dataIdentifier = "ipfs://placeholder-for-uploaded-photos";
+            
+            // Upload images to IPFS if photos are provided
+            if (photos.length > 0) {
+                try {
+                    // Compress and convert photos to base64
+                    const compressedPhotos = await Promise.all(
+                        photos.map(async (photo) => {
+                            const compressed = await compressImage(photo.file);
+                            return compressed;
+                        })
+                    );
+                    
+                    const base64Photos = await filesToBase64Array(compressedPhotos);
+                    
+                    // Prepare listing data for IPFS
+                    const listingData = {
+                        title,
+                        description,
+                        listingType: listingType === 'item' ? 'item' : 'service',
+                        userAddress,
+                        category: listingType === 'item' ? category : serviceCategory,
+                        price: parseFloat(price),
+                        zipCode,
+                        deliveryMethod: listingType === 'item' ? deliveryMethod : undefined,
+                        shippingCost: listingType === 'item' && deliveryMethod === 'shipping' ? parseFloat(shippingCost) : undefined,
+                        rateType: listingType === 'service' ? rateType : undefined,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    // Upload to IPFS
+                    const uploadResponse = await fetch('/.netlify/functions/upload-images-to-ipfs', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            images: base64Photos,
+                            listingData
+                        })
+                    });
+
+                    if (!uploadResponse.ok) {
+                        const errorData = await uploadResponse.json();
+                        throw new Error(errorData.error || 'Failed to upload images to IPFS');
+                    }
+
+                    const uploadResult = await uploadResponse.json();
+                    dataIdentifier = uploadResult.listingMetadataUrl;
+                    ipfsHashRef.current = uploadResult.listingMetadataHash;
+                    setStatusMessage('Images uploaded! Requesting signature...');
+                } catch (uploadError) {
+                    console.error("Image upload failed:", uploadError);
+                    alert(`Image upload failed: ${uploadError.message}`);
+                    setIsLoading(false);
+                    setStatusMessage('');
+                    return;
+                }
+            }
+
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
             const feeInToken = parseEther("10"); 
             const deadline = Math.floor(Date.now() / 1000) + 3600;
-            const dataIdentifier = "ipfs://placeholder-for-uploaded-photos";
+
+            const signatureRequestData = {
+                listingType: listingTypeEnum,
+                dataIdentifier,
+                userAddress,
+                feeInToken: feeInToken.toString(),
+                deadline,
+                chainId,
+                verifyingContract: listingManagerConfig.address
+            };
 
             const signatureResponse = await fetch('/.netlify/functions/create-listing-signature', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    listingType: listingTypeEnum,
-                    dataIdentifier,
-                    userAddress,
-                    feeInToken: feeInToken.toString(),
-                    deadline,
-                    chainId,
-                    verifyingContract: listingManagerConfig.address
-                })
+                body: JSON.stringify(signatureRequestData)
             });
 
             if (!signatureResponse.ok) throw new Error('Failed to get server signature.');
@@ -104,19 +176,21 @@ const CreateListingPage = ({ addListing, listings }) => {
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
             const feeInToken = parseEther("10");
             const deadline = Math.floor(Date.now() / 1000) + 3600;
-            const dataIdentifier = "ipfs://placeholder-for-uploaded-photos";
+            const dataIdentifier = ipfsHashRef.current ? `ipfs://${ipfsHashRef.current}` : "ipfs://placeholder-for-uploaded-photos";
+
+            const createListingArgs = [
+                listingTypeEnum,
+                dataIdentifier,
+                feeInToken,
+                deadline,
+                signatureRef.current
+            ];
 
             createListing({
                 address: listingManagerConfig.address,
                 abi: listingManagerConfig.abi,
                 functionName: 'createListing',
-                args: [
-                    listingTypeEnum,
-                    dataIdentifier,
-                    feeInToken,
-                    deadline,
-                    signatureRef.current
-                ]
+                args: createListingArgs
             });
         }
     }, [isApproved]);

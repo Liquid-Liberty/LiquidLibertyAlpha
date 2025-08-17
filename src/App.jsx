@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { userListings } from './data/mockData'; 
+import { useListings } from './context/ListingsContext';
 import { faucetConfig } from './contract-config';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -18,7 +18,7 @@ import LocateVendorPage from './pages/LocateVendorPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
-    const [listings, setListings] = useState(userListings); 
+    const { listings, refreshData } = useListings();
     const [notification, setNotification] = useState('');
     const location = useLocation();
     const { address, isConnected } = useAccount();
@@ -38,13 +38,15 @@ function App() {
     }, [location.pathname]);
 
     const addListing = (newListing, isEditing) => {
-        setListings(prevListings => [newListing, ...prevListings]);
+        // Refresh data from blockchain after adding listing
+        refreshData();
         setNotification('Listing created successfully!');
         setTimeout(() => setNotification(''), 4000);
     };
 
     const deleteListing = (id) => {
-        setListings(prev => prev.filter(l => l.id !== id));
+        // Refresh data from blockchain after deleting listing
+        refreshData();
         setNotification('Listing deleted.');
         setTimeout(() => setNotification(''), 4000);
     };

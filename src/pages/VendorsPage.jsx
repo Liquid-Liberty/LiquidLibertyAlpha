@@ -5,7 +5,6 @@ import VendorSimulator from '../components/VendorSimulator'; // Import the simul
 const BecomeVendorForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
-        console.log("Form submitted!");
         alert("Thank you for your interest! We will be in touch shortly.");
     };
 

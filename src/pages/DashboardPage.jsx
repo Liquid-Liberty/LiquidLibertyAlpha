@@ -1,19 +1,26 @@
-import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
+import React, { useState, useEffect } from 'react';
 import TradingViewChart from '../components/TradingViewChart';
 import MyListings from '../components/MyListings';
+import { treasuryConfig, lmktConfig } from '../contract-config';
+import GenericERC20ABI from '../config/GenericERC20.json';
+import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { parseEther, formatEther } from 'ethers';
+import { useListings } from '../context/ListingsContext';
+import ListingsDebug from '../components/ListingsDebug';
 
 const WHITELISTED_TOKENS = [
-    { id: 'lmkt', name: 'Liberty Market Token', symbol: 'LMKT', contractAddress: '0x1111111111111111111111111111111111111111', tradingViewSymbol: 'UNISWAP:WETHUSDC' }, // Placeholder symbol
-    { id: 'lbrty', name: 'LBRTY', symbol: 'LBRTY', contractAddress: '0xB261Fa283aBf9CcE0b493B50b57cb654A490f339', tradingViewSymbol: 'COINBASE:SOLUSD' }, // Using Solana as a distinct placeholder
-    { id: 'wbtc', name: 'Wrapped BTC', symbol: 'WBTC', contractAddress: '0x3333333333333333333333333333333333333333', tradingViewSymbol: 'COINBASE:BTCUSD' },
-    { id: 'dai', name: 'DAI', symbol: 'DAI', contractAddress: '0xefD766cCb38EaF1dfd701853BFCe31359239F305', tradingViewSymbol: 'KRAKEN:DAIUSD' },
-    { id: 'weth', name: 'WETH', symbol: 'WETH', contractAddress: '0x02DcdD04e3a455B21854B2643D5eE36163390A05', tradingViewSymbol: 'COINBASE:ETHUSD' }
+    { id: 'lmkt', name: 'Liberty Market Token', symbol: 'LMKT', contractAddress: '0x1caDa8B5db6B5db3d2D05736b6B4ab46828c4698', tradingViewSymbol: 'UNISWAP:WETHUSDC' }, // Placeholder symbol
+    { id: 'lbrty', name: 'LBRTY', symbol: 'LBRTY', contractAddress: '0x8E894504B4fcb14FD5405B09f7b3A61eAE0424f3', tradingViewSymbol: 'COINBASE:SOLUSD' }, // Using Solana as a distinct placeholder
+    { id: 'wbtc', name: 'Wrapped BTC', symbol: 'WBTC', contractAddress: '0xDD5Be901c7A1B8019Ef2640Ea73b392084251145', tradingViewSymbol: 'COINBASE:BTCUSD' },
+    { id: 'dai', name: 'DAI', symbol: 'DAI', contractAddress: '0x507CF05b2Db24BF2b354Bf19bBBE20a035324ED5', tradingViewSymbol: 'KRAKEN:DAIUSD' },
+    { id: 'weth', name: 'WETH', symbol: 'WETH', contractAddress: '0x1fDC5b3E2d07F24d8F3a1EE4a1185fa0d4f63720', tradingViewSymbol: 'COINBASE:ETHUSD' }
 ];
 
 const OTHER_CHARTS = [
     { id: 'portfolio', name: 'Portfolio', symbol: 'Portfolio', tradingViewSymbol: 'CRYPTOCAP:TOTAL' }, // Using total crypto market cap as a placeholder
 ];
+
+
 
 const ChartToolbar = ({ token }) => {
     const [copyText, setCopyText] = useState('Copy');
@@ -21,7 +28,7 @@ const ChartToolbar = ({ token }) => {
     const handleImportToken = async () => {
         if (window.ethereum) await window.ethereum.request({ method: 'wallet_watchAsset', params: { type: 'ERC20', options: { address: token.contractAddress, symbol: token.symbol, decimals: 18 } } });
     };
-    const blockExplorerUrl = `https://scan.v4.testnet.pulsechain.com/token/${token.contractAddress}`;
+    const blockExplorerUrl = `https://sepolia.etherscan.io/token/${token.contractAddress}`;
     return (
         <div className="flex items-center space-x-2">
             <button onClick={handleImportToken} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200 transition">Import</button>
@@ -45,8 +52,175 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
 };
 
 const DashboardPage = ({ listings, userAddress }) => {
-    const { isConnected } = useAccount();
+    const { isConnected, address } = useAccount();
+    const { listings: blockchainListings, escrows, getUserListings, getUserEscrows, loading: listingsLoading, error: listingsError } = useListings();
+    const [selectedToken, setSelectedToken] = useState("WBTC");
+    const [amountIn, setAmountIn] = useState(0);
     const [treasuryTab, setTreasuryTab] = useState('buy');
+    const { data: approveHash, writeContract: approve } = useWriteContract();
+    const { data: buyHash, writeContract: handleBuy } = useWriteContract();
+    const { data: sellHash, writeContract: handleSell } = useWriteContract();
+    const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
+    const { isSuccess: isBought, isError: isBuyError, error: buyError } = useWaitForTransactionReceipt({ hash: buyHash });
+    const { isSuccess: isSold, isError: isSellError, error: sellError } = useWaitForTransactionReceipt({ hash: sellHash });
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [calculatedLmkt, setCalculatedLmkt] = useState('0');
+    const [calculatedCollateral, setCalculatedCollateral] = useState('0');
+
+    const [tokenAddress, setTokenAddress] = useState(WHITELISTED_TOKENS[2].contractAddress); // Default WBTC address
+
+    const { data: lmktAmount, isError, refetch } = useReadContract({
+        address: treasuryConfig.address,
+        abi: treasuryConfig.abi,
+        functionName: 'getLmktAmountForCollateral',
+        args: [
+            amountIn ? parseEther(amountIn) : 0n,
+            tokenAddress
+        ],
+        query: {
+            enabled: amountIn > 0 && selectedToken.contractAddress !== '0x1111111111111111111111111111111111111111',
+        }
+    });
+
+    // Contract read for sell calculation (collateral amount for LMKT)
+    const { data: collateralAmount, isError: isSellCalcError, refetch: refetchSell } = useReadContract({
+        address: treasuryConfig.address,
+        abi: treasuryConfig.abi,
+        functionName: 'getCollateralAmountForLmkt',
+        args: [
+            amountIn ? parseEther(amountIn) : 0n,
+            tokenAddress // Use LMKT address for sell calculation
+        ],
+        query: {
+            enabled: amountIn > 0 && treasuryTab === 'sell' && selectedToken.contractAddress !== '0x1111111111111111111111111111111111111111',
+        }
+    });
+
+    // Refetch when inputs change
+    useEffect(() => {
+        if (amountIn > 0 && tokenAddress !== '0x1111111111111111111111111111111111111111') {
+            if (treasuryTab === 'buy') {
+                refetch();
+                setCalculatedLmkt(lmktAmount ? formatEther(lmktAmount) : '0');
+            } else if (treasuryTab === 'sell') {
+                refetchSell();
+                setCalculatedCollateral(collateralAmount ? formatEther(collateralAmount) : '0');
+            }
+        } else {
+            setCalculatedLmkt('0');
+            setCalculatedCollateral('0');
+        }
+    }, [amountIn, tokenAddress, treasuryTab, refetch, refetchSell, lmktAmount, collateralAmount, isError, isSellCalcError]);
+
+    // Handle token selection change
+    const handleTokenChange = (tokenId) => {
+        const token = WHITELISTED_TOKENS.find(t => t.id === tokenId);
+        if (token) {
+            setSelectedToken(token);
+            setTokenAddress(token.contractAddress)
+        }
+    };
+
+    // Handle amount input change
+    const handleAmountChange = (value) => {
+        setAmountIn(value);
+    };
+
+    // Update calculated LMKT amount when contract call succeeds
+    useEffect(() => {
+        if (lmktAmount && !isError) {
+            setCalculatedLmkt(formatEther(lmktAmount));
+        }
+    }, [lmktAmount, isError]);
+
+    // Update calculated collateral amount when sell calculation succeeds
+    useEffect(() => {
+        if (collateralAmount && !isSellCalcError) {
+            setCalculatedCollateral(formatEther(collateralAmount));
+        }
+    }, [collateralAmount, isSellCalcError]);
+
+    // Reset calculations when switching tabs
+    useEffect(() => {
+        if (treasuryTab === 'buy') {
+            setCalculatedCollateral('0');
+        } else if (treasuryTab === 'sell') {
+            setCalculatedLmkt('0');
+        }
+    }, [treasuryTab]);
+
+
+    const handleBuySubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setStatusMessage('Waiting Approval ...');
+        approve({
+            address: tokenAddress,
+            abi: GenericERC20ABI.abi,
+            functionName: 'approve',
+            args: [treasuryConfig.address, parseEther(amountIn.toString())],
+        });
+    };
+
+    const handleSellSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setStatusMessage('Waiting Approval ...');
+        approve({
+            address: lmktConfig.address,
+            abi: GenericERC20ABI.abi,
+            functionName: 'approve',
+            args: [treasuryConfig.address, parseEther(amountIn.toString())],
+        });
+
+
+    };
+
+    useEffect(() => {
+        if (isApproved) {
+            setStatusMessage('Approved! Please confirm the final transaction...');
+            if (treasuryTab === 'buy') {
+                handleBuy({
+                    address: treasuryConfig.address,
+                    abi: treasuryConfig.abi,
+                    functionName: 'buyMkt',
+                    args: [
+                        parseEther(amountIn.toString()),
+                        tokenAddress
+                    ]
+                });
+            } else {
+                handleSell({
+                    address: treasuryConfig.address,
+                    abi: treasuryConfig.abi,
+                    functionName: 'sellMkt',
+                    args: [
+                        parseEther(amountIn.toString()),
+                        tokenAddress
+                    ]
+                });
+            }
+        }
+    }, [isApproved]);
+
+    useEffect(() => {
+        if (isBought) {
+            setIsLoading(false);
+            setStatusMessage('');
+            setAmountIn(0);
+            alert("Purchase successful!");
+        }
+    }, [isBought]);
+
+    useEffect(() => {
+        if (isSold) {
+            setIsLoading(false);
+            setStatusMessage('');
+            setAmountIn(0);
+            alert("Sale successful!");
+        }
+    }, [isSold]);
 
     if (!isConnected) {
         return <div className="p-8 text-center text-xl">Please connect your wallet to view the dashboard.</div>;
@@ -56,7 +230,7 @@ const DashboardPage = ({ listings, userAddress }) => {
         <div className="container mx-auto px-6 py-12">
             <div className="bg-stone-50/95 p-8 md:p-12 rounded-lg shadow-lg">
                 <h1 className="text-4xl font-display font-bold text-zinc-800 mb-8">Dashboard</h1>
-                
+
                 <AccordionSection title="My Listings">
                     <MyListings listings={listings} userAddress={userAddress} />
                 </AccordionSection>
@@ -73,46 +247,101 @@ const DashboardPage = ({ listings, userAddress }) => {
                                 <div>
                                     <label className="block text-sm font-bold text-zinc-700 mb-2">You Spend</label>
                                     <div className="flex">
-                                        <input type="number" placeholder="0.0" className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-l-md focus:ring-teal-500 focus:border-teal-500 transition" />
-                                        <select className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md">
+                                        <input
+                                            type="number"
+                                            placeholder="0.0"
+                                            value={amountIn}
+                                            onChange={(e) => handleAmountChange(e.target.value)}
+                                            className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-l-md focus:ring-teal-500 focus:border-teal-500 transition"
+                                        />
+                                        <select
+                                            value={selectedToken.id}
+                                            onChange={(e) => handleTokenChange(e.target.value)}
+                                            className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md"
+                                        >
                                             {WHITELISTED_TOKENS.filter(t => t.id !== 'lmkt' && t.id !== 'lbrty').map(token => (
-                                                <option key={token.id} value={token.symbol}>{token.symbol}</option>
+                                                <option key={token.id} value={token.id}>{token.symbol}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-zinc-700 mb-2">You Receive (Estimated)</label>
-                                    <div className="flex">
-                                        <input type="number" placeholder="0.0" readOnly className="w-full px-4 py-2 bg-stone-100 border border-zinc-300 rounded-l-md" />
-                                        <span className="px-4 py-2 bg-stone-200 border-t border-b border-r border-zinc-300 rounded-r-md font-bold text-zinc-600">LMKT</span>
-                                    </div>
+                                <div className="flex">
+                                    <input
+                                        type="number"
+                                        value={calculatedLmkt}
+                                        readOnly
+                                        className="w-full px-4 py-2 bg-stone-100 border border-zinc-300 rounded-l-md"
+                                    />
+                                    <span className="px-4 py-2 bg-stone-200 border-t border-b border-r border-zinc-300 rounded-r-md font-bold text-zinc-600">LMKT</span>
                                 </div>
-                                <button className="w-full mt-4 bg-teal-800 text-white py-3 rounded-md hover:bg-teal-900 transition font-bold text-lg">Buy LMKT</button>
+                                {/* Show loading and error states */}
+                                {isLoading && amountIn > 0 && (
+                                    <p className="text-sm text-blue-600 mt-1">🔄 Calculating LMKT amount...</p>
+                                )}
+                                {isError && amountIn > 0 && (
+                                    <p className="text-sm text-red-600 mt-1">❌ Error calculating LMKT amount</p>
+                                )}
+                                {amountIn > 0 && !isLoading && !isError && calculatedLmkt > 0 && (
+                                    <p className="text-sm text-green-600 mt-1">✅ LMKT amount calculated successfully</p>
+                                )}
+
+                                <button onClick={handleBuySubmit} disabled={isLoading} className="w-full mt-2 bg-blue-700 text-white py-3 rounded-md hover:bg-blue-800 transition font-bold text-lg">
+                                    {isLoading ? 'Processing...' : 'Purchase LMKT'}
+                                </button>
+                                {statusMessage && <p className="text-sm text-zinc-600 mt-2">{statusMessage}</p>}
+
                             </div>
                         )}
 
                         {treasuryTab === 'sell' && (
-                             <div className="space-y-4">
+                            <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-bold text-zinc-700 mb-2">You Spend (Sell)</label>
                                     <div className="flex">
-                                        <input type="number" placeholder="0.0" className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-l-md focus:ring-teal-500 focus:border-teal-500 transition" />
+                                        <input
+                                            type="number"
+                                            placeholder="0.0"
+                                            value={amountIn}
+                                            onChange={(e) => handleAmountChange(e.target.value)}
+                                            className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-l-md focus:ring-teal-500 focus:border-teal-500 transition"
+                                        />
                                         <span className="px-4 py-2 bg-stone-200 border-t border-b border-r border-zinc-300 rounded-r-md font-bold text-zinc-600">LMKT</span>
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold text-zinc-700 mb-2">You Receive (Estimated)</label>
                                     <div className="flex">
-                                        <input type="number" placeholder="0.0" readOnly className="w-full px-4 py-2 bg-stone-100 border border-zinc-300 rounded-l-md" />
-                                        <select className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md">
+                                        <input
+                                            type="number"
+                                            value={calculatedCollateral}
+                                            readOnly
+                                            className="w-full px-4 py-2 bg-stone-100 border border-zinc-300 rounded-l-md"
+                                        />
+                                        <select
+                                            value={selectedToken.id}
+                                            onChange={(e) => handleTokenChange(e.target.value)}
+                                            className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md"
+                                        >
                                             {WHITELISTED_TOKENS.filter(t => t.id !== 'lmkt' && t.id !== 'lbrty').map(token => (
-                                                <option key={token.id} value={token.symbol}>{token.symbol}</option>
+                                                <option key={token.id} value={token.id}>{token.symbol}</option>
                                             ))}
                                         </select>
                                     </div>
+                                    {/* Show loading and error states for sell calculation */}
+                                    {isLoading && amountIn > 0 && (
+                                        <p className="text-sm text-blue-600 mt-1">🔄 Calculating collateral amount...</p>
+                                    )}
+                                    {isSellCalcError && amountIn > 0 && (
+                                        <p className="text-sm text-red-600 mt-1">❌ Error calculating collateral amount</p>
+                                    )}
+                                    {amountIn > 0 && !isLoading && !isSellCalcError && calculatedCollateral > 0 && (
+                                        <p className="text-sm text-green-600 mt-1">✅ Collateral amount calculated successfully</p>
+                                    )}
                                 </div>
-                                <button className="w-full mt-4 bg-red-700 text-white py-3 rounded-md hover:bg-red-800 transition font-bold text-lg">Sell LMKT</button>
+                                <button onClick={handleSellSubmit} disabled={isLoading} className="w-full mt-4 bg-red-700 text-white py-3 rounded-md hover:bg-red-800 transition font-bold text-lg">
+                                    {isLoading ? 'Processing...' : 'Sell LMKT'}
+                                </button>
+                                {statusMessage && <p className="text-sm text-zinc-600 mt-2">{statusMessage}</p>}
                             </div>
                         )}
                     </div>
@@ -121,7 +350,7 @@ const DashboardPage = ({ listings, userAddress }) => {
                 <AccordionSection title="Portfolio & System Health">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                         {OTHER_CHARTS.map(chart => (
-                             <div key={chart.id}>
+                            <div key={chart.id}>
                                 <div className="flex justify-between items-center mb-2">
                                     <h4 className="text-lg font-bold text-zinc-800">{chart.name}</h4>
                                 </div>

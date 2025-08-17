@@ -6,7 +6,7 @@ import ServiceListingCard from '../components/ServiceListingCard';
 const ServiceCategoryPage = ({ listings }) => {
     const { categoryName } = useParams();
     const category = serviceCategories.find(c => c.key === categoryName);
-    const serviceListings = listings.filter(l => l.type === 'service' && l.serviceCategory === categoryName);
+    const serviceListings = listings.filter(l => l.listingType === 'service' && (categoryName !== 'all' ? l.category === categoryName : true));
 
     return (
         <div className="container mx-auto px-6 py-12">

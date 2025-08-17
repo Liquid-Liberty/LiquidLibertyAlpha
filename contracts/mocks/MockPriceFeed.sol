@@ -30,4 +30,12 @@ contract MockPriceFeed is Ownable {
     {
         return (value, block.timestamp);
     }
+
+    function getPrice(bytes32 _queryId)
+        external
+        view
+        returns (uint256 _value)
+    {
+        return value;
+    }
 }

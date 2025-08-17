@@ -3,12 +3,13 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
+import { ListingsProvider } from './context/ListingsContext';
 
 // --- NEW IMPORTS for wagmi v2 and web3modal v4 ---
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 import { defaultWagmiConfig } from '@web3modal/wagmi/react/config';
 import { WagmiProvider, useAccount } from 'wagmi';
-import { hardhat } from 'wagmi/chains'; // For local development
+import { sepolia } from 'wagmi/chains'; // For local development
 import { useWeb3Modal } from '@web3modal/wagmi/react'; // New hook for opening the modal
 import { defineChain, formatUnits } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,15 +19,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 const queryClient = new QueryClient();
 
 // --- 1. Define Your Chains ---
-const pulseChainTestnet = defineChain({
-    id: 943,
-    name: 'PulseChain Testnet v4',
-    nativeCurrency: { name: 'Test Pulse', symbol: 'tPLS', decimals: 18 },
+const customSepolia = defineChain({
+    id: 11155111,
+    name: 'Sepolia Testnet',
+    nativeCurrency: { name: 'tETH', symbol: 'tETH', decimals: 18 },
     rpcUrls: {
-        default: { http: ['https://rpc.v4.testnet.pulsechain.com'] },
+        default: { 
+            http: [
+                'https://ethereum-sepolia-rpc.publicnode.com',
+                'https://rpc.sepolia.org',
+                'https://rpc2.sepolia.org',
+                'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                'https://eth-sepolia.g.alchemy.com/v2/demo'
+            ] 
+        },
     },
     blockExplorers: {
-        default: { name: 'PulseScan', url: 'https://scan.v4.testnet.pulsechain.com' },
+        default: { name: 'Sepolia Scan', url: 'https://sepolia.etherscan.io/' },
     },
     testnet: true,
 });
@@ -41,7 +50,7 @@ const metadata = {
   icons: ['/your-logo.png'] // Replace with your actual logo
 };
 
-const chains = [pulseChainTestnet, hardhat];
+const chains = [customSepolia];
 const wagmiConfig = defaultWagmiConfig({
   chains,
   projectId,
@@ -140,7 +149,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <WagmiProvider config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-                <Gatekeeper />
+                <ListingsProvider>
+                    <Gatekeeper />
+                </ListingsProvider>
             </BrowserRouter>
         </QueryClientProvider>
     </WagmiProvider>

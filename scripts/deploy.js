@@ -46,7 +46,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
   
   const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY;
-  if (!signerPrivateKey || !signerPrivateKey.startsWith('0x')) {
+  if (!signerPrivateKey) {
     throw new Error("SIGNER_PRIVATE_KEY is not set or invalid in the .env file.");
   }
   const trustedSigner = new ethers.Wallet(signerPrivateKey);
@@ -113,43 +113,78 @@ async function main() {
   console.log("PaymentProcessor deployed to:", paymentProcessor.target);
 
   console.log("\n--- Performing Initial Setup ---");
-  await treasury.setLmktAddress(lmkt.target);
-  await treasury.setWhitelistedCollateral(mockDai.target, true);
-  await treasury.setWhitelistedCollateral(mockWeth.target, true);
-  await treasury.setWhitelistedCollateral(mockWbtc.target, true);
-  await treasury.setWhitelistedCollateral(mockPls.target, true);
+  const setLmktTx = await treasury.setLmktAddress(lmkt.target);
+  await setLmktTx.wait();
+  console.log("Set LMKT address in Treasury");
+  const setDaiCollateralTx = await treasury.setWhitelistedCollateral(mockDai.target, true);
+  await setDaiCollateralTx.wait();
+  console.log("Whitelisted DAI collateral token in Treasury");
+  const setWethCollateralTx = await treasury.setWhitelistedCollateral(mockWeth.target, true);
+  await setWethCollateralTx.wait();
+  console.log("Whitelisted WETH collateral token in Treasury");
+  const setWbtcCollateralTx = await treasury.setWhitelistedCollateral(mockWbtc.target, true);
+  await setWbtcCollateralTx.wait(); 
+  console.log("Whitelisted WBTC collateral token in Treasury");
+  const setPlsCollateralTx = await treasury.setWhitelistedCollateral(mockPls.target, true);
+  await setPlsCollateralTx.wait();
+  console.log("Whitelisted PLS collateral token in Treasury");
   console.log("Whitelisted all collateral tokens in Treasury");
-  await treasury.setPriceFeed(mockDai.target, daiPriceFeed.target);
-  await treasury.setPriceFeed(mockWeth.target, wethPriceFeed.target);
-  await treasury.setPriceFeed(mockWbtc.target, wbtcPriceFeed.target);
-  await treasury.setPriceFeed(mockPls.target, plsPriceFeed.target);
+  const setDaiPriceFeedTx = await treasury.setPriceFeed(mockDai.target, daiPriceFeed.target);
+  await setDaiPriceFeedTx.wait();
+  const setWethPriceFeedTx = await treasury.setPriceFeed(mockWeth.target, wethPriceFeed.target);
+  await setWethPriceFeedTx.wait();
+  const setWbtcPriceFeedTx = await treasury.setPriceFeed(mockWbtc.target, wbtcPriceFeed.target);
+  await setWbtcPriceFeedTx.wait();
+  const setPlsPriceFeedTx = await treasury.setPriceFeed(mockPls.target, plsPriceFeed.target);
+  await setPlsPriceFeedTx.wait();
   console.log("Set all price feeds in Treasury");
 
   const USDT_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("USDT/USD"));
   const ETH_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("ETH/USD"));
   const BTC_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("BTC/USD"));
   const PLS_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("PLS/USD"));
-  await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID);
-  await treasury.setTokenQueryId(mockWeth.target, ETH_USD_QUERY_ID);
-  await treasury.setTokenQueryId(mockWbtc.target, BTC_USD_QUERY_ID);
-  await treasury.setTokenQueryId(mockPls.target, PLS_USD_QUERY_ID);
+  const setDaiQueryIdTx = await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID);
+  await setDaiQueryIdTx.wait();
+  const setWethQueryIdTx = await treasury.setTokenQueryId(mockWeth.target, ETH_USD_QUERY_ID);
+  await setWethQueryIdTx.wait();
+  const setWbtcQueryIdTx = await treasury.setTokenQueryId(mockWbtc.target, BTC_USD_QUERY_ID);
+  await setWbtcQueryIdTx.wait();
+  const setPlsQueryIdTx = await treasury.setTokenQueryId(mockPls.target, PLS_USD_QUERY_ID);
+  await setPlsQueryIdTx.wait();
   console.log("Set all token Query IDs in Treasury");
 
-  await priceOracleConsumer.fetchLatestPrice(USDT_USD_QUERY_ID);
-  await priceOracleConsumer.fetchLatestPrice(ETH_USD_QUERY_ID);
-  await priceOracleConsumer.fetchLatestPrice(BTC_USD_QUERY_ID);
-  await priceOracleConsumer.fetchLatestPrice(PLS_USD_QUERY_ID);
+  // const usdtPrice = await priceOracleConsumer.fetchLatestPrice(USDT_USD_QUERY_ID);
+  // console.log("USDT/USD Price:", usdtPrice.toString());
+  // await priceOracleConsumer.fetchLatestPrice(ETH_USD_QUERY_ID);
+  // console.log("ETH/USD Price:", (await priceOracleConsumer.fetchLatestPrice(ETH_USD_QUERY_ID)).toString());
+  // await priceOracleConsumer.fetchLatestPrice(BTC_USD_QUERY_ID);
+  // console.log("BTC/USD Price:", (await priceOracleConsumer.fetchLatestPrice(BTC_USD_QUERY_ID)).toString());
+  // await priceOracleConsumer.fetchLatestPrice(PLS_USD_QUERY_ID);
+  // console.log("PLS/USD Price:", (await priceOracleConsumer.fetchLatestPrice(PLS_USD_QUERY_ID)).toString());
+  // await priceOracleConsumer.fetchLatestPrice(ETH_USD_QUERY_ID);
+  // await priceOracleConsumer.fetchLatestPrice(BTC_USD_QUERY_ID);
+  // await priceOracleConsumer.fetchLatestPrice(PLS_USD_QUERY_ID);
   console.log("Initial prices fetched and stored in PriceOracleConsumer");
   console.log("Treasury setup complete.");
 
   console.log("\n--- Provisioning Initial Liquidity ---");
-  await mockDai.mint(treasury.target, ethers.parseEther("25000"));
-  await mockWeth.mint(treasury.target, ethers.parseEther("25000"));
-  await mockPls.mint(treasury.target, ethers.parseEther("25000"));
-  await mockWbtc.mint(treasury.target, ethers.parseUnits("25000", 8));
+  const daiMintTx = await mockDai.mint(treasury.target, ethers.parseEther("25000"));
+  await daiMintTx.wait();
+  const wethMintTx = await mockWeth.mint(treasury.target, ethers.parseEther("25000"));
+  await wethMintTx.wait();
+  const wbtcMintTx = await mockWbtc.mint(treasury.target, ethers.parseUnits("25000", 8));
+  await wbtcMintTx.wait();
+  const plsMintTx = await mockPls.mint(treasury.target, ethers.parseEther("25000"));
+  await plsMintTx.wait();
+  console.log("Mock tokens minted for initial liquidity.");
+  // await mockWeth.mint(treasury.target, ethers.parseEther("25000"));
+  // await mockPls.mint(treasury.target, ethers.parseEther("25000"));
+  // await mockWbtc.mint(treasury.target, ethers.parseUnits("25000", 8));
   const initialSupply = await lmkt.totalSupply();
-  await lmkt.transfer(treasury.target, initialSupply);
-  await lmkt.transferOwnership(treasury.target);
+  const transferTx = await lmkt.transfer(treasury.target, initialSupply);
+  await transferTx.wait();
+  const ownershipTx = await lmkt.transferOwnership(treasury.target);
+  await ownershipTx.wait();
   console.log("Initial liquidity provisioned.");
 
   console.log("\n--- Deploying Faucet ---");
@@ -157,11 +192,19 @@ async function main() {
   const faucet = await Faucet.deploy(mockDai.target, mockWeth.target, mockWbtc.target, mockPls.target);
   await faucet.waitForDeployment();
   console.log("Faucet deployed to:", faucet.target);
-  await mockDai.addMinter(faucet.target);
-  await mockWeth.addMinter(faucet.target);
-  await mockWbtc.addMinter(faucet.target);
-  await mockPls.addMinter(faucet.target);
-  await lbrty.addMinter(faucet.target);
+  const daiMinterTx = await mockDai.addMinter(faucet.target);
+  await daiMinterTx.wait();
+  const wethMinterTx = await mockWeth.addMinter(faucet.target);
+  await wethMinterTx.wait();
+  const wbtcMinterTx = await mockWbtc.addMinter(faucet.target);
+  await wbtcMinterTx.wait();
+  const plsMinterTx = await mockPls.addMinter(faucet.target);
+  await plsMinterTx.wait();
+  console.log("Faucet configured with minters for all tokens.");
+  // await mockWeth.addMinter(faucet.target);
+  // await mockWbtc.addMinter(faucet.target);
+  // await mockPls.addMinter(faucet.target);
+  // await lbrty.addMinter(faucet.target);
   console.log("Faucet configured.");
 
   saveFrontendFiles({

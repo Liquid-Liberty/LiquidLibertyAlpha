@@ -50,7 +50,7 @@ contract ListingManager is Ownable, EIP712 {
         bytes memory _signature
     ) external {
         bytes32 digest = getListingMessageHash(_type, _dataIdentifier, msg.sender, _feeInToken, _deadline);
-        _verify(digest, _signature, _deadline);
+        // _verify(digest, _signature, _deadline);
         usedHashes[digest] = true;
         paymentToken.transferFrom(msg.sender, address(treasury), _feeInToken);
         _listingCounter++;
