@@ -15,28 +15,25 @@ interface IMintable {
 contract Faucet is Ownable {
     // --- State Variables ---
     address public mockDaiToken;
-    address public mockWethToken;
-    address public mockWbtcToken;
+    // address public mockWethToken;
+    // address public mockWbtcToken;
+    // address public mockPlsToken;
 
     mapping(address => bool) public hasClaimed;
 
     // --- Constants ---
     uint256 public constant DAI_AMOUNT = 250 * 1e18; // $250 worth
-    uint256 public constant WETH_AMOUNT = 1018 * 1e14; // approx 0.1018 WETH, $250 worth
+    // uint256 public constant WETH_AMOUNT = 1018 * 1e14; // approx 0.1018 WETH, $250 worth
     // uint256 public constant PLS_AMOUNT = 10224948 * 1e18; // $250 worth
-    uint256 public constant WBTC_AMOUNT = 231000; // approx 0.00231 WBTC, $250 worth
+    // uint256 public constant WBTC_AMOUNT = 231000; // approx 0.00231 WBTC, $250 worth
 
     // --- Events ---
     event TokensClaimed(address indexed user);
 
     constructor(
-        address _daiAddr,
-        address _wethAddr,
-        address _wbtcAddr
+        address _daiAddr
     ) Ownable(msg.sender) {
         mockDaiToken = _daiAddr;
-        mockWethToken = _wethAddr;
-        mockWbtcToken = _wbtcAddr;
     }
 
     /**
@@ -50,29 +47,16 @@ contract Faucet is Ownable {
         if (mockDaiToken != address(0)) {
             IMintable(mockDaiToken).mint(msg.sender, DAI_AMOUNT);
         }
-        if (mockWethToken != address(0)) {
-            IMintable(mockWethToken).mint(msg.sender, WETH_AMOUNT);
-        }
-        if (mockWbtcToken != address(0)) {
-            IMintable(mockWbtcToken).mint(msg.sender, WBTC_AMOUNT);
-        }
-
         emit TokensClaimed(msg.sender);
     }
 
     /**
      * @notice Allows the owner to update the token contract addresses.
      * @param _daiAddr The new address for the Mock DAI token.
-     * @param _wethAddr The new address for the Mock WETH token.
-     * @param _wbtcAddr The new address for the Mock WBTC token.
      */
     function updateTokenAddresses(
-        address _daiAddr,
-        address _wethAddr,
-        address _wbtcAddr
+        address _daiAddr
     ) external onlyOwner {
         mockDaiToken = _daiAddr;
-        mockWethToken = _wethAddr;
-        mockWbtcToken = _wbtcAddr;
     }
 }

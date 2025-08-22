@@ -13,6 +13,15 @@ const ExitFullscreenIcon = () => (
     </svg>
 );
 
+const defaultProps = {
+    symbol: 'LiquidLiberty',
+    libraryPath: '/tradingview/charting_library/',
+    chartsStorageUrl: 'https://saveload.tradingview.com',
+    chartsStorageApiVersion: '1.1',
+    fullscreen: false,
+    autosize: false,
+};
+
 
 const TradingViewChart = ({ symbol }) => {
     const containerRef = useRef(null);
@@ -30,6 +39,18 @@ const TradingViewChart = ({ symbol }) => {
             if (typeof window.TradingView !== 'undefined') {
                 container.innerHTML = ''; // Clear previous widget to prevent duplicates
                 new window.TradingView.widget({
+                    enabled_features: ["custom_resolutions"],
+                    overrides: {
+                        'mainSeriesProperties.statusViewStyle.showExchange': false,
+                        volumePaneSize: 'small',
+                        keep_object_tree_widget_in_right_toolbar: true,
+                    },
+                    studies_overrides: {
+                        'volume.volume.ma.visible': false,
+                    },
+                    loading_screen: {
+                        backgroundColor: '#000000',
+                    },
                     width: "100%",
                     height: "100%",
                     symbol: symbol,
@@ -41,15 +62,50 @@ const TradingViewChart = ({ symbol }) => {
                     toolbar_bg: "#f1f3f6",
                     enable_publishing: false,
                     hide_side_toolbar: false,
-                    allow_symbol_change: true,
-                    details: true,
-                    hotlist: true,
-                    calendar: true,
+                    allow_symbol_change: false,
+                    details: false,
+                    hotlist: false,
+                    calendar: false,
+                    charts_storage_url: defaultProps.chartsStorageUrl,
+                    charts_storage_api_version: '1.1',
+                    fullscreen: defaultProps.fullscreen,
+                    autosize: defaultProps.autosize,
                     container_id: chartContainerId,
+                    custom_css_url: '/tradingview/styles/custom.css',
+                    disabled_features: ['header_symbol_search', 'header_compare', 'display_market_status', 'header_saveload', 'timeframes_toolbar', 'chart_template_storage'],
+                    custom_formatters: {
+                        timeFormatter: {
+                            format: (date) => {
+                                const _format_str = '%h:%m';
+                                return _format_str
+                                    .replace('%h', date.getHours().toString().padStart(2, '0'))
+                                    .replace('%m', date.getMinutes().toString().padStart(2, '0'))
+                                    .replace('%s', date.getSeconds().toString().padStart(2, '0'));
+                            },
+                            formatLocal: (date) => {
+                                const _format_str = '%h:%m';
+                                return _format_str
+                                    .replace('%h', date.getHours().toString().padStart(2, '0'))
+                                    .replace('%m', date.getMinutes().toString().padStart(2, '0'))
+                                    .replace('%s', date.getSeconds().toString().padStart(2, '0'));
+                            },
+                        },
+                        dateFormatter: {
+                            format: (date) => {
+                                return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
+                            },
+                            formatLocal: (date) => {
+                                return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
+                            },
+                        },
+                        priceFormatterFactory: () => {
+                            return { format: (price) => formatNumber(price) };
+                        },
+                    },
                 });
             }
         };
-        
+
         if (!scriptLoadedRef.current) {
             const script = document.createElement("script");
             script.src = "https://s3.tradingview.com/tv.js";
@@ -61,7 +117,7 @@ const TradingViewChart = ({ symbol }) => {
             };
             document.body.appendChild(script);
         } else {
-             createWidget();
+            createWidget();
         }
 
     }, [symbol, isFullscreen, chartContainerId]);
@@ -73,13 +129,13 @@ const TradingViewChart = ({ symbol }) => {
     return (
         <div className={fullscreenClasses}>
             <div id={chartContainerId} ref={containerRef} className="w-full h-full" />
-            <button
+            {/* <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
                 className="absolute top-2 right-2 z-10 p-2 bg-stone-700/50 text-white rounded-full hover:bg-stone-600 transition"
                 aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            >
-                {isFullscreen ? <ExitFullscreenIcon /> : <EnterFullscreenIcon />}
-            </button>
+            > */}
+            {/* {isFullscreen ? <ExitFullscreenIcon /> : <EnterFullscreenIcon />} */}
+            {/* </button> */}
         </div>
     );
 };

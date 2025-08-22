@@ -8,6 +8,7 @@ import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt,
 import { parseEther, formatEther } from 'ethers';
 import { useListings } from '../context/ListingsContext';
 import ListingsDebug from '../components/ListingsDebug';
+import TradingViewChart from '../components/TradingViewChart';
 import { TVChart } from '../components/TVChart';
 
 // Only LMKT token is needed for the chart
@@ -17,9 +18,6 @@ const LMKT_TOKEN = {
     symbol: 'LMKT',
     contractAddress: lmktConfig.address
 };
-
-
-
 
 
 const AccordionSection = ({ title, children, defaultOpen = false }) => {
@@ -91,7 +89,7 @@ const DashboardPage = ({ listings, userAddress }) => {
         { value: '1D', label: '1D' },
         { value: '1W', label: '1W' },
         { value: '1M', label: '1M' },
-      ];
+    ];
 
     const [tokenAddress, setTokenAddress] = useState(mockWbtcConfig.address); // Default WBTC address for collateral
 
@@ -507,19 +505,28 @@ const DashboardPage = ({ listings, userAddress }) => {
                 </AccordionSection>
 
                 <AccordionSection title="Portfolio & System Health">
-                    <div className="w-full">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                         {/* <LMKTTvChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} /> */}
-                        <TVChart
-                            widget={widget}
-                            setWidget={setWidget}
-                            data={mockPoolData}
-                            interval={interval}
-                            onLoaded={() => console.log('Chart loaded successfully!')}
-                        />
+                        <div>
+                            <div className="h-[500px] rounded-lg overflow-hidden relative">
+                                <TradingViewChart symbol='KRAKEN:DAIUSD' />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="h-[500px] rounded-lg overflow-hidden relative">
+                                <TVChart
+                                    widget={widget}
+                                    setWidget={setWidget}
+                                    data={mockPoolData}
+                                    interval={interval}
+                                    onLoaded={() => console.log('Chart loaded successfully!')}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </AccordionSection>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

@@ -18,10 +18,10 @@ const defaultProps = {
 };
 
 const formatNumber = (price) => {
-  if (price < 0.000001) return price.toFixed(12);
-  if (price < 0.00001) return price.toFixed(10);
-  if (price < 0.0001) return price.toFixed(8);
-  if (price < 0.001) return price.toFixed(6);
+  // if (price < 0.000001) return price.toFixed(12);
+  // if (price < 0.00001) return price.toFixed(10);
+  // if (price < 0.0001) return price.toFixed(8);
+  // if (price < 0.001) return price.toFixed(6);
   if (price < 0.01) return price.toFixed(4);
   if (price < 1) return price.toFixed(3);
   if (price < 10) return price.toFixed(2);
@@ -94,7 +94,7 @@ export const TVChart = ({
         interval: (interval || '5'),
         locale: 'en',
         custom_css_url: '/tradingview/styles/custom.css',
-        disabled_features: ['header_symbol_search', 'header_compare', 'display_market_status', 'header_saveload', 'timeframes_toolbar','chart_template_storage'],
+        disabled_features: ['header_symbol_search', 'header_compare', 'display_market_status', 'header_saveload', 'timeframes_toolbar','chart_template_storage','header_fullscreen_button','header_settings'],
         charts_storage_url: defaultProps.chartsStorageUrl,
         charts_storage_api_version: '1.1',
         fullscreen: defaultProps.fullscreen,
@@ -143,7 +143,7 @@ export const TVChart = ({
           'mainSeriesProperties.visible': true,
           'mainSeriesProperties.style': 1,
           'paneProperties.backgroundType': 'solid',
-          'paneProperties.background': '#121316', // Chart background color
+          'paneProperties.background': '#0f0f0f', // Chart background color
           'paneProperties.vertGridProperties.color': '#1A1A1A', // Vertical grid lines color
           'paneProperties.horzGridProperties.color': '#1A1A1A', // Horizontal grid lines color
         });
@@ -158,10 +158,10 @@ export const TVChart = ({
         }
 
         widget.chart().getSeries().setChartStyleProperties(1, {
-          upColor: '#31F79B',
-          downColor: '#F6475D',
-          borderUpColor: '#31F79B',
-          borderDownColor: '#F6475D'
+          upColor: '#089981',
+          downColor: '#d4404a',
+          borderUpColor: '#089981',
+          borderDownColor: '#d4404a'
         });
 
         widget.subscribe('drawing_event', () => {
