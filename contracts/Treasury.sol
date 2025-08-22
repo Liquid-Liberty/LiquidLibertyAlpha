@@ -15,7 +15,7 @@ interface IPriceOracle {
 contract Treasury is Ownable, ReentrancyGuard {
     // event MktPurchased(address indexed buyer, address indexed collateralToken, uint256 collateralAmount, uint256 lmktAmount);
     // event MktSold(address indexed seller, uint256 lmktAmount, uint256 collateralAmount, address indexed collateralToken);
-    event MKTSwap(address indexed sender, address indexed collateralToken, uint256 collateralAmount, uint256 lmktAmount, bool isBuy);
+    event MKTSwap(address indexed sender, address indexed collateralToken, uint256 collateralAmount, uint256 lmktAmount, uint256 totalCollateral, uint256 totalLmktValue, bool isBuy);
     event CollateralWhitelisted(address indexed token, bool isWhitelisted);
     event CommerceFeeReceived(address indexed token, uint256 amount);
     event PriceFeedSet(address indexed token, address indexed feed);
@@ -67,7 +67,9 @@ contract Treasury is Ownable, ReentrancyGuard {
         require(lmktToken.balanceOf(msg.sender) + lmktToSend <= holdingCap, "Treasury: Purchase exceeds holding cap");
         IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount);
         lmktToken.transfer(msg.sender, lmktToSend);
-        emit MKTSwap(msg.sender, collateralToken, collateralAmount, lmktToSend, true);
+        uint256 totalCollateral = getTotalCollateralValue();
+        uint256 totalLmktValue = lmktToken.balanceOf(address(this));
+        emit MKTSwap(msg.sender, collateralToken, collateralAmount, lmktToSend, totalCollateral, totalLmktValue, true);
         // emit MktPurchased(msg.sender, collateralToken, collateralAmount, lmktToSend);
     }
 
@@ -75,12 +77,14 @@ contract Treasury is Ownable, ReentrancyGuard {
         require(isWhitelistedCollateral[collateralToken], "Treasury: Token not whitelisted");
         uint256 burnAmount = (lmktAmount * BURN_RATE) / SPREAD_BASE;
         uint256 remainingAmount = lmktAmount - burnAmount;
-        uint256 collateralToSend = getCollateralAmountForLmkt(remainingAmount, collateralToken);
+        uint256 collateralToSend = getCollateralAmountForLmkt(lmktAmount, collateralToken);
         require(IERC20(collateralToken).balanceOf(address(this)) >= collateralToSend, "Treasury: Insufficient reserves for this collateral");
         lmktToken.transferFrom(msg.sender, address(this), lmktAmount);
         lmktToken.burn(burnAmount);
         IERC20(collateralToken).transfer(msg.sender, collateralToSend);
-        emit MKTSwap(msg.sender, collateralToken, collateralToSend, lmktAmount, false);
+        uint256 totalCollateral = getTotalCollateralValue();
+        uint256 totalLmktValue = lmktToken.balanceOf(address(this));
+        emit MKTSwap(msg.sender, collateralToken, collateralToSend, lmktAmount, totalCollateral, totalLmktValue, false);
         // emit MktSold(msg.sender, lmktAmount, collateralToSend, collateralToken);
 
     }
@@ -126,11 +130,7 @@ contract Treasury is Ownable, ReentrancyGuard {
         uint256 baseCollateralValue = (lmktAmount * totalCollateral) / lmktReserves;
         uint256 discountedValue = (baseCollateralValue * (SPREAD_BASE - SELL_PREMIUM)) / SPREAD_BASE;
         uint8 tokenDecimals = IERC20Metadata(collateralToken).decimals();
-        if (tokenDecimals > ORACLE_PRICE_DECIMALS) {
-            return discountedValue * (10**(uint256(tokenDecimals) - ORACLE_PRICE_DECIMALS));
-        } else {
-            return discountedValue / (10**(ORACLE_PRICE_DECIMALS - uint256(tokenDecimals)));
-        }
+        return discountedValue;
     }
 
     function getTotalCollateralValue() public view returns (uint256) {
@@ -158,7 +158,7 @@ contract Treasury is Ownable, ReentrancyGuard {
         require(price > 0, "Treasury: Oracle price is zero or not updated");
 
         uint8 tokenDecimals = IERC20Metadata(token).decimals();
-        return (amount * price) / (10**tokenDecimals);
+        return (amount * price) / (10**ORACLE_PRICE_DECIMALS);
     }
     
     receive() external payable {}

@@ -91,16 +91,16 @@ const DashboardPage = ({ listings, userAddress }) => {
         { value: '1M', label: '1M' },
     ];
 
-    const [tokenAddress, setTokenAddress] = useState(mockWbtcConfig.address); // Default WBTC address for collateral
+    const [tokenAddress, setTokenAddress] = useState(mockDaiConfig.address); // Default WBTC address for collateral
 
     // Read token balances
-    const { data: wbtcBalance, refetch: refetchWbtcBalance } = useReadContract({
-        address: mockWbtcConfig.address,
-        abi: GenericERC20ABI.abi,
-        functionName: 'balanceOf',
-        args: [address],
-        query: { enabled: !!address }
-    });
+    // const { data: wbtcBalance, refetch: refetchWbtcBalance } = useReadContract({
+    //     address: mockWbtcConfig.address,
+    //     abi: GenericERC20ABI.abi,
+    //     functionName: 'balanceOf',
+    //     args: [address],
+    //     query: { enabled: !!address }
+    // });
 
     const { data: daiBalance, refetch: refetchDaiBalance } = useReadContract({
         address: mockDaiConfig.address,
@@ -110,13 +110,13 @@ const DashboardPage = ({ listings, userAddress }) => {
         query: { enabled: !!address }
     });
 
-    const { data: wethBalance, refetch: refetchWethBalance } = useReadContract({
-        address: mockWethConfig.address,
-        abi: GenericERC20ABI.abi,
-        functionName: 'balanceOf',
-        args: [address],
-        query: { enabled: !!address }
-    });
+    // const { data: wethBalance, refetch: refetchWethBalance } = useReadContract({
+    //     address: mockWethConfig.address,
+    //     abi: GenericERC20ABI.abi,
+    //     functionName: 'balanceOf',
+    //     args: [address],
+    //     query: { enabled: !!address }
+    // });
 
     const { data: lmktBalance, refetch: refetchLmktBalance } = useReadContract({
         address: lmktConfig.address,
@@ -130,11 +130,11 @@ const DashboardPage = ({ listings, userAddress }) => {
     useEffect(() => {
         console.log("aria wbtcBalance = ", daiBalance, address, mockDaiConfig.address)
         refetchDaiBalance()
-        if (wbtcBalance) setTokenBalances(prev => ({ ...prev, wbtc: formatEther(wbtcBalance) }));
+        // if (wbtcBalance) setTokenBalances(prev => ({ ...prev, wbtc: formatEther(wbtcBalance) }));
         if (daiBalance) setTokenBalances(prev => ({ ...prev, dai: formatEther(daiBalance) }));
-        if (wethBalance) setTokenBalances(prev => ({ ...prev, weth: formatEther(wethBalance) }));
+        // if (wethBalance) setTokenBalances(prev => ({ ...prev, weth: formatEther(wethBalance) }));
         if (lmktBalance) setTokenBalances(prev => ({ ...prev, lmkt: formatEther(lmktBalance) }));
-    }, [wbtcBalance, daiBalance, wethBalance, lmktBalance, address, treasuryTab, tokenAddress, refetchDaiBalance]);
+    }, [daiBalance, lmktBalance, address, treasuryTab, tokenAddress, refetchDaiBalance]);
 
     // Periodic balance refresh
     // useEffect(() => {
@@ -182,6 +182,8 @@ const DashboardPage = ({ listings, userAddress }) => {
         console.log("aria amountIn = ", amountIn)
         if (amountIn > 0 && tokenAddress !== '0x1111111111111111111111111111111111111111') {
             if (treasuryTab === 'buy') {
+                console.log("aria lmktAmount = ", treasuryConfig.address, amountIn, tokenAddress)
+
                 refetch();
                 setCalculatedLmkt(lmktAmount ? formatEther(lmktAmount) : '0');
             } else if (treasuryTab === 'sell') {
@@ -200,24 +202,24 @@ const DashboardPage = ({ listings, userAddress }) => {
     const handleTokenChange = (tokenSymbol) => {
         let newTokenAddress;
         switch (tokenSymbol) {
-            case 'wbtc':
-                newTokenAddress = mockWbtcConfig.address;
-                break;
+            // case 'wbtc':
+            //     newTokenAddress = mockWbtcConfig.address;
+            //     break;
             case 'dai':
                 newTokenAddress = mockDaiConfig.address;
                 break;
-            case 'weth':
-                newTokenAddress = mockWethConfig.address;
-                break;
+            // case 'weth':
+            //     newTokenAddress = mockWethConfig.address;
+            //     break;
             default:
                 newTokenAddress = mockWbtcConfig.address;
         }
         setTokenAddress(newTokenAddress);
 
         // Refresh balances when token selection changes
-        refetchWbtcBalance();
+        // refetchWbtcBalance();
         refetchDaiBalance();
-        refetchWethBalance();
+        // refetchWethBalance();
         refetchLmktBalance();
     };
 
@@ -311,12 +313,12 @@ const DashboardPage = ({ listings, userAddress }) => {
             alert("Purchase successful!");
             setChartRefreshKey((k) => k + 1);
             // Refresh all balances after successful purchase
-            refetchWbtcBalance();
+            // refetchWbtcBalance();
             refetchDaiBalance();
-            refetchWethBalance();
+            // refetchWethBalance();
             refetchLmktBalance();
         }
-    }, [isBought, refetchWbtcBalance, refetchDaiBalance, refetchWethBalance, refetchLmktBalance]);
+    }, [isBought, refetchDaiBalance, refetchLmktBalance]);
 
     useEffect(() => {
         if (isSold) {
@@ -326,12 +328,12 @@ const DashboardPage = ({ listings, userAddress }) => {
             alert("Sale successful!");
             setChartRefreshKey((k) => k + 1);
             // Refresh all balances after successful sale
-            refetchWbtcBalance();
+            // refetchWbtcBalance();
             refetchDaiBalance();
-            refetchWethBalance();
+            // refetchWethBalance();
             refetchLmktBalance();
         }
-    }, [isSold, refetchWbtcBalance, refetchDaiBalance, refetchWethBalance, refetchLmktBalance]);
+    }, [isSold, refetchDaiBalance, refetchLmktBalance]);
 
     if (!isConnected) {
         return <div className="p-8 text-center text-xl">Please connect your wallet to view the dashboard.</div>;
@@ -359,18 +361,18 @@ const DashboardPage = ({ listings, userAddress }) => {
                                 <div className="bg-stone-100 p-4 rounded-lg">
                                     <h3 className="text-sm font-bold text-zinc-700 mb-3">Token Balances</h3>
                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                        <div className="flex justify-between">
+                                        {/* <div className="flex justify-between">
                                             <span className="text-zinc-600">WBTC:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.wbtc).toFixed(8)}</span>
-                                        </div>
+                                        </div> */}
                                         <div className="flex justify-between">
                                             <span className="text-zinc-600">DAI:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.dai).toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between">
+                                        {/* <div className="flex justify-between">
                                             <span className="text-zinc-600">WETH:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.weth).toFixed(6)}</span>
-                                        </div>
+                                        </div> */}
                                         <div className="flex justify-between">
                                             <span className="text-zinc-600">LMKT:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.lmkt).toFixed(2)}</span>
@@ -393,9 +395,9 @@ const DashboardPage = ({ listings, userAddress }) => {
                                             onChange={(e) => handleTokenChange(e.target.value)}
                                             className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md"
                                         >
-                                            <option value="wbtc">WBTC</option>
+                                            {/* <option value="wbtc">WBTC</option> */}
                                             <option value="dai">DAI</option>
-                                            <option value="weth">WETH</option>
+                                            {/* <option value="weth">WETH</option> */}
                                         </select>
                                     </div>
                                 </div>
@@ -433,18 +435,18 @@ const DashboardPage = ({ listings, userAddress }) => {
                                 <div className="bg-stone-100 p-4 rounded-lg">
                                     <h3 className="text-sm font-bold text-zinc-700 mb-3">Token Balances</h3>
                                     <div className="grid grid-cols-2 gap-3 text-sm">
-                                        <div className="flex justify-between">
+                                        {/* <div className="flex justify-between">
                                             <span className="text-zinc-600">WBTC:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.wbtc).toFixed(8)}</span>
-                                        </div>
+                                        </div> */}
                                         <div className="flex justify-between">
                                             <span className="text-zinc-600">DAI:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.dai).toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between">
+                                        {/* <div className="flex justify-between">
                                             <span className="text-zinc-600">WETH:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.weth).toFixed(6)}</span>
-                                        </div>
+                                        </div> */}
                                         <div className="flex justify-between">
                                             <span className="text-zinc-600">LMKT:</span>
                                             <span className="font-mono font-bold">{parseFloat(tokenBalances.lmkt).toFixed(2)}</span>
@@ -479,9 +481,9 @@ const DashboardPage = ({ listings, userAddress }) => {
                                             onChange={(e) => handleTokenChange(e.target.value)}
                                             className="px-4 py-2 bg-stone-100 border-t border-b border-r border-zinc-300 rounded-r-md"
                                         >
-                                            <option value="wbtc">WBTC</option>
+                                            {/* <option value="wbtc">WBTC</option> */}
                                             <option value="dai">DAI</option>
-                                            <option value="weth">WETH</option>
+                                            {/* <option value="weth">WETH</option> */}
                                         </select>
                                     </div>
                                     {/* Show loading and error states for sell calculation */}

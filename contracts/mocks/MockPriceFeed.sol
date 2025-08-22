@@ -22,6 +22,10 @@ contract MockPriceFeed is Ownable {
         value = _value;
     }
 
+    function getPrice(bytes32 _queryId) external view returns(uint256){
+        return value;
+    }
+
     // Function to return the value directly.  No encoding is needed for this mock.
     function getDataAfter(bytes32 _queryId, uint256 _timestamp)
         external

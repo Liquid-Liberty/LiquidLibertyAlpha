@@ -58,7 +58,7 @@ export const SUPPORTED_RESOLUTIONS = [
   // Normalize timestamp to seconds (TradingView expects seconds)
   const normalizeTs = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
   // Fixed pair address for sample (override incoming symbol's address)
-  const FIXED_PAIR_ADDRESS = '0xa62fa311c79bb3f6bd9727288902c1a81c55738a';
+  const FIXED_PAIR_ADDRESS = '0xdd9d21a8f3c792d3cc1d162ae38f12d2d58abf82';
   
   export function GetDatafeedProvider(data, ws_pool) {
     return {
@@ -130,7 +130,7 @@ export const SUPPORTED_RESOLUTIONS = [
           const includeFilterInServer = resolution !== '1';
           const query = `{
             candles(
-              first: '1000',
+              first: 1000,
               orderBy: bucketStart,
               orderDirection: asc,
               where: {pair: "${pairAddress}", interval: "${intervalParam}"${timeFilter}, volumeToken0_gt: "0"}
@@ -143,6 +143,8 @@ export const SUPPORTED_RESOLUTIONS = [
               volumeToken0
             }
           }`;
+
+          console.log("aria query = ", query)
 
   
           const doFetch = async (q) => {
@@ -157,6 +159,7 @@ export const SUPPORTED_RESOLUTIONS = [
   
           // First try with time filter
           let candles = await doFetch(query);
+          console.log("aria candles = ", candles)
   
           // Fallback: if no data returned (common for 1m small windows), refetch without time filter
           if ((!candles || candles.length === 0) && (fromSec && toSec)) {

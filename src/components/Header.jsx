@@ -40,8 +40,8 @@ const Header = ({ onFaucetClick }) => {
     const importTokens = async () => {
         const tokens = [
             { address: mockDaiConfig.address, symbol: 'DAI', decimals: 18 },
-            { address: mockWethConfig.address, symbol: 'WETH', decimals: 18 },
-            { address: mockWbtcConfig.address, symbol: 'WBTC', decimals: 18 },
+            // { address: mockWethConfig.address, symbol: 'WETH', decimals: 18 },
+            // { address: mockWbtcConfig.address, symbol: 'WBTC', decimals: 18 },
             // { address: mockPlsConfig.address, symbol: 'PLS', decimals: 18 },
         ];
 

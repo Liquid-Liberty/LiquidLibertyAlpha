@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract LMKT is ERC20, Ownable {
     constructor() ERC20("Liberty Market Token", "LMKT") Ownable(msg.sender) {
         // Mint the initial 200 Trillion tokens to the deployer.
-        _mint(msg.sender, 200_000_000_000_000 * (10**decimals()));
+        _mint(msg.sender, 2_500_000 * (10**decimals()));
     }
 
     /**

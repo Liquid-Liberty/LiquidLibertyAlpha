@@ -41,6 +41,8 @@ module.exports = {
           apiKey: process.env.SEPOLIA_API_KEY || "",
         },
       },
+      gas: 2100000,
+      gasPrice: 800000000,
     },
   },
   etherscan: {
