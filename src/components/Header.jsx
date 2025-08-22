@@ -41,8 +41,8 @@ const Header = ({ onFaucetClick }) => {
         const tokens = [
             { address: mockDaiConfig.address, symbol: 'DAI', decimals: 18 },
             { address: mockWethConfig.address, symbol: 'WETH', decimals: 18 },
-            { address: mockWbtcConfig.address, symbol: 'WBTC', decimals: 8 },
-            { address: mockPlsConfig.address, symbol: 'PLS', decimals: 18 },
+            { address: mockWbtcConfig.address, symbol: 'WBTC', decimals: 18 },
+            // { address: mockPlsConfig.address, symbol: 'PLS', decimals: 18 },
         ];
 
         for (const token of tokens) {

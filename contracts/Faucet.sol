@@ -17,14 +17,13 @@ contract Faucet is Ownable {
     address public mockDaiToken;
     address public mockWethToken;
     address public mockWbtcToken;
-    address public mockPlsToken;
 
     mapping(address => bool) public hasClaimed;
 
     // --- Constants ---
     uint256 public constant DAI_AMOUNT = 250 * 1e18; // $250 worth
     uint256 public constant WETH_AMOUNT = 1018 * 1e14; // approx 0.1018 WETH, $250 worth
-    uint256 public constant PLS_AMOUNT = 10224948 * 1e18; // $250 worth
+    // uint256 public constant PLS_AMOUNT = 10224948 * 1e18; // $250 worth
     uint256 public constant WBTC_AMOUNT = 231000; // approx 0.00231 WBTC, $250 worth
 
     // --- Events ---
@@ -33,13 +32,11 @@ contract Faucet is Ownable {
     constructor(
         address _daiAddr,
         address _wethAddr,
-        address _wbtcAddr,
-        address _plsAddr
+        address _wbtcAddr
     ) Ownable(msg.sender) {
         mockDaiToken = _daiAddr;
         mockWethToken = _wethAddr;
         mockWbtcToken = _wbtcAddr;
-        mockPlsToken = _plsAddr;
     }
 
     /**
@@ -59,9 +56,6 @@ contract Faucet is Ownable {
         if (mockWbtcToken != address(0)) {
             IMintable(mockWbtcToken).mint(msg.sender, WBTC_AMOUNT);
         }
-        if (mockPlsToken != address(0)) {
-            IMintable(mockPlsToken).mint(msg.sender, PLS_AMOUNT);
-        }
 
         emit TokensClaimed(msg.sender);
     }
@@ -71,17 +65,14 @@ contract Faucet is Ownable {
      * @param _daiAddr The new address for the Mock DAI token.
      * @param _wethAddr The new address for the Mock WETH token.
      * @param _wbtcAddr The new address for the Mock WBTC token.
-     * @param _plsAddr The new address for the Mock PLS token.
      */
     function updateTokenAddresses(
         address _daiAddr,
         address _wethAddr,
-        address _wbtcAddr,
-        address _plsAddr
+        address _wbtcAddr
     ) external onlyOwner {
         mockDaiToken = _daiAddr;
         mockWethToken = _wethAddr;
         mockWbtcToken = _wbtcAddr;
-        mockPlsToken = _plsAddr;
     }
 }
