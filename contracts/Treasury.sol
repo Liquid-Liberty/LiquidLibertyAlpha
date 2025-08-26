@@ -63,12 +63,12 @@ contract Treasury is Ownable, ReentrancyGuard {
     function buyMkt(uint256 collateralAmount, address collateralToken) external nonReentrant {
         require(isWhitelistedCollateral[collateralToken], "Treasury: Token not whitelisted");
         uint256 lmktToSend = getLmktAmountForCollateral(collateralAmount, collateralToken);
-        uint256 holdingCap = (lmktToken.totalSupply() * HOLDING_CAP_PERCENT) / HOLDING_CAP_BASE;
-        require(lmktToken.balanceOf(msg.sender) + lmktToSend <= holdingCap, "Treasury: Purchase exceeds holding cap");
+        // uint256 holdingCap = (lmktToken.totalSupply() * HOLDING_CAP_PERCENT) / HOLDING_CAP_BASE;
+        // require(lmktToken.balanceOf(msg.sender) + lmktToSend <= holdingCap, "Treasury: Purchase exceeds holding cap");
         IERC20(collateralToken).transferFrom(msg.sender, address(this), collateralAmount);
         lmktToken.transfer(msg.sender, lmktToSend);
         uint256 totalCollateral = getTotalCollateralValue();
-        uint256 totalLmktValue = lmktToken.balanceOf(address(this));
+        uint256 totalLmktValue = getLmktReserves();
         emit MKTSwap(msg.sender, collateralToken, collateralAmount, lmktToSend, totalCollateral, totalLmktValue, true);
         // emit MktPurchased(msg.sender, collateralToken, collateralAmount, lmktToSend);
     }
@@ -77,13 +77,13 @@ contract Treasury is Ownable, ReentrancyGuard {
         require(isWhitelistedCollateral[collateralToken], "Treasury: Token not whitelisted");
         uint256 burnAmount = (lmktAmount * BURN_RATE) / SPREAD_BASE;
         uint256 remainingAmount = lmktAmount - burnAmount;
-        uint256 collateralToSend = getCollateralAmountForLmkt(lmktAmount, collateralToken);
-        require(IERC20(collateralToken).balanceOf(address(this)) >= collateralToSend, "Treasury: Insufficient reserves for this collateral");
         lmktToken.transferFrom(msg.sender, address(this), lmktAmount);
         lmktToken.burn(burnAmount);
+        uint256 collateralToSend = getCollateralAmountForLmkt(lmktAmount, collateralToken);
+        require(IERC20(collateralToken).balanceOf(address(this)) >= collateralToSend, "Treasury: Insufficient reserves for this collateral");
         IERC20(collateralToken).transfer(msg.sender, collateralToSend);
         uint256 totalCollateral = getTotalCollateralValue();
-        uint256 totalLmktValue = lmktToken.balanceOf(address(this));
+        uint256 totalLmktValue = getLmktReserves();
         emit MKTSwap(msg.sender, collateralToken, collateralToSend, lmktAmount, totalCollateral, totalLmktValue, false);
         // emit MktSold(msg.sender, lmktAmount, collateralToSend, collateralToken);
 
@@ -92,6 +92,9 @@ contract Treasury is Ownable, ReentrancyGuard {
     function depositCommerceFee(address token, uint256 amount) external {
         require(token == address(lmktToken) || isWhitelistedCollateral[token], "Treasury: Can only receive whitelisted tokens");
         IERC20(token).transferFrom(msg.sender, address(this), amount);
+        if (token == address(lmktToken)){
+            lmktToken.burn(amount);
+        }
         emit CommerceFeeReceived(token, amount);
     }
 
@@ -117,7 +120,7 @@ contract Treasury is Ownable, ReentrancyGuard {
     function getLmktAmountForCollateral(uint256 collateralAmount, address collateralToken) public view returns (uint256) {
         uint256 collateralValue = getCollateralTokenValue(collateralAmount, collateralToken);
         uint256 totalCollateral = getTotalCollateralValue();
-        uint256 lmktReserves = lmktToken.balanceOf(address(this));
+        uint256 lmktReserves = getLmktReserves();
         if (totalCollateral == 0) return 0;
         uint256 baseLmktAmount = (collateralValue * lmktReserves) / totalCollateral;
         return (baseLmktAmount * (SPREAD_BASE - BUY_DISCOUNT)) / SPREAD_BASE;
@@ -125,7 +128,7 @@ contract Treasury is Ownable, ReentrancyGuard {
 
     function getCollateralAmountForLmkt(uint256 lmktAmount, address collateralToken) public view returns (uint256) {
         uint256 totalCollateral = getTotalCollateralValue();
-        uint256 lmktReserves = lmktToken.balanceOf(address(this));
+        uint256 lmktReserves = getLmktReserves();
         if (lmktReserves == 0) return 0;
         uint256 baseCollateralValue = (lmktAmount * totalCollateral) / lmktReserves;
         uint256 discountedValue = (baseCollateralValue * (SPREAD_BASE - SELL_PREMIUM)) / SPREAD_BASE;
@@ -143,6 +146,12 @@ contract Treasury is Ownable, ReentrancyGuard {
             }
         }
         return totalValue;
+    }
+
+    function getLmktReserves() public view returns (uint256) {
+        uint256 lmktSupply = lmktToken.totalSupply();
+        uint256 lmktBalanceOnZero = lmktToken.balanceOf(address(0));
+        return lmktSupply - lmktBalanceOnZero;
     }
 
     function getCollateralTokenValue(uint256 amount, address token) public view returns (uint256) {

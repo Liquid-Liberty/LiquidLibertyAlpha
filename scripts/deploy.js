@@ -46,9 +46,10 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
   
   const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY;
-  if (!signerPrivateKey || !signerPrivateKey.startsWith('0x')) {
-    throw new Error("SIGNER_PRIVATE_KEY is not set or invalid in the .env file.");
-  }
+  console.log("aria signerPrivateKey:", signerPrivateKey);
+  // if (!signerPrivateKey || !signerPrivateKey.startsWith('0x')) {
+  //   throw new Error("SIGNER_PRIVATE_KEY is not set or invalid in the .env file.");
+  // }
   const trustedSigner = new ethers.Wallet(signerPrivateKey);
   console.log("Backend Trusted Signer address for ListingManager:", trustedSigner.address);
 
@@ -113,23 +114,27 @@ async function main() {
   console.log("PaymentProcessor deployed to:", paymentProcessor.target);
 
   console.log("\n--- Performing Initial Setup ---");
-  await treasury.setLmktAddress(lmkt.target);
-  await treasury.setWhitelistedCollateral(mockDai.target, true);
+  const setLmktTx = await treasury.setLmktAddress(lmkt.target);
+  await setLmktTx.wait();
+  const setWhitelistTx = await treasury.setWhitelistedCollateral(mockDai.target, true);
+  await setWhitelistTx.wait();
   // await treasury.setWhitelistedCollateral(mockWeth.target, true);
   // await treasury.setWhitelistedCollateral(mockWbtc.target, true);
   // await treasury.setWhitelistedCollateral(mockPls.target, true);
   console.log("Whitelisted all collateral tokens in Treasury");
-  await treasury.setPriceFeed(mockDai.target, daiPriceFeed.target);
+  const setPriceFeedTx = await treasury.setPriceFeed(mockDai.target, daiPriceFeed.target);
+  await setPriceFeedTx.wait();
   // await treasury.setPriceFeed(mockWeth.target, wethPriceFeed.target);
   // await treasury.setPriceFeed(mockWbtc.target, wbtcPriceFeed.target);
   // await treasury.setPriceFeed(mockPls.target, plsPriceFeed.target);
   console.log("Set all price feeds in Treasury");
 
-  // const USDT_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("USDT/USD"));
+  const USDT_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("USDT/USD"));
   // const ETH_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("ETH/USD"));
   // const BTC_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("BTC/USD"));
   // const PLS_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("PLS/USD"));
-  // await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID);
+  const setQueryIdTx = await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID);
+  await setQueryIdTx.wait();
   // await treasury.setTokenQueryId(mockWeth.target, ETH_USD_QUERY_ID);
   // await treasury.setTokenQueryId(mockWbtc.target, BTC_USD_QUERY_ID);
   // await treasury.setTokenQueryId(mockPls.target, PLS_USD_QUERY_ID);
@@ -143,13 +148,16 @@ async function main() {
   console.log("Treasury setup complete.");
 
   console.log("\n--- Provisioning Initial Liquidity ---");
-  await mockDai.mint(treasury.target, ethers.parseEther("25000"));
+  const daiMintTx = await mockDai.mint(treasury.target, ethers.parseEther("25000"));
+  await daiMintTx.wait();
   // await mockWeth.mint(treasury.target, ethers.parseEther("25000"));
   // await mockPls.mint(treasury.target, ethers.parseEther("25000"));
   // await mockWbtc.mint(treasury.target, ethers.parseUnits("25000", 8));
   const initialSupply = await lmkt.totalSupply();
-  await lmkt.transfer(treasury.target, initialSupply);
-  await lmkt.transferOwnership(treasury.target);
+  const lmktTransferTx = await lmkt.transfer(treasury.target, initialSupply);
+  await lmktTransferTx.wait();
+  const transferOwnershipTx = await lmkt.transferOwnership(treasury.target);
+  await transferOwnershipTx.wait();
   console.log("Initial liquidity provisioned.");
 
   console.log("\n--- Deploying Faucet ---");
@@ -158,11 +166,13 @@ async function main() {
   // const faucet = await Faucet.deploy(mockDai.target, mockWeth.target, mockWbtc.target, mockPls.target);
   await faucet.waitForDeployment();
   console.log("Faucet deployed to:", faucet.target);
-  await mockDai.addMinter(faucet.target);
+  const addMinterTx = await mockDai.addMinter(faucet.target);
+  await addMinterTx.wait();
   // await mockWeth.addMinter(faucet.target);
   // await mockWbtc.addMinter(faucet.target);
   // await mockPls.addMinter(faucet.target);
-  await lbrty.addMinter(faucet.target);
+  const addLbrtyMinter = await lbrty.addMinter(faucet.target);
+  await addLbrtyMinter.wait();
   console.log("Faucet configured.");
 
   saveFrontendFiles({

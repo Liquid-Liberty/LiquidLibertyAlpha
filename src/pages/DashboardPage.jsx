@@ -128,7 +128,6 @@ const DashboardPage = ({ listings, userAddress }) => {
 
     // Update balances when data changes
     useEffect(() => {
-        console.log("aria wbtcBalance = ", daiBalance, address, mockDaiConfig.address)
         refetchDaiBalance()
         // if (wbtcBalance) setTokenBalances(prev => ({ ...prev, wbtc: formatEther(wbtcBalance) }));
         if (daiBalance) setTokenBalances(prev => ({ ...prev, dai: formatEther(daiBalance) }));
@@ -179,10 +178,8 @@ const DashboardPage = ({ listings, userAddress }) => {
 
     // Refetch when inputs change
     useEffect(() => {
-        console.log("aria amountIn = ", amountIn)
         if (amountIn > 0 && tokenAddress !== '0x1111111111111111111111111111111111111111') {
             if (treasuryTab === 'buy') {
-                console.log("aria lmktAmount = ", treasuryConfig.address, amountIn, tokenAddress)
 
                 refetch();
                 setCalculatedLmkt(lmktAmount ? formatEther(lmktAmount) : '0');
@@ -194,7 +191,6 @@ const DashboardPage = ({ listings, userAddress }) => {
             setCalculatedLmkt('0');
             setCalculatedCollateral('0');
         }
-        console.log("aria calculatedLmkt = ", calculatedLmkt)
 
     }, [amountIn, tokenAddress, treasuryTab, refetch, refetchSell, lmktAmount, collateralAmount, isError, isSellCalcError]);
 

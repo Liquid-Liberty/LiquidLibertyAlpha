@@ -58,7 +58,7 @@ export const SUPPORTED_RESOLUTIONS = [
   // Normalize timestamp to seconds (TradingView expects seconds)
   const normalizeTs = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
   // Fixed pair address for sample (override incoming symbol's address)
-  const FIXED_PAIR_ADDRESS = '0xdd9d21a8f3c792d3cc1d162ae38f12d2d58abf82';
+  const FIXED_PAIR_ADDRESS = '0x28e9c4f1b349c55d51258691c95a4f1a0619b240';
   
   export function GetDatafeedProvider(data, ws_pool) {
     return {
@@ -144,7 +144,7 @@ export const SUPPORTED_RESOLUTIONS = [
             }
           }`;
 
-          console.log("aria query = ", query)
+          console.log('Fetching candles with query:', query);
 
   
           const doFetch = async (q) => {
@@ -159,8 +159,7 @@ export const SUPPORTED_RESOLUTIONS = [
   
           // First try with time filter
           let candles = await doFetch(query);
-          console.log("aria candles = ", candles)
-  
+          console.log(`Fetched ${candles.length} candles for ${pairAddress} interval ${intervalParam}`);
           // Fallback: if no data returned (common for 1m small windows), refetch without time filter
           if ((!candles || candles.length === 0) && (fromSec && toSec)) {
             const fallbackQuery = `{

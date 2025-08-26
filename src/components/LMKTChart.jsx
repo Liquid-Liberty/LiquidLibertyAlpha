@@ -46,9 +46,7 @@ const LMKTChart = ({ pairAddress = "0x0000000000000000000000000000000000000000" 
             
             // Try to fetch real data from subgraph
             try {
-                console.log("aria data fetch = ", pairAddress, interval)
                 const data = await fetchLMKTData(pairAddress, interval, 100); // Fetch last 100 candles
-                console.log("aria data = ", data)
                 if (data && data.length > 0) {
                     setChartData(data);
                     setLoading(false);

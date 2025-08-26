@@ -7,7 +7,6 @@ const SUBGRAPH_URL = 'https://cowboy.blocketize.io/subgraphs/name/liquid-liberty
  * @returns {Promise<Object>} - Query result
  */
 export const fetchFromSubgraph = async (query, variables = {}) => {
-    console.log("aria query = ", query, variables)
     try {
         const response = await fetch(SUBGRAPH_URL, {
             method: 'POST',
@@ -70,7 +69,6 @@ export const fetchLMKTData = async (pairAddress, interval, limit = 1000) => {
             pairAddress,
             interval
         });
-        console.log("aria fetch data = ", data)
         
         // Transform the data to match our chart format
         if (data.candles) {
