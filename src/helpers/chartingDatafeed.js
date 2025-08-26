@@ -58,7 +58,7 @@ export const SUPPORTED_RESOLUTIONS = [
   // Normalize timestamp to seconds (TradingView expects seconds)
   const normalizeTs = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
   // Fixed pair address for sample (override incoming symbol's address)
-  const FIXED_PAIR_ADDRESS = '0x28e9c4f1b349c55d51258691c95a4f1a0619b240';
+  const FIXED_PAIR_ADDRESS = '0x334f67528f54e9a3d604d0bf11859dfcf843a135';
   
   export function GetDatafeedProvider(data, ws_pool) {
     return {

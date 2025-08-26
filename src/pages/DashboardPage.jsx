@@ -129,11 +129,12 @@ const DashboardPage = ({ listings, userAddress }) => {
     // Update balances when data changes
     useEffect(() => {
         refetchDaiBalance()
+        refetchLmktBalance()
         // if (wbtcBalance) setTokenBalances(prev => ({ ...prev, wbtc: formatEther(wbtcBalance) }));
         if (daiBalance) setTokenBalances(prev => ({ ...prev, dai: formatEther(daiBalance) }));
         // if (wethBalance) setTokenBalances(prev => ({ ...prev, weth: formatEther(wethBalance) }));
         if (lmktBalance) setTokenBalances(prev => ({ ...prev, lmkt: formatEther(lmktBalance) }));
-    }, [daiBalance, lmktBalance, address, treasuryTab, tokenAddress, refetchDaiBalance]);
+    }, [daiBalance, lmktBalance, address, treasuryTab, tokenAddress, refetchDaiBalance, isBought, isSold]);
 
     // Periodic balance refresh
     // useEffect(() => {

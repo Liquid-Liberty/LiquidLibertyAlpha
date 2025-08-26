@@ -4,12 +4,13 @@ import { serviceCategories, mockAds } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
 import { useListings } from '../context/ListingsContext';
 import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { lmktConfig, paymentProcessorConfig } from '../contract-config';
+import { lmktConfig, paymentProcessorConfig, treasuryConfig } from '../contract-config';
 import { parseEther } from 'viem';
 
 const ListingDetailPage = ({ listings }) => {
     const { id } = useParams();
     // const { listings: blockchainListings, loading, error } = useListings();
+    const { address: userAddress, isConnected } = useAccount();
     const { listings: blockchainListings, loading, error } = useListings();
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
@@ -17,8 +18,7 @@ const ListingDetailPage = ({ listings }) => {
     const { data: buyHash, writeContract: handleBuy } = useWriteContract();
     const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
     const { isSuccess: isBought, isError: isBuyError, error: buyError } = useWaitForTransactionReceipt({ hash: buyHash });
-
-
+    const [lmktPrice, setLmktPrice] = useState(100000000);
     // const item_listings = blockchainListings.filter(l => l.listingType === 'item');
     const listing = blockchainListings.find(l => l.id.toString() === id);
     const [mainImage, setMainImage] = useState(`https://ipfs.io/ipfs/${listing.imageUrl}` || '');
@@ -28,15 +28,30 @@ const ListingDetailPage = ({ listings }) => {
 
     const isService = listing.listingType === 'service';
 
+    const { data: tokenPrice, refetch: refetchLMKTPrice } = useReadContract({
+        address: treasuryConfig.address,
+        abi: treasuryConfig.abi,
+        functionName: 'getLMKTPrice',
+        args: [],
+        query: { enabled: !!userAddress }
+    });
+
+    useEffect(() => {
+        refetchLMKTPrice()
+        if (tokenPrice) setLmktPrice(tokenPrice);
+    }, [refetchLMKTPrice, userAddress, isConnected, tokenPrice]);
+
     const handleBuyNow = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setStatusMessage('Waiting Approval ...');
+        console.log("aria listingPrice = ", listing.price)
+        const approveAmount = (parseEther((listing.price * 1.1).toString()) * 100000000n) / BigInt(lmktPrice);
         approve({
             address: lmktConfig.address,
             abi: lmktConfig.abi,
             functionName: 'approve',
-            args: [paymentProcessorConfig.address, parseEther((listing.price * 1.006).toString())],
+            args: [paymentProcessorConfig.address, approveAmount],
         });
     };
 

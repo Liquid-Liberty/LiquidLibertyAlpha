@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { parseEther } from 'viem'; 
-import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { listingManagerConfig, lmktConfig } from '../contract-config';
+import { parseEther } from 'viem';
+import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { listingManagerConfig, lmktConfig, treasuryConfig } from '../contract-config';
 import { forSaleCategories, serviceCategories } from '../data/categories';
 import { filesToBase64Array, validateImageFiles, compressImage } from '../utils/imageUtils';
 
@@ -23,23 +23,36 @@ const CreateListingPage = ({ addListing, listings }) => {
     const [serviceCategory, setServiceCategory] = useState(existingListing?.serviceCategory || '');
     const [description, setDescription] = useState(existingListing?.description || '');
     const [photos, setPhotos] = useState(existingListing?.photos || []);
+    const [lmktPrice, setLmktPrice] = useState(100000000);
 
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const { address: userAddress, isConnected } = useAccount();
     const chainId = useChainId();
-    
     const { data: approveHash, writeContract: approve } = useWriteContract();
     const { data: createListingHash, writeContract: createListing } = useWriteContract();
     const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
     const { isSuccess: isCreated } = useWaitForTransactionReceipt({ hash: createListingHash });
     const signatureRef = useRef(null);
-    const ipfsHashRef = useRef(null); 
+    const ipfsHashRef = useRef(null);
 
     useEffect(() => {
         setCategory('');
         setServiceCategory('');
     }, [listingType]);
+
+    const { data: tokenPrice, refetch: refetchLMKTPrice } = useReadContract({
+        address: treasuryConfig.address,
+        abi: treasuryConfig.abi,
+        functionName: 'getLMKTPrice',
+        args: [],
+        query: { enabled: !!userAddress }
+    });
+
+    useEffect(() => {
+        refetchLMKTPrice()
+        if (tokenPrice) setLmktPrice(tokenPrice);
+    }, [refetchLMKTPrice, userAddress, photos, isConnected, tokenPrice]);
 
     const handlePhotoChange = (e) => {
         if (e.target.files) {
@@ -71,7 +84,7 @@ const CreateListingPage = ({ addListing, listings }) => {
 
         try {
             let dataIdentifier = "ipfs://placeholder-for-uploaded-photos";
-            
+
             // Upload images to IPFS if photos are provided
             if (photos.length > 0) {
                 try {
@@ -82,9 +95,9 @@ const CreateListingPage = ({ addListing, listings }) => {
                             return compressed;
                         })
                     );
-                    
+
                     const base64Photos = await filesToBase64Array(compressedPhotos);
-                    
+
                     // Prepare listing data for IPFS
                     const listingData = {
                         title,
@@ -129,7 +142,7 @@ const CreateListingPage = ({ addListing, listings }) => {
             }
 
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
-            const feeInToken = parseEther("10"); 
+            const feeInToken = parseEther(price);
             const deadline = Math.floor(Date.now() / 1000) + 3600;
 
             const signatureRequestData = {
@@ -149,16 +162,17 @@ const CreateListingPage = ({ addListing, listings }) => {
             });
 
             if (!signatureResponse.ok) throw new Error('Failed to get server signature.');
-            
+
             const { signature } = await signatureResponse.json();
             signatureRef.current = signature;
 
             setStatusMessage('Please approve the listing fee...');
+            const feeInUsd = (feeInToken * 100000000n) / BigInt(lmktPrice);
             approve({
                 address: lmktConfig.address,
                 abi: lmktConfig.abi,
                 functionName: 'approve',
-                args: [listingManagerConfig.address, feeInToken],
+                args: [listingManagerConfig.address, feeInUsd],
             });
 
         } catch (error) {
@@ -168,13 +182,13 @@ const CreateListingPage = ({ addListing, listings }) => {
             setStatusMessage('');
         }
     };
-    
+
     useEffect(() => {
         if (isApproved) {
             setStatusMessage('Approved! Please confirm the final listing transaction...');
-            
+
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
-            const feeInToken = parseEther("10");
+            const feeInToken = parseEther(price);
             const deadline = Math.floor(Date.now() / 1000) + 3600;
             const dataIdentifier = ipfsHashRef.current ? `ipfs://${ipfsHashRef.current}` : "ipfs://placeholder-for-uploaded-photos";
 
@@ -274,13 +288,13 @@ const CreateListingPage = ({ addListing, listings }) => {
                                         <option value="" disabled>Select a category...</option>
                                         {serviceCategories.map(cat => <option key={cat.key} value={cat.key}>{cat.name}</option>)}
                                     </select>
-                                 </div>
+                                </div>
                                 <div>
                                     <label htmlFor="zipCode" className="block text-lg font-bold text-zinc-700 mb-2">Service Area (Zip Code)</label>
                                     <input type="text" id="zipCode" value={zipCode} onChange={(e) => setZipCode(e.target.value)} required placeholder="e.g., 10001" className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-md focus:ring-teal-500 focus:border-teal-500 transition" />
                                 </div>
                             </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
                                     <label htmlFor="price" className="block text-lg font-bold text-zinc-700 mb-2">Rate (USD)</label>
                                     <input type="number" step="0.01" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="e.g., 50.00" className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-md focus:ring-teal-500 focus:border-teal-500 transition" />

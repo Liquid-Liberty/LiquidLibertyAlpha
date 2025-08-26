@@ -41,18 +41,24 @@ contract PaymentProcessor is ReentrancyGuard, Ownable {
     function makePurchase(uint256 listingId, uint256 price, address seller) external nonReentrant {
         // A full implementation would link to a listing management system
         // to verify the price and seller address.
-        
+
+        uint256 tokenPrice = ITreasury(treasury).getLMKTPrice();
+        require(tokenPrice > 0, "PaymentProcessor: Invalid LMKT price");
+
         uint256 totalFee = (price * COMMERCE_FEE) / FEE_BASE;
         uint256 totalAmount = price + totalFee;
+        uint256 totalAmountInUSD = (totalAmount * 1e8) / tokenPrice; // Assuming tokenPrice has 8 decimals
+        require(IERC20(lmktToken).balanceOf(msg.sender) >= totalAmountInUSD, "PaymentProcessor: Insufficient LMKT balance");
+        require(IERC20(lmktToken).allowance(msg.sender, address(this)) >= totalAmountInUSD, "PaymentProcessor: Insufficient LMKT allowance");
 
         escrows[listingId] = Escrow({
             buyer: msg.sender,
             seller: seller,
-            totalAmount: totalAmount,
+            totalAmount: totalAmountInUSD,
             fundsReleased: false
         });
 
-        IERC20(lmktToken).transferFrom(msg.sender, address(this), totalAmount);
+        IERC20(lmktToken).transferFrom(msg.sender, address(this), totalAmountInUSD);
 
         emit PurchaseMade(listingId, msg.sender, totalAmount);
     }

@@ -169,6 +169,13 @@ contract Treasury is Ownable, ReentrancyGuard {
         uint8 tokenDecimals = IERC20Metadata(token).decimals();
         return (amount * price) / (10**ORACLE_PRICE_DECIMALS);
     }
+
+    function getLMKTPrice() external view returns (uint256) {
+        uint256 totalCollateral = getTotalCollateralValue();
+        uint256 lmktReserves = getLmktReserves();
+        if (lmktReserves == 0) return 0;
+        return (totalCollateral * 1e8) / lmktReserves;
+    }
     
     receive() external payable {}
 }

@@ -42,6 +42,8 @@ contract ListingManager is Ownable, EIP712 {
         trustedSigner = _trustedSigner;
     }
 
+
+
     function createListing(
         ListingType _type,
         string memory _dataIdentifier,
@@ -52,7 +54,13 @@ contract ListingManager is Ownable, EIP712 {
         bytes32 digest = getListingMessageHash(_type, _dataIdentifier, msg.sender, _feeInToken, _deadline);
         // _verify(digest, _signature, _deadline);
         usedHashes[digest] = true;
-        paymentToken.transferFrom(msg.sender, address(treasury), _feeInToken);
+        uint256 price = treasury.getLMKTPrice();
+        uint256 feeInUSD = _feeInToken * 1e8 / price;
+        require(price > 0, "ListingManager: Invalid LMKT price");
+        require(paymentToken.balanceOf(msg.sender) >= feeInUSD, "ListingManager: Insufficient token balance");
+        require(paymentToken.allowance(msg.sender, address(this)) >= feeInUSD, "ListingManager: Insufficient token allowance");
+        // Transfer the fee in payment token
+        paymentToken.transferFrom(msg.sender, address(treasury), feeInUSD);
         _listingCounter++;
         uint256 newListingId = _listingCounter;
         listings[newListingId] = Listing({
@@ -61,7 +69,7 @@ contract ListingManager is Ownable, EIP712 {
             listingType: _type,
             dataIdentifier: _dataIdentifier
         });
-        emit ListingCreated(newListingId, msg.sender, _type, _feeInToken);
+        emit ListingCreated(newListingId, msg.sender, _type, feeInUSD);
     }
 
     // --- CORRECTED: Removed 'onlyOwner' and updated the require message ---

@@ -14,4 +14,6 @@ interface ITreasury {
      * @param amount The amount of the token being deposited.
      */
     function depositCommerceFee(address token, uint256 amount) external;
+
+    function getLMKTPrice() external view returns (uint256);
 }
