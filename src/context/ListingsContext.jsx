@@ -279,7 +279,7 @@ export const ListingsProvider = ({ children }) => {
       const allEscrows = [];
 
       // Get all PurchaseMade events to find escrows
-      const fromBlock = 8990580n;
+      const fromBlock = 9068400n;
       const toBlock = 'latest';
 
       try {

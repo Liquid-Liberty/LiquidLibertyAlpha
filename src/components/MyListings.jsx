@@ -235,6 +235,8 @@ const MyListings = () => {
     // Get user's listings and escrows
     const userListings = getUserListings(address);
     const userEscrows = getUserEscrows(address);
+    console.log("aria userListings = ", userListings)
+    console.log("aria userEscrows = ", userEscrows)
 
     // Separate listings by status
     const activeListings = userListings.filter(l => {
