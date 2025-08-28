@@ -48,6 +48,7 @@
     "wagmi": "^2.11.0"
   },
   "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.97.1",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@types/react": "^18.3.3",
