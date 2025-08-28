@@ -22,7 +22,7 @@ contract ListingManager is Ownable, EIP712 {
 
     uint256 public constant LISTING_DURATION = 30 days;
     bytes32 private constant LISTING_TYPEHASH = keccak256(
-        "Listing(uint8 listingType,string dataIdentifier,address userAddress,uint256 feeInToken,uint256 deadline)"
+        "Listing(uint256 listingType,string dataIdentifier,address userAddress,uint256 feeInToken,uint256 deadline)"
     );
 
     ITreasury public treasury;
@@ -80,7 +80,7 @@ contract ListingManager is Ownable, EIP712 {
     }
 
     function getListingMessageHash(ListingType _type, string memory _dataIdentifier, address _user, uint256 _feeInToken, uint256 _deadline) public view returns (bytes32) {
-        bytes32 structHash = keccak256(abi.encode(LISTING_TYPEHASH, uint8(_type), keccak256(bytes(_dataIdentifier)), _user, _feeInToken, _deadline));
+        bytes32 structHash = keccak256(abi.encode(LISTING_TYPEHASH, uint256(_type), keccak256(bytes(_dataIdentifier)), _user, _feeInToken, _deadline));
         return _hashTypedDataV4(structHash);
     }
 

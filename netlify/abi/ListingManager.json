@@ -65,7 +65,7 @@
           "indexed": false,
           "internalType": "enum ListingManager.ListingType",
           "name": "listingType",
-          "type": "uint8"
+          "type": "uint256"
         },
         {
           "indexed": false,
@@ -127,7 +127,7 @@
         {
           "internalType": "enum ListingManager.ListingType",
           "name": "_type",
-          "type": "uint8"
+          "type": "uint256"
         },
         {
           "internalType": "string",
@@ -191,7 +191,7 @@
         {
           "internalType": "enum ListingManager.ListingType",
           "name": "listingType",
-          "type": "uint8"
+          "type": "uint256"
         },
         {
           "internalType": "string",

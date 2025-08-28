@@ -110,7 +110,7 @@ export const handler = async (event) => {
         // EIP-712 types
         const types = {
             Listing: [
-                { name: 'listingType', type: 'uint8' },
+                { name: 'listingType', type: 'uint256' },
                 { name: 'dataIdentifier', type: 'string' },
                 { name: 'userAddress', type: 'address' },
                 { name: 'feeInToken', type: 'uint256' },
@@ -120,7 +120,7 @@ export const handler = async (event) => {
         
         // Prepare the value object with correct types
         const value = {
-            listingType: parseInt(listingType),           // uint8
+            listingType: parseInt(listingType),           // uint256
             dataIdentifier: dataIdentifier,               // string
             userAddress: userAddress,                     // address
             feeInToken: ethers.parseEther(feeInToken),   // uint256 - Use the actual fee from request

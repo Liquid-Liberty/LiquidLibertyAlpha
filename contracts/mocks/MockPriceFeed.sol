@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract MockPriceFeed is Ownable {
     uint256 public value;
-    uint8 public decimals;
+    uint256 public decimals;
 
-    constructor(uint256 _initialValue, uint8 _decimals) Ownable(msg.sender) {
+    constructor(uint256 _initialValue, uint256 _decimals) Ownable(msg.sender) {
         value = _initialValue;
         decimals = _decimals;
     }

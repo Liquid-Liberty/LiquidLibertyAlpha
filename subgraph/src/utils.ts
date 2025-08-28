@@ -18,5 +18,13 @@ export function bigDecimalMin(a: BigDecimal, b: BigDecimal): BigDecimal {
 }
 
 export function bucketStart(timestamp: i32, intervalSec: i32): i32 {
-  return timestamp - (timestamp % intervalSec);
+  let aligned = timestamp - (timestamp % intervalSec);
+
+  // Safety: don’t allow bucket more than 5 minutes in the future
+  let now = timestamp;
+  if (aligned > now + 300) {
+    aligned = now;
+  }
+
+  return aligned;
 }

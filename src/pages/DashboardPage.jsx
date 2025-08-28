@@ -513,15 +513,13 @@ const DashboardPage = ({ listings, userAddress }) => {
                         </div>
                         <div>
                             <div className="h-[500px] rounded-lg overflow-hidden relative">
-                        <LMKTTvChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} />
-                        {/* <LMKTChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} /> */}
-                                {/* <TVChart
+                                <TVChart
                                     widget={widget}
                                     setWidget={setWidget}
                                     data={mockPoolData}
                                     interval={interval}
                                     onLoaded={() => console.log('Chart loaded successfully!')}
-                                /> */}
+                                />
                             </div>
                         </div>
                     </div>

@@ -8,14 +8,17 @@ dataSources:
     source:
       address: "0xfA3988fE86CDC9d167b438eB590F1f4fd51b44B4"
       abi: Treasury
-      startBlock: 9082418
+      startBlock: 9082425
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - Deposit
-        - Withdrawal
+        - Candle
+        - Pair
+        - Token
+        - CollateralWhitelist
+        - CommerceFee
       abis:
         - name: Treasury
           file: ./abis/Treasury.json

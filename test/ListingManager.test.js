@@ -20,7 +20,7 @@ describe("ListingManager (EIP-712)", function () {
 
         const types = {
             Listing: [
-                { name: 'listingType', type: 'uint8' },
+                { name: 'listingType', type: 'uint256' },
                 { name: 'dataIdentifier', type: 'string' },
                 { name: 'userAddress', type: 'address' },
                 { name: 'feeInToken', type: 'uint256' },
@@ -96,7 +96,7 @@ describe("ListingManager (EIP-712)", function () {
             const deadline = (await time.latest()) + 3600;
             // Create the same EIP-712 data...
             const domain = { name: 'ListingManager', version: '1', chainId: (await ethers.provider.getNetwork()).chainId, verifyingContract: await listingManager.getAddress() };
-            const types = { Listing: [ { name: 'listingType', type: 'uint8' }, { name: 'dataIdentifier', type: 'string' }, { name: 'userAddress', type: 'address' }, { name: 'feeInToken', type: 'uint256' }, { name: 'deadline', type: 'uint256' }, ], };
+            const types = { Listing: [ { name: 'listingType', type: 'uint256' }, { name: 'dataIdentifier', type: 'string' }, { name: 'userAddress', type: 'address' }, { name: 'feeInToken', type: 'uint256' }, { name: 'deadline', type: 'uint256' }, ], };
             const value = { listingType: LISTING_TYPE_FOR_SALE, dataIdentifier: DATA_IDENTIFIER, userAddress: user.address, feeInToken: FEE_IN_TOKEN, deadline: deadline };
             
             // ...but have it signed by the wrong account ('owner' instead of 'trustedSigner').

@@ -59,7 +59,7 @@ async function debugDataFlow() {
         
         const types = {
             Listing: [
-                { name: 'listingType', type: 'uint8' },
+                { name: 'listingType', type: 'uint256' },
                 { name: 'dataIdentifier', type: 'string' },
                 { name: 'userAddress', type: 'address' },
                 { name: 'feeInToken', type: 'uint256' },
@@ -99,7 +99,7 @@ async function debugDataFlow() {
         
         // 8. Simulate what gets sent to contract
         const contractArgs = [
-            processedData.listingType,        // uint8
+            processedData.listingType,        // uint256
             processedData.dataIdentifier,     // string
             processedData.feeInToken,         // uint256 (BigInt)
             processedData.deadline,           // uint256

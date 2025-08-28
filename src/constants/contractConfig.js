@@ -32,7 +32,7 @@ export const treasuryAbi = [
 export const erc20Abi = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
+  "function decimals() view returns (uint256)",
   "function totalSupply() view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
   "function allowance(address owner, address spender) view returns (uint256)",

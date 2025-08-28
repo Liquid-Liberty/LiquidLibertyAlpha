@@ -13,6 +13,7 @@
     "verify-full": "node scripts/verify.js"
   },
   "dependencies": {
+    "@graphprotocol/graph-ts": "^0.34.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@nomicfoundation/hardhat-ethers": "^3.1.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
@@ -48,7 +49,7 @@
     "wagmi": "^2.11.0"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "^0.97.1",
+    "@graphprotocol/graph-cli": "^0.34.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@types/react": "^18.3.3",

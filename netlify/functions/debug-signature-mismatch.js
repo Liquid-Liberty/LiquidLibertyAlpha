@@ -11,7 +11,7 @@ async function debugSignatureMismatch() {
         const abi = [
             "function trustedSigner() external view returns (address)",
             "function eip712Domain() external view returns (bytes1 fields, string name, string version, uint256 chainId, address verifyingContract, bytes32 salt, uint256[] extensions)",
-            "function getListingMessageHash(uint8 _type, string _dataIdentifier, address _user, uint256 _feeInToken, uint256 _deadline) external view returns (bytes32)"
+            "function getListingMessageHash(uint256 _type, string _dataIdentifier, address _user, uint256 _feeInToken, uint256 _deadline) external view returns (bytes32)"
         ];
         
         // Create provider
@@ -69,7 +69,7 @@ async function debugSignatureMismatch() {
         
         const types = {
             Listing: [
-                { name: 'listingType', type: 'uint8' },
+                { name: 'listingType', type: 'uint256' },
                 { name: 'dataIdentifier', type: 'string' },
                 { name: 'userAddress', type: 'address' },
                 { name: 'feeInToken', type: 'uint256' },

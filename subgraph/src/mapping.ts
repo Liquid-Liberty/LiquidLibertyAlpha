@@ -1,7 +1,7 @@
 import { Address, BigDecimal, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { MKTSwap } from "../generated/Treasury/Treasury";
 import { ERC20 } from "../generated/Treasury/ERC20";
-import { bucketStart, bigDecimalMax, bigDecimalMin, toDecimal, ZERO_BD } from "./utils";
+import {  bucketStart, bigDecimalMax, bigDecimalMin, toDecimal, ZERO_BD } from "./utils";
 import {
   CollateralWhitelisted as CollateralWhitelistedEvent,
   CommerceFeeReceived as CommerceFeeReceivedEvent
@@ -191,14 +191,11 @@ const pair = getOrCreatePair(
   const lmktAmount = toDecimal(event.params.lmktAmount, dec1);
   const totalCollateral = toDecimal(event.params.totalCollateral, dec0);
   const totalLmktValue = toDecimal(event.params.totalLmktValue, dec1);
-  const isBuy = event.params.isBuy;
 
   // Price (invert: token0 per token1)
-  let price: BigDecimal;
+ let price: BigDecimal = BigDecimal.zero();
   if (totalCollateral.gt(BigDecimal.zero()) && totalLmktValue.gt(BigDecimal.zero())) {
     price = totalCollateral.div(totalLmktValue);
-  } else {
-    price = BigDecimal.zero();
   }
 
   const ts: i32 = event.block.timestamp.toI32();

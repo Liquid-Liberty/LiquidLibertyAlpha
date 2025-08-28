@@ -13,7 +13,7 @@ async function testSignatureVerification() {
         
         // Contract ABI
         const abi = [
-            "function getListingMessageHash(uint8 _type, string _dataIdentifier, address _user, uint256 _feeInToken, uint256 _deadline) external view returns (bytes32)"
+            "function getListingMessageHash(uint256 _type, string _dataIdentifier, address _user, uint256 _feeInToken, uint256 _deadline) external view returns (bytes32)"
         ];
         
         // Create contract instance
@@ -54,7 +54,7 @@ async function testSignatureVerification() {
         // 3. EIP-712 types
         const types = {
             Listing: [
-                { name: 'listingType', type: 'uint8' },
+                { name: 'listingType', type: 'uint256' },
                 { name: 'dataIdentifier', type: 'string' },
                 { name: 'userAddress', type: 'address' },
                 { name: 'feeInToken', type: 'uint256' },

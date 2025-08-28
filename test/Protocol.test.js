@@ -65,7 +65,7 @@ describe("Liberty Market Protocol v4", function () {
         await lmkt.connect(buyer).approve(await listingManager.getAddress(), listingFee);
 
         const domain = { name: 'ListingManager', version: '1', chainId: (await ethers.provider.getNetwork()).chainId, verifyingContract: await listingManager.getAddress() };
-        const types = { Listing: [ { name: 'listingType', type: 'uint8' }, { name: 'dataIdentifier', type: 'string' }, { name: 'userAddress', type: 'address' }, { name: 'feeInToken', type: 'uint256' }, { name: 'deadline', type: 'uint256' } ] };
+        const types = { Listing: [ { name: 'listingType', type: 'uint256' }, { name: 'dataIdentifier', type: 'string' }, { name: 'userAddress', type: 'address' }, { name: 'feeInToken', type: 'uint256' }, { name: 'deadline', type: 'uint256' } ] };
         const value = { listingType, dataIdentifier, userAddress: buyer.address, feeInToken: listingFee, deadline };
         const signature = await owner.signTypedData(domain, types, value);
 
