@@ -9,6 +9,8 @@ type Token @entity {
 
 type Pair @entity {
   id: ID!
+  token0: Token!
+  token1: Token!
   createdAt: BigInt!
 }
 

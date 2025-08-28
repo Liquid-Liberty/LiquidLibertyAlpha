@@ -6,6 +6,7 @@ import { bucketStart, bigDecimalMax, bigDecimalMin, toDecimal, ZERO_BD } from ".
 
 // Extended intervals
 const INTERVALS: i32[] = [60, 300, 900, 3600, 14400, 86400]; // 1m, 5m, 15m, 1h, 4h, 1d
+const LMKT_ADDRESS = Address.fromString("0xc0Bb618F4d885E0c4aAB287a427B2612d64Daa1B");
 
 function getOrCreateToken(addr: Address): Token {
   let id = addr.toHexString();
@@ -24,14 +25,28 @@ function getOrCreateToken(addr: Address): Token {
   return token as Token;
 }
 
-function getOrCreatePair(addr: Address, block: ethereum.Block): Pair {
+function getOrCreatePair(
+  addr: Address,
+  token0Addr: Address,
+  token1Addr: Address,
+  block: ethereum.Block
+): Pair {
   let id = addr.toHexString();
   let pair = Pair.load(id);
+
   if (pair == null) {
     pair = new Pair(id);
     pair.createdAt = block.timestamp;
+
+    let token0 = getOrCreateToken(token0Addr);
+    let token1 = getOrCreateToken(token1Addr);
+
+    pair.token0 = token0.id;
+    pair.token1 = token1.id;
+
     pair.save();
   }
+
   return pair as Pair;
 }
 
@@ -156,7 +171,12 @@ export function handleSwap(event: MKTSwap): void {
     return;
   }
 
-  const pair = getOrCreatePair(event.address, event.block);
+const pair = getOrCreatePair(
+  event.address,
+  event.params.collateralToken,
+  LMKT_ADDRESS,
+  event.block
+);
 
   const dec0 = 18 as i32;
   const dec1 = 18 as i32;
