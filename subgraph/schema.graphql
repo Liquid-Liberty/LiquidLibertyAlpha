@@ -1,0 +1,32 @@
+# Entities
+
+type Token @entity {
+  id: ID!
+  symbol: String
+  name: String
+  decimals: Int!
+}
+
+type Pair @entity {
+  id: ID!
+  createdAt: BigInt!
+}
+
+# OHLCV candle entity per interval & pair
+# id format: `${pair}-${interval}-${bucketStart}`
+
+type Candle @entity {
+  id: ID!
+  pair: Pair!
+  interval: String!
+  bucketStart: Int!
+
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
+
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  trades: Int!
+}

@@ -1,0 +1,34 @@
+# Configuration Template for Liquid Liberty Subgraph
+# Copy this file and update with your values
+
+# Subgraph Configuration
+subgraph:
+  name: "liquid-liberty"
+  network: "sepolia"  # Options: mainnet, sepolia, polygon, arbitrum, optimism
+  pair_address: "0x0000000000000000000000000000000000000000"  # Your Uniswap V2 pair address
+  start_block: 5820000  # Starting block for indexing
+
+# Network RPC URLs
+rpc_urls:
+  ethereum_mainnet: "https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
+  ethereum_sepolia: "https://sepolia.infura.io/v3/YOUR_PROJECT_ID"
+  polygon: "https://polygon-rpc.com"
+  arbitrum: "https://arb1.arbitrum.io/rpc"
+  optimism: "https://mainnet.optimism.io"
+
+# Local Development Settings
+local_development:
+  graph_node_url: "http://localhost:8020"
+  ipfs_url: "http://localhost:5001"
+  postgres:
+    host: "localhost"
+    port: 5432
+    user: "graph-node"
+    password: "let-me-in"
+    database: "graph-node"
+
+# Deployment Settings
+deployment:
+  studio_access_token: "YOUR_GRAPH_STUDIO_ACCESS_TOKEN"
+  hosted_service_access_token: "YOUR_HOSTED_SERVICE_ACCESS_TOKEN"
+  subgraph_name: "liquid-liberty"
