@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { fetchLMKTData, fetchLMKTCurrentStats } from '../utils/subgraph';
 import { LMKT_CONFIG } from '../config/lmkt-config';
 
-const LMKTChart = ({ pairAddress = "0x0000000000000000000000000000000000000000" }) => {
+const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
     const [chartData, setChartData] = useState([]);
     const [currentStats, setCurrentStats] = useState(null);
     const [loading, setLoading] = useState(true);

@@ -55,9 +55,7 @@ export const SUPPORTED_RESOLUTIONS = [
   const subscriberState = {};
   // Normalize timestamp to seconds (TradingView expects seconds)
   const normalizeTs = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
-  // Fixed pair address for sample (override incoming symbol's address)
-  const FIXED_PAIR_ADDRESS = '0x334f67528f54e9a3d604d0bf11859dfcf843a135';
-  
+
   export function GetDatafeedProvider(data, ws_pool) {
     return {
       onReady: (callback) => {
@@ -117,7 +115,7 @@ export const SUPPORTED_RESOLUTIONS = [
         onErrorCallback
       ) => {
         try {
-          const pairAddress = FIXED_PAIR_ADDRESS || symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
+          const pairAddress = SUBGRAPH_CONFIG.PAIR_ADDRESS|| symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
           const intervalParam = mapResolutionToSeconds(resolution);
   
           // TradingView Charting Library passes from/to in milliseconds
@@ -211,7 +209,7 @@ export const SUPPORTED_RESOLUTIONS = [
         subscriberUID,
         onResetCacheNeededCallback
       ) => {
-        const pairAddress = FIXED_PAIR_ADDRESS || symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
+        const pairAddress = SUBGRAPH_CONFIG.PAIR_ADDRESS || symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
         const intervalParam = mapResolutionToSeconds(resolution);
   
         const poll = async () => {
