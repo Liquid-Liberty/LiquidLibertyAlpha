@@ -2,7 +2,7 @@
 
 export const SUBGRAPH_CONFIG = {
   // TheGraph endpoint
-    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/version/latest",
+    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.2",
 
     // The Treasury contract being tracked
     PAIR_ADDRESS: "0xe758e36476376ccddf574144ab3e9a560d550de3",

@@ -77,6 +77,7 @@ export const TVChart = ({
         enabled_features: ["custom_resolutions"],
         overrides: {
           'mainSeriesProperties.statusViewStyle.showExchange': false,
+          'scalesProperties.showRightScale': true,
           volumePaneSize: 'small',
           keep_object_tree_widget_in_right_toolbar: true,
         },
