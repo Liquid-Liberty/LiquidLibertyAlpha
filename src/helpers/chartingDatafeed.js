@@ -1,5 +1,6 @@
 // Simplified chartingDatafeed for demo purposes
 // Based on the main project's chartingDatafeed.ts
+import { SUBGRAPH_CONFIG } from "../config/subgraph-config";
 
 // Resolutions user can pick in TradingView and how we convert to subgraph seconds
 export const SUPPORTED_RESOLUTIONS = [
@@ -13,11 +14,7 @@ export const SUPPORTED_RESOLUTIONS = [
     // Fallback to 5m
     return '300';
   };
-  
-  // Replace with your actual SUBGRAPH_URL
-  const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
 
-  
   // Mock websocket client for demo
   class MockSocketIOClient {
     constructor() {}
@@ -149,7 +146,7 @@ export const SUPPORTED_RESOLUTIONS = [
 
   
           const doFetch = async (q) => {
-            const res = await fetch(SUBGRAPH_URL, {
+            const res = await fetch(SUBGRAPH_CONFIG.URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query: q }),
@@ -235,7 +232,7 @@ export const SUPPORTED_RESOLUTIONS = [
               }
             }`;
   
-            const response = await fetch(SUBGRAPH_URL, {
+            const response = await fetch(SUBGRAPH_CONFIG.URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query }),

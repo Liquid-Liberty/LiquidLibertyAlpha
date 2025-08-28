@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
 import { LMKT_CONFIG } from '../config/lmkt-config';
-
-const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
+import { SUBGRAPH_CONFIG } from '../config/subgraph-config';
 
 const LMKTTvChart = ({
   pairAddress,
@@ -200,7 +199,7 @@ const LMKTTvChart = ({
         }
       }`;
 
-      const response = await fetch(SUBGRAPH_URL, {
+      const response = await fetch(SUBGRAPH_CONFIG.URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
@@ -227,7 +226,7 @@ const LMKTTvChart = ({
         if (candleSeriesRef.current && volumeSeriesRef.current) {
           candleSeriesRef.current.setData(candleData);
           volumeSeriesRef.current.setData(volumeData);
-          
+
           // Fit content to show all data
           if (priceChartRef.current && volumeChartRef.current) {
             priceChartRef.current.timeScale().fitContent();
