@@ -12,7 +12,8 @@ This directory contains utilities for integrating with the Liquid Liberty subgra
 
 The subgraph URL is configured in `subgraph.js`:
 ```javascript
-const SUBGRAPH_URL = 'https://cowboy.blocketize.io/subgraphs/name/liquid-liberty';
+const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
+
 ```
 
 **Important**: You need to update the `PAIR_ADDRESS` in `src/config/lmkt-config.js` with the actual LMKT pair address from your subgraph.

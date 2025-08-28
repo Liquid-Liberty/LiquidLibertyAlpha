@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createChart } from 'lightweight-charts';
 import { LMKT_CONFIG } from '../config/lmkt-config';
 
-const SUBGRAPH_URL = 'https://cowboy.blocketize.io/subgraphs/name/liquid-liberty';
+const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
 
 const LMKTTvChart = ({
   pairAddress,

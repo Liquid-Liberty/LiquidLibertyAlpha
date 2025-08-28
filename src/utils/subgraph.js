@@ -1,4 +1,4 @@
-const SUBGRAPH_URL = 'https://cowboy.blocketize.io/subgraphs/name/liquid-liberty';
+const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
 
 /**
  * Fetch data from the subgraph
