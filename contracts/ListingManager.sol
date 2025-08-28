@@ -60,7 +60,9 @@ contract ListingManager is Ownable, EIP712 {
         require(paymentToken.balanceOf(msg.sender) >= feeInUSD, "ListingManager: Insufficient token balance");
         require(paymentToken.allowance(msg.sender, address(this)) >= feeInUSD, "ListingManager: Insufficient token allowance");
         // Transfer the fee in payment token
-        paymentToken.transferFrom(msg.sender, address(treasury), feeInUSD);
+        paymentToken.transferFrom(msg.sender, address(this), feeInUSD);
+        paymentToken.approve(address(treasury), feeInUSD);
+        treasury.depositTreasury(address(paymentToken), feeInUSD);
         _listingCounter++;
         uint256 newListingId = _listingCounter;
         listings[newListingId] = Listing({

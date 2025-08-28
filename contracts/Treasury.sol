@@ -122,6 +122,16 @@ contract Treasury is Ownable, ReentrancyGuard {
         emit CommerceFeeReceived(token, amount);
     }
 
+// ADDED from last pull
+    function depositTreasury(address token, uint256 amount) external {
+        require(token == address(lmktToken) || isWhitelistedCollateral[token], "Treasury: Can only receive whitelisted tokens");
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        if (token == address(lmktToken)){
+            lmktToken.burn(amount);
+        }
+        emit CommerceFeeReceived(token, amount);
+    }
+
     // --- View Functions ---
     function getLmktAmountForCollateral(uint256 collateralAmount, address collateralToken) public view returns (uint256) {
         uint256 collateralValue = getCollateralTokenValue(collateralAmount, collateralToken);

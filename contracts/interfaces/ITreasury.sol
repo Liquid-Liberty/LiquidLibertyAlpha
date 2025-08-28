@@ -15,5 +15,7 @@ interface ITreasury {
      */
     function depositCommerceFee(address token, uint256 amount) external;
 
+    function depositTreasury(address token, uint256 amount) external;
+
     function getLMKTPrice() external view returns (uint256);
 }

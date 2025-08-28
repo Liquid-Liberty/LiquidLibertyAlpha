@@ -8,26 +8,6 @@ import { lmktConfig, paymentProcessorConfig, treasuryConfig } from '../contract-
 import { parseEther } from 'viem';
 
 const ListingDetailPage = ({ listings }) => {
-    const { id } = useParams();
-    // const { listings: blockchainListings, loading, error } = useListings();
-    const { address: userAddress, isConnected } = useAccount();
-    const { listings: blockchainListings, loading, error } = useListings();
-    const [isLoading, setIsLoading] = useState(false);
-    const [statusMessage, setStatusMessage] = useState('');
-    const { data: approveHash, writeContract: approve } = useWriteContract();
-    const { data: buyHash, writeContract: handleBuy } = useWriteContract();
-    const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
-    const { isSuccess: isBought, isError: isBuyError, error: buyError } = useWaitForTransactionReceipt({ hash: buyHash });
-    const [lmktPrice, setLmktPrice] = useState(100000000);
-    // const item_listings = blockchainListings.filter(l => l.listingType === 'item');
-    const listing = blockchainListings.find(l => l.id.toString() === id);
-    const [mainImage, setMainImage] = useState(`https://ipfs.io/ipfs/${listing.imageUrl}` || '');
-    if (!listing) {
-        return <div className="text-center py-20 font-display text-2xl">Listing not found.</div>;
-    }
-
-    const isService = listing.listingType === 'service';
-
     const { data: tokenPrice, refetch: refetchLMKTPrice } = useReadContract({
         address: treasuryConfig.address,
         abi: treasuryConfig.abi,
@@ -45,7 +25,6 @@ const ListingDetailPage = ({ listings }) => {
         e.preventDefault();
         setIsLoading(true);
         setStatusMessage('Waiting Approval ...');
-        console.log("aria listingPrice = ", listing.price)
         const approveAmount = (parseEther((listing.price * 1.1).toString()) * 100000000n) / BigInt(lmktPrice);
         approve({
             address: lmktConfig.address,
@@ -76,8 +55,30 @@ const ListingDetailPage = ({ listings }) => {
             setIsLoading(false);
             setStatusMessage('');
             alert("Purchase successful!");
+            setTimeout(() => {
+                refreshData();
+            }, 2000);
         }
-    }, [isBought]);
+    }, [isBought, refreshData]);
+    const { id } = useParams();
+    // const { listings: blockchainListings, loading, error } = useListings();
+    const { address: userAddress, isConnected } = useAccount();
+    const { listings: blockchainListings, loading, error, refreshData } = useListings();
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const { data: approveHash, writeContract: approve } = useWriteContract();
+    const { data: buyHash, writeContract: handleBuy } = useWriteContract();
+    const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
+    const { isSuccess: isBought, isError: isBuyError, error: buyError } = useWaitForTransactionReceipt({ hash: buyHash });
+    const [lmktPrice, setLmktPrice] = useState(100000000);
+    // const item_listings = blockchainListings.filter(l => l.listingType === 'item');
+    const listing = blockchainListings.find(l => l.id.toString() === id);
+    const [mainImage, setMainImage] = useState(`https://ipfs.io/ipfs/${listing.imageUrl}` || '');
+    if (!listing) {
+        return <div className="text-center py-20 font-display text-2xl">Listing not found.</div>;
+    }
+
+    const isService = listing.listingType === 'service';
 
     return (
         <div className="container mx-auto px-6 py-12">

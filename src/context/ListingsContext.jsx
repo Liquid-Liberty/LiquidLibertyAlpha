@@ -104,7 +104,7 @@ export const ListingsProvider = ({ children }) => {
 
       // Try to fetch listings sequentially until we find an invalid one
       // We'll limit this to a reasonable number to avoid infinite loops
-      const maxAttempts = 10;
+      const maxAttempts = 50;
 
       for (let i = 1; i <= maxAttempts; i++) {
         try {
@@ -279,7 +279,7 @@ export const ListingsProvider = ({ children }) => {
       const allEscrows = [];
 
       // Get all PurchaseMade events to find escrows
-      const fromBlock = 9068400n;
+      const fromBlock = 9072344n;
       const toBlock = 'latest';
 
       try {
@@ -299,7 +299,7 @@ export const ListingsProvider = ({ children }) => {
               topics: log.topics,
             });
 
-            const { listingId, buyer, totalAmount } = decodedLog.args;
+            const { listingId, totalAmount } = decodedLog.args;
 
             // Get the escrow details
             const escrow = await publicClient.readContract({
@@ -308,17 +308,17 @@ export const ListingsProvider = ({ children }) => {
               functionName: 'escrows',
               args: [listingId],
             });
-            console.log(`Escrow for listing ${listingId}:`, escrow);
+            console.log(`Escrow for listing ${listingId}:`, escrow, address);
 
-            if (escrow.buyer !== '0x0000000000000000000000000000000000000000') {
-              allEscrows.push({
-                listingId: Number(listingId),
-                buyer: escrow[0],
-                seller: escrow[1],
-                totalAmount: Number(escrow[2]),
-                fundsReleased: escrow[3],
-                purchaseAmount: Number(totalAmount),
-              });
+            if (escrow[0] !== '0x0000000000000000000000000000000000000000' && escrow[0] == address) {
+                allEscrows.push({
+                  listingId: Number(listingId),
+                  buyer: escrow[0],
+                  seller: escrow[1],
+                  totalAmount: Number(escrow[2]),
+                  fundsReleased: escrow[3],
+                  purchaseAmount: Number(totalAmount),
+                });
             }
           } catch (error) {
             console.log(`Error processing escrow for listing ${log.args?.listingId}:`, error.message);
@@ -345,6 +345,10 @@ export const ListingsProvider = ({ children }) => {
   const refreshData = () => {
     fetchAllData();
   };
+
+  useEffect(() => {
+    refreshData()
+  }, [])
 
   // Get listings by type
   const getListingsByType = (type) => {

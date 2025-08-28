@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useListings } from '../context/ListingsContext';
 import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { listingManagerConfig, lmktConfig, paymentProcessorConfig } from '../contract-config';
 import { formatEther, parseEther } from 'viem';
+import { formatUnits } from 'ethers';
 
-const ListingRow = ({ listing, escrow }) => {
+const ListingRow = ({ listing, escrow, onRefetch }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
     const { isSuccess: isDelete, isError: isDeleteError, error: deleteError } = useWaitForTransactionReceipt({ hash: deleteHash });
@@ -12,6 +13,34 @@ const ListingRow = ({ listing, escrow }) => {
     const { isSuccess: isReleased, isError: isReleaseError, error: releaseError } = useWaitForTransactionReceipt({ hash: releaseHash });
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
+
+    useEffect(() => {
+        if(isReleased){
+            alert("Fund Released!")
+            // Reset loading state
+            setIsLoading(false);
+            setStatusMessage('');
+            // Refetch data after successful release with a small delay
+            if (onRefetch) {
+                setTimeout(() => {
+                    onRefetch();
+                }, 2000); // Wait 2 seconds for blockchain confirmation
+            }
+        }
+        if(isDelete){
+            alert("Sale Deleted")
+            // Reset loading state
+            setIsLoading(false);
+            setStatusMessage('');
+            // Refetch data after successful deletion with a small delay
+            if (onRefetch) {
+                setTimeout(() => {
+                    onRefetch();
+                }, 2000); // Wait 2 seconds for blockchain confirmation
+            }
+        }
+    }, [isDelete, isReleased, onRefetch])
+    
 
     const handleDelete = async (e) => {
         e.preventDefault();
@@ -126,7 +155,7 @@ const ListingRow = ({ listing, escrow }) => {
                     <div className="text-sm text-zinc-700 mt-3 space-y-1">
                         <p><strong>Date:</strong> {new Date(listing.createdAt || listing.uploadedAt || Date.now()).toLocaleDateString()}</p>
                         {escrow && <p><strong>Buyer:</strong> <code className="text-xs">{escrow.buyer}</code></p>}
-                        {escrow && <p><strong>Escrow Amount:</strong> <code className="text-xs">{formatEther(escrow.totalAmount)}</code></p>}
+                        {escrow && <p><strong>Escrow Amount:</strong> <code className="text-xs">{Number(formatUnits(BigInt(escrow.totalAmount), 18)).toFixed(3)} LMKT</code></p>}
                         <p><strong>Listing ID:</strong> {listing.id}</p>
                         <p><strong>Category:</strong> {listing.category || 'Uncategorized'}</p>
                         <p><strong>Delivery Method:</strong> {listing.deliveryMethod || 'Pickup'}</p>
@@ -141,9 +170,41 @@ const ListingRow = ({ listing, escrow }) => {
     );
 };
 
-const EscrowRow = ({ escrow, listing }) => {
+const EscrowRow = ({ escrow, listing, onRefetch }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
+    const { isSuccess: isDelete, isError: isDeleteError, error: deleteError } = useWaitForTransactionReceipt({ hash: deleteHash });
+    const { data: releaseHash, writeContract: handleReleaseAction } = useWriteContract();
+    const { isSuccess: isReleased, isError: isReleaseError, error: releaseError } = useWaitForTransactionReceipt({ hash: releaseHash });
+    const [isLoading, setIsLoading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
 
+    useEffect(() => {
+        if(isReleased){
+            alert("Fund Released!")
+            // Reset loading state
+            setIsLoading(false);
+            setStatusMessage('');
+            // Refetch data after successful release with a small delay
+            if (onRefetch) {
+                setTimeout(() => {
+                    onRefetch();
+                }, 2000); // Wait 2 seconds for blockchain confirmation
+            }
+        }
+        if(isDelete){
+            alert("Sale Deleted")
+            // Reset loading state
+            setIsLoading(false);
+            setStatusMessage('');
+            // Refetch data after successful deletion with a small delay
+            if (onRefetch) {
+                setTimeout(() => {
+                    onRefetch();
+                }, 2000); // Wait 2 seconds for blockchain confirmation
+            }
+        }
+    }, [isDelete, isReleased, onRefetch])
     // Get the main image URL for the listing
     const getMainImageUrl = () => {
         if (listing?.mainImage?.gatewayUrl) {
@@ -157,6 +218,31 @@ const EscrowRow = ({ escrow, listing }) => {
         }
         return 'https://via.placeholder.com/48x48?text=No+Image';
     };
+
+    const handleDelete = async (e) => {
+        e.preventDefault();
+        console.log("handleDelete called for listing:", listing.id);
+        setIsLoading(true);
+        setStatusMessage('Waiting Approval ...');
+        handleDeleteAction({
+            address: listingManagerConfig.address,
+            abi: listingManagerConfig.abi,
+            functionName: 'deleteListing',
+            args: [listing.id],
+        });
+    };
+
+    const handleRelease = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setStatusMessage('Releasing funds...');
+        handleReleaseAction({
+            address: paymentProcessorConfig.address,
+            abi: paymentProcessorConfig.abi,
+            functionName: 'releaseFunds',
+            args: [escrow.listingId],
+        });
+    }
 
     return (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -172,7 +258,7 @@ const EscrowRow = ({ escrow, listing }) => {
                     />
                     <div className="min-w-0">
                         <p className="font-bold text-zinc-800 truncate">{listing?.title || `Escrow #${escrow.listingId}`}</p>
-                        <p className="text-sm text-zinc-600">{formatEther(escrow.totalAmount)}</p>
+                        <p className="text-sm text-zinc-600">{Number(formatUnits(BigInt(escrow.totalAmount), 18)).toFixed(3)} LMKT</p>
                     </div>
                 </div>
                 <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
@@ -186,14 +272,14 @@ const EscrowRow = ({ escrow, listing }) => {
                         <p><strong>Listing ID:</strong> {escrow.listingId}</p>
                         <p><strong>Buyer:</strong> <code className="text-xs">{escrow.buyer}</code></p>
                         <p><strong>Seller:</strong> <code className="text-xs">{escrow.seller}</code></p>
-                        <p><strong>Total Amount:</strong> {formatEther(escrow.totalAmount)}</p>
+                        <p><strong>Total Amount:</strong> {Number(formatUnits(BigInt(escrow.totalAmount), 18)).toFixed(3)} LMKT</p>
                         <p><strong>Funds Released:</strong> {escrow.fundsReleased ? 'Yes' : 'No'}</p>
                     </div>
                     <div className="flex items-center space-x-2 mt-4">
                         {!escrow.fundsReleased && (
                             <>
-                                <button className="text-xs bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600">Release Funds</button>
-                                <button className="text-xs bg-orange-500 text-white px-3 py-1 rounded-md hover:bg-orange-600">Start Dispute</button>
+                                <button className="text-xs bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600" onClick={handleRelease}>Release Funds</button>
+                                <button className="text-xs bg-orange-500 text-white px-3 py-1 rounded-md hover:bg-orange-600" onClick={handleDelete}>Start Dispute</button>
                             </>
                         )}
                     </div>
@@ -204,7 +290,7 @@ const EscrowRow = ({ escrow, listing }) => {
 };
 
 const MyListings = () => {
-    const { listings, escrows, loading, error, getUserListings, getUserEscrows } = useListings();
+    const { listings, escrows, loading, error, getUserListings, getUserEscrows, refreshData } = useListings();
     const { address, isConnected } = useAccount();
 
     if (!isConnected) {
@@ -235,8 +321,6 @@ const MyListings = () => {
     // Get user's listings and escrows
     const userListings = getUserListings(address);
     const userEscrows = getUserEscrows(address);
-    console.log("aria userListings = ", userListings)
-    console.log("aria userEscrows = ", userEscrows)
 
     // Separate listings by status
     const activeListings = userListings.filter(l => {
@@ -282,7 +366,7 @@ const MyListings = () => {
                         <div className="space-y-3">
                             {section.listings.map(listing => {
                                 const escrow = escrows.find(e => e.listingId === listing.id);
-                                return <ListingRow key={listing.id} listing={listing} escrow={escrow} />;
+                                return <ListingRow key={listing.id} listing={listing} escrow={escrow} onRefetch={refreshData} />;
                             })}
                         </div>
                     </div>
@@ -297,7 +381,7 @@ const MyListings = () => {
                         <div className="space-y-3">
                             {section.escrows.map(escrow => {
                                 const listing = listings.find(l => l.id === escrow.listingId);
-                                return <EscrowRow key={`escrow-${escrow.listingId}`} escrow={escrow} listing={listing} />;
+                                return <EscrowRow key={`escrow-${escrow.listingId}`} escrow={escrow} listing={listing} onRefetch={refreshData} />;
                             })}
                         </div>
                     </div>
