@@ -6,6 +6,7 @@ import { listingManagerConfig, lmktConfig, treasuryConfig } from '../contract-co
 import { forSaleCategories, serviceCategories } from '../data/categories';
 import { filesToBase64Array, validateImageFiles, compressImage } from '../utils/imageUtils';
 
+
 const CreateListingPage = ({ addListing, listings }) => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -142,7 +143,7 @@ const CreateListingPage = ({ addListing, listings }) => {
             }
 
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
-            const feeInToken = parseEther(price);
+            const feeInToken = parseEther(listingType === 'item' ? '5' : '20');  //Check feeInToken implementation
             const deadline = Math.floor(Date.now() / 1000) + 3600;
 
             const signatureRequestData = {
@@ -188,7 +189,7 @@ const CreateListingPage = ({ addListing, listings }) => {
             setStatusMessage('Approved! Please confirm the final listing transaction...');
 
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
-            const feeInToken = parseEther(price);
+            const feeInToken = parseEther(listingType === 'item' ? '5' : '20'); //Confirm feeInToken implementation
             const deadline = Math.floor(Date.now() / 1000) + 3600;
             const dataIdentifier = ipfsHashRef.current ? `ipfs://${ipfsHashRef.current}` : "ipfs://placeholder-for-uploaded-photos";
 
@@ -332,7 +333,9 @@ const CreateListingPage = ({ addListing, listings }) => {
                             {isLoading ? 'Processing...' : (isEditing ? 'Save Changes' : 'Pay & Create Listing')}
                         </button>
                         <p className="text-sm text-zinc-600 mt-3">
-                            {isEditing ? 'No fee is required to edit a listing.' : 'A fee of ~$5 (paid in whitelisted tokens) is required to create a listing.'}
+                            {isEditing
+                                ? "No fee is required to edit a listing."
+                                : `A fee of ~$${listingType === "item" ? "5" : "20"} (paid in whitelisted tokens) is required to create a listing.`}
                         </p>
                         {statusMessage && <p className="text-md text-zinc-600 mt-4 animate-pulse">{statusMessage}</p>}
                     </div>
