@@ -10,6 +10,7 @@ import { useListings } from '../context/ListingsContext';
 import ListingsDebug from '../components/ListingsDebug';
 import TradingViewChart from '../components/TradingViewChart';
 import { TVChart } from '../components/TVChart';
+import LMKTChart from '../components/LMKTChart';
 
 // Only LMKT token is needed for the chart
 const LMKT_TOKEN = {
@@ -505,7 +506,6 @@ const DashboardPage = ({ listings, userAddress }) => {
 
                 <AccordionSection title="Portfolio & System Health">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                        {/* <LMKTTvChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} /> */}
                         <div>
                             <div className="h-[500px] rounded-lg overflow-hidden relative">
                                 <TradingViewChart symbol='KRAKEN:DAIUSD' />
@@ -513,13 +513,15 @@ const DashboardPage = ({ listings, userAddress }) => {
                         </div>
                         <div>
                             <div className="h-[500px] rounded-lg overflow-hidden relative">
-                                <TVChart
+                        <LMKTTvChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} />
+                        {/* <LMKTChart pairAddress={LMKT_CONFIG.PAIR_ADDRESS} refreshKey={chartRefreshKey} /> */}
+                                {/* <TVChart
                                     widget={widget}
                                     setWidget={setWidget}
                                     data={mockPoolData}
                                     interval={interval}
                                     onLoaded={() => console.log('Chart loaded successfully!')}
-                                />
+                                /> */}
                             </div>
                         </div>
                     </div>

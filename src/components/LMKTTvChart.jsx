@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createChart } from 'lightweight-charts';
-import { LMKT_CONFIG } from '../config/lmkt-config';
-import { SUBGRAPH_CONFIG } from '../config/subgraph-config';
+import React, { useEffect, useRef, useState } from "react";
+import { createChart } from "lightweight-charts";
+import { LMKT_CONFIG } from "../config/lmkt-config";
+import { SUBGRAPH_CONFIG } from "../config/subgraph-config";
 
 const LMKTTvChart = ({
-  pairAddress,
+  pairAddress = LMKT_CONFIG.PAIR_ADDRESS,
   defaultInterval = LMKT_CONFIG.DEFAULT_INTERVAL,
   intervals = LMKT_CONFIG.INTERVALS,
   height = 500,
@@ -34,40 +34,106 @@ const LMKTTvChart = ({
     const priceHeight = Math.round(height * 0.7);
     const volumeHeight = height - priceHeight;
 
+    // --- Price chart ---
     const priceChart = createChart(priceContainerRef.current, {
       width: priceContainerRef.current.clientWidth,
       height: priceHeight,
-      layout: { background: { type: 'Solid', color: '#ffffff' }, textColor: '#374151' },
-      rightPriceScale: { borderColor: '#e5e7eb', visible: true },
-      leftPriceScale: { visible: false },
-      timeScale: { borderColor: '#e5e7eb', visible: false },
-      grid: { vertLines: { color: '#f3f4f6' }, horzLines: { color: '#f3f4f6' } },
+      layout: {
+        background: { type: "Solid", color: "#0f0f0f" },
+        textColor: "#d1d5db",
+      },
+      rightPriceScale: {
+        borderColor: "#1A1A1A",
+        visible: true,
+        scaleMargins: { top: 0.2, bottom: 0.2 },
+      },
+      timeScale: {
+        borderColor: "#1A1A1A",
+        visible: true,
+        timeVisible: false,
+        secondsVisible: false,
+        tickMarkFormatter: (time, tickMarkType, locale) => {
+          return new Date(time * 1000).toLocaleTimeString(locale, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        },
+      },
+      grid: {
+        vertLines: { color: "#1A1A1A" },
+        horzLines: { color: "#1A1A1A" },
+      },
       crosshair: { mode: 1 },
     });
 
+    // ✅ Force more labels on Y-axis
+    priceChart.priceScale("right").applyOptions({
+      scaleMargins: { top: 0.05, bottom: 0.05 },
+      mode: 0, // normal (not % or log)
+      autoScale: true,
+      alignLabels: true,
+      borderVisible: true,
+    });
+
+    // ✅ Force more labels on X-axis
+    priceChart.timeScale().applyOptions({
+      minBarSpacing: 1, // lower spacing = more labels
+      fixLeftEdge: false,
+      fixRightEdge: false,
+      tickMarkSpacing: 30, // tighter spacing = more ticks
+    });
+
+    priceChart.applyOptions({
+      layout: {
+        fontSize: 14, // ⬅️ make axis numbers larger
+        fontFamily: "Inter, sans-serif",
+      },
+    });
+
+    // --- Volume chart ---
     const volumeChart = createChart(volumeContainerRef.current, {
       width: volumeContainerRef.current.clientWidth,
       height: volumeHeight,
-      layout: { background: { type: 'Solid', color: '#ffffff' }, textColor: '#374151' },
-      rightPriceScale: { borderColor: '#e5e7eb', visible: true },
-      leftPriceScale: { visible: false },
-      timeScale: { borderColor: '#e5e7eb', visible: true },
-      grid: { vertLines: { color: '#f3f4f6' }, horzLines: { color: '#f3f4f6' } },
+      layout: {
+        background: { type: "Solid", color: "#0f0f0f" },
+        textColor: "#d1d5db",
+      },
+      rightPriceScale: {
+        borderColor: "#1A1A1A",
+        visible: true,
+        scaleMargins: { top: 0.05, bottom: 0 },
+      },
+      timeScale: {
+        borderColor: "#1A1A1A",
+        visible: true,
+        timeVisible: true,
+      },
+      grid: {
+        vertLines: { color: "#1A1A1A" },
+        horzLines: { color: "#1A1A1A" },
+      },
+    });
+
+    volumeChart.applyOptions({
+      layout: {
+        fontSize: 14, // ⬅️ larger tick labels
+        fontFamily: "Inter, sans-serif",
+      },
     });
 
     const candleSeries = priceChart.addCandlestickSeries({
-      upColor: '#10b981',
-      borderUpColor: '#10b981',
-      wickUpColor: '#10b981',
-      downColor: '#ef5350',
-      borderDownColor: '#ef5350',
-      wickDownColor: '#ef5350',
-      priceFormat: { type: 'price', precision: 4, minMove: 0.0001 },
+      upColor: "#089981", // green
+      borderUpColor: "#089981",
+      wickUpColor: "#089981",
+      downColor: "#d4404a", // red
+      borderDownColor: "#d4404a",
+      wickDownColor: "#d4404a",
+      priceFormat: { type: "price", precision: 4, minMove: 0.00001 },
     });
 
     const volumeSeries = volumeChart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'right',
+      priceFormat: { type: "volume" },
+      priceScaleId: "right",
       scaleMargins: { top: 0.1, bottom: 0 },
     });
 
@@ -76,39 +142,7 @@ const LMKTTvChart = ({
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
 
-    // Hide TradingView brand links in both panes
-    const hideLogo = (el) => {
-      if (!el) return () => {};
-      const hide = () => el.querySelectorAll('a').forEach((a) => (a.style.display = 'none'));
-      hide();
-      const observer = new MutationObserver(hide);
-      observer.observe(el, { childList: true, subtree: true });
-      return () => observer.disconnect();
-    };
-    const disconnectPriceLogo = hideLogo(priceContainerRef.current);
-    const disconnectVolumeLogo = hideLogo(volumeContainerRef.current);
-
-    // Sync visible range between charts
-    let isSyncing = false;
-    const syncFromPrice = () => {
-      if (isSyncing) return;
-      isSyncing = true;
-      const range = priceChart.timeScale().getVisibleLogicalRange();
-      if (range) volumeChart.timeScale().setVisibleLogicalRange(range);
-      isSyncing = false;
-    };
-    const syncFromVolume = () => {
-      if (isSyncing) return;
-      isSyncing = true;
-      const range = volumeChart.timeScale().getVisibleLogicalRange();
-      if (range) priceChart.timeScale().setVisibleLogicalRange(range);
-      isSyncing = false;
-    };
-
-    priceChart.timeScale().subscribeVisibleLogicalRangeChange(syncFromPrice);
-    volumeChart.timeScale().subscribeVisibleLogicalRangeChange(syncFromVolume);
-
-    // Handle window resize
+    // --- Resize ---
     const handleResize = () => {
       if (priceContainerRef.current && volumeContainerRef.current) {
         const containerWidth = priceContainerRef.current.clientWidth;
@@ -116,68 +150,40 @@ const LMKTTvChart = ({
         volumeChart.applyOptions({ width: containerWidth });
       }
     };
+    window.addEventListener("resize", handleResize);
 
-    window.addEventListener('resize', handleResize);
+    if (pairAddress) fetchCandles();
 
-    // Initial data fetch
-    if (pairAddress) {
-      fetchCandles();
-    }
-
-    // Cleanup function
     return () => {
-      window.removeEventListener('resize', handleResize);
-      disconnectPriceLogo();
-      disconnectVolumeLogo();
-      if (priceChart) {
-        priceChart.remove();
-        priceChartRef.current = null;
-      }
-      if (volumeChart) {
-        volumeChart.remove();
-        volumeChartRef.current = null;
-      }
+      window.removeEventListener("resize", handleResize);
+      if (priceChart) priceChart.remove();
+      if (volumeChart) volumeChart.remove();
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [pairAddress, height]); // Only recreate charts when pairAddress or height changes
+  }, [pairAddress, height]);
 
   useEffect(() => {
-    if (!pairAddress || !priceChartRef.current || !volumeChartRef.current) return;
+    if (!pairAddress || !priceChartRef.current || !volumeChartRef.current)
+      return;
     fetchCandles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pairAddress, interval]);
 
-  // Refresh when external signal changes (e.g., buy/sell success)
   useEffect(() => {
     if (!pairAddress) return;
     fetchCandles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
-  // Periodic auto-refresh aligned to candle boundary
-  useEffect(() => {
-    if (!pairAddress) return;
-    const seconds = parseInt(interval, 10) || 60;
-    const now = Math.floor(Date.now() / 1000);
-    const secsToBoundary = seconds - (now % seconds);
-    let intervalId;
-    const timeoutId = setTimeout(() => {
-      fetchCandles();
-      intervalId = setInterval(() => {
-        fetchCandles();
-      }, seconds * 1000);
-    }, secsToBoundary * 1000);
-    return () => {
-      clearTimeout(timeoutId);
-      if (intervalId) clearInterval(intervalId);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pairAddress, interval]);
-
-  // Fetch candles data
   const fetchCandles = async () => {
-    if (isFetchingRef.current || !pairAddress || !candleSeriesRef.current || !volumeSeriesRef.current) return;
+    if (
+      isFetchingRef.current ||
+      !pairAddress ||
+      !candleSeriesRef.current ||
+      !volumeSeriesRef.current
+    )
+      return;
     isFetchingRef.current = true;
     setLoading(true);
     try {
@@ -186,7 +192,10 @@ const LMKTTvChart = ({
           first: 100,
           orderBy: bucketStart,
           orderDirection: asc,
-          where: {pair: "${pairAddress}", interval: "${interval}"}
+          where: {
+            pair: "${pairAddress.toLowerCase()}",
+            interval: "${interval}"
+          }
         ) {
           bucketStart
           open
@@ -194,14 +203,12 @@ const LMKTTvChart = ({
           low
           close
           volumeToken0
-          volumeToken1
-          trades
         }
       }`;
 
       const response = await fetch(SUBGRAPH_CONFIG.URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
 
@@ -209,95 +216,70 @@ const LMKTTvChart = ({
 
       if (data?.candles && data.candles.length > 0) {
         const candleData = data.candles.map((candle) => ({
-          time: parseInt(candle.bucketStart),
+          time: parseInt(candle.bucketStart), // keep as seconds, DO NOT * 1000
           open: parseFloat(candle.open),
           high: parseFloat(candle.high),
           low: parseFloat(candle.low),
           close: parseFloat(candle.close),
-        }));
-
+        })).filter((c) => c.high !== c.low);
         const volumeData = data.candles.map((candle) => ({
           time: parseInt(candle.bucketStart),
           value: parseFloat(candle.volumeToken0),
-          color: parseFloat(candle.close) >= parseFloat(candle.open) ? '#26a69a' : '#ef5350',
+          color:
+            parseFloat(candle.close) >= parseFloat(candle.open)
+              ? "#26a69a"
+              : "#ef5350",
         }));
 
-        // Only update if charts are still valid
-        if (candleSeriesRef.current && volumeSeriesRef.current) {
-          candleSeriesRef.current.setData(candleData);
-          volumeSeriesRef.current.setData(volumeData);
+        candleSeriesRef.current.setData(candleData);
+        volumeSeriesRef.current.setData(volumeData);
 
-          // Fit content to show all data
-          if (priceChartRef.current && volumeChartRef.current) {
-            priceChartRef.current.timeScale().fitContent();
-            volumeChartRef.current.timeScale().fitContent();
-          }
-        }
+        priceChartRef.current.timeScale().fitContent();
+        volumeChartRef.current.timeScale().fitContent();
       }
     } catch (error) {
-      console.error('Error fetching candles:', error);
+      console.error("Error fetching candles:", error);
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
     }
   };
 
-  // Handle interval change
-  const handleIntervalChange = (newInterval) => {
-    if (newInterval !== interval) {
-      setInterval(newInterval);
-      // Clear any existing data to prevent display issues
-      if (candleSeriesRef.current && volumeSeriesRef.current) {
-        candleSeriesRef.current.setData([]);
-        volumeSeriesRef.current.setData([]);
-      }
-    }
-  };
-
-  // Manual refresh function
-  const handleRefresh = () => {
-    if (candleSeriesRef.current && volumeSeriesRef.current) {
-      fetchCandles();
-    }
-  };
-
   return (
-    <div className="bg-white p-4 rounded-lg shadow-lg">
+    <div className="bg-stone-900 p-4 rounded-lg shadow-lg">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <h3 className="text-lg font-bold text-zinc-800">LMKT Price Chart</h3>
+        <h3 className="text-lg font-bold text-gray-100">LMKT Price Chart</h3>
         <div className="flex items-center gap-2">
-          {/* Interval Selection */}
-          <div className="flex bg-stone-100 rounded-lg p-1">
+          <div className="flex bg-stone-800 rounded-lg p-1">
             {intervals.map((int) => (
               <button
                 key={int}
-                onClick={() => handleIntervalChange(int)}
+                onClick={() => setInterval(int)}
                 className={`px-3 py-1 text-sm rounded-md transition-colors ${
                   interval === int
-                    ? 'bg-teal-600 text-white shadow'
-                    : 'text-zinc-600 hover:bg-stone-200'
+                    ? "bg-teal-600 text-white shadow"
+                    : "text-gray-300 hover:bg-stone-700"
                 }`}
               >
                 {formatIntervalLabel(int)}
               </button>
             ))}
           </div>
-          
-          {/* Refresh Button */}
           <button
-            onClick={handleRefresh}
+            onClick={() => fetchCandles()}
             disabled={loading}
             className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {loading ? '🔄' : '↻'}
+            {loading ? "🔄" : "↻"}
           </button>
         </div>
       </div>
-
-      {/* Chart Container */}
       <div style={{ height }} className="w-full rounded-lg overflow-hidden">
-        <div ref={priceContainerRef} style={{ height: '70%', width: '99.8%' }} />
-        <div ref={volumeContainerRef} style={{ height: '30%', width: '100%' }} />
+        <div ref={priceContainerRef} style={{ height: "70%", width: "100%" }} />
+        <div
+          ref={volumeContainerRef}
+          style={{ height: "30%", width: "100%" }}
+        />
       </div>
     </div>
   );
