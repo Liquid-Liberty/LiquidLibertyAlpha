@@ -1,12 +1,17 @@
 import { Address, BigDecimal, BigInt, ethereum } from "@graphprotocol/graph-ts";
 import { MKTSwap } from "../generated/Treasury/Treasury";
 import { ERC20 } from "../generated/Treasury/ERC20";
-import { Candle, Pair, Token } from "../generated/schema";
 import { bucketStart, bigDecimalMax, bigDecimalMin, toDecimal, ZERO_BD } from "./utils";
+import {
+  CollateralWhitelisted as CollateralWhitelistedEvent,
+  CommerceFeeReceived as CommerceFeeReceivedEvent
+} from "../generated/Treasury/Treasury";
+
+import { CollateralWhitelist, CommerceFee, Candle, Pair, Token } from "../generated/schema";
 
 // Extended intervals
 const INTERVALS: i32[] = [60, 300, 900, 3600, 14400, 86400]; // 1m, 5m, 15m, 1h, 4h, 1d
-const LMKT_ADDRESS = Address.fromString("0xc0Bb618F4d885E0c4aAB287a427B2612d64Daa1B");
+const LMKT_ADDRESS = Address.fromString("0x780575B902c78E299AA6A5EEEf9eA0C7d8a01fF3");
 
 function getOrCreateToken(addr: Address): Token {
   let id = addr.toHexString();
@@ -15,7 +20,7 @@ function getOrCreateToken(addr: Address): Token {
     token = new Token(id);
     let t = ERC20.bind(addr);
     let dec = t.try_decimals();
-    token.decimals = dec.reverted ? 18 : dec.value;
+    token.decimals = dec.reverted ? 18 : dec.value.toI32();
     let sym = t.try_symbol();
     token.symbol = sym.reverted ? null : sym.value;
     let name = t.try_name();
@@ -209,4 +214,32 @@ const pair = getOrCreatePair(
     
     updateCandle(pair, interval, bucket, price, collateralAmount, lmktAmount);
   }
+}
+
+// Handle CollateralWhitelisted updates
+export function handleCollateralWhitelisted(event: CollateralWhitelistedEvent): void {
+  let id = event.params.token.toHexString();
+  let entry = CollateralWhitelist.load(id);
+
+  if (entry == null) {
+    entry = new CollateralWhitelist(id);
+    entry.token = event.params.token;
+  }
+
+  entry.isWhitelisted = event.params.isWhitelisted;
+  entry.updatedAt = event.block.timestamp;
+  entry.save();
+}
+
+// Handle CommerceFeeReceived
+export function handleCommerceFeeReceived(event: CommerceFeeReceivedEvent): void {
+  let id = event.transaction.hash.toHex() + "-" + event.logIndex.toString();
+  let fee = new CommerceFee(id);
+
+  fee.token = event.params.token;
+  fee.amount = toDecimal(event.params.amount, 18); // assumes 18 decimals
+  fee.blockNumber = event.block.number;
+  fee.timestamp = event.block.timestamp;
+  fee.txHash = event.transaction.hash;
+  fee.save();
 }

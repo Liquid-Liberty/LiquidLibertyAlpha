@@ -32,18 +32,10 @@ module.exports = {
     //   },
     // },
     sepolia: {
-      url: "https://ethereum-sepolia-rpc.publicnode.com",
-      accounts: process.env.SIGNER_PRIVATE_KEY ? [process.env.SIGNER_PRIVATE_KEY] : [],
-      chainId: 11155111,
-      verify: {
-        etherscan: {
-          apiUrl: "https://ethereum-sepolia-rpc.publicnode.com",
-          apiKey: process.env.SEPOLIA_API_KEY || "",
-        },
-      },
-      gas: 2100000,
-      gasPrice: 800000000,
-    },
+  url: process.env.SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com",
+  accounts: process.env.SIGNER_PRIVATE_KEY ? [process.env.SIGNER_PRIVATE_KEY] : [],
+  chainId: 11155111,
+},
   },
   etherscan: {
     apiKey: {

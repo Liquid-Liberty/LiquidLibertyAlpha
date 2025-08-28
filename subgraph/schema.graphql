@@ -1,13 +1,13 @@
 # Entities
 
-type Token @entity {
+type Token @entity(immutable: false) {
   id: ID!
   symbol: String
   name: String
   decimals: Int!
 }
 
-type Pair @entity {
+type Pair @entity(immutable: false) {
   id: ID!
   token0: Token!
   token1: Token!
@@ -17,7 +17,7 @@ type Pair @entity {
 # OHLCV candle entity per interval & pair
 # id format: `${pair}-${interval}-${bucketStart}`
 
-type Candle @entity {
+type Candle @entity(immutable: false) {
   id: ID!
   pair: Pair!
   interval: String!
@@ -31,4 +31,20 @@ type Candle @entity {
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
   trades: Int!
+}
+
+type CollateralWhitelist @entity(immutable: false) {
+  id: ID!
+  token: Bytes!
+  isWhitelisted: Boolean!
+  updatedAt: BigInt!
+}
+
+type CommerceFee @entity(immutable: false) {
+  id: ID!
+  token: Bytes!
+  amount: BigDecimal!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
 }

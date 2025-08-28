@@ -6,17 +6,16 @@ dataSources:
     name: Treasury
     network: sepolia
     source:
-      address: "0xe758e36476376ccddf574144ab3e9a560d550de3"        # e.g. 0xYourSepoliaV2Pair
+      address: "0xfA3988fE86CDC9d167b438eB590F1f4fd51b44B4"
       abi: Treasury
-      startBlock: 9072300        # e.g. 5820000
+      startBlock: 9082418
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - Token
-        - Pair
-        - Candle
+        - Deposit
+        - Withdrawal
       abis:
         - name: Treasury
           file: ./abis/Treasury.json
@@ -25,4 +24,8 @@ dataSources:
       eventHandlers:
         - event: MKTSwap(indexed address,indexed address,uint256,uint256,uint256,uint256,bool)
           handler: handleSwap
+        - event: CollateralWhitelisted(indexed address,bool)
+          handler: handleCollateralWhitelisted
+        - event: CommerceFeeReceived(indexed address,uint256)
+          handler: handleCommerceFeeReceived
       file: ./src/mapping.ts
