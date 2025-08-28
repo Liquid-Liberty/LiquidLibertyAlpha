@@ -1,14 +1,8 @@
-const SUBGRAPH_URL = import.meta.env.VITE_SUBGRAPH_URL || 'https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.1';
+import { SUBGRAPH_CONFIG } from '../config/subgraph-config';
 
-/**
- * Fetch data from the subgraph
- * @param {string} query - GraphQL query string
- * @param {Object} variables - GraphQL variables (optional)
- * @returns {Promise<Object>} - Query result
- */
 export const fetchFromSubgraph = async (query, variables = {}) => {
     try {
-        const response = await fetch(SUBGRAPH_URL, {
+        const response = await fetch(SUBGRAPH_CONFIG.URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

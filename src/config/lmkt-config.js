@@ -1,7 +1,9 @@
 // LMKT Configuration
+import { SUBGRAPH_CONFIG } from './subgraph-config';
+
 export const LMKT_CONFIG = {
     // Update this with your actual LMKT pair address from the subgraph
-    PAIR_ADDRESS: "0xa62fa311c79bb3f6bd9727288902c1a81c55738a",
+    PAIR_ADDRESS: SUBGRAPH_CONFIG.PAIR_ADDRESS,
     
     // Supported time intervals
     INTERVALS: ["60", "300", "900", "3600", "14400", "86400"],
