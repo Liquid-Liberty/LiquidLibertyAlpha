@@ -80,6 +80,8 @@ export const TVChart = ({
           'scalesProperties.showRightScale': true,
           volumePaneSize: 'small',
           keep_object_tree_widget_in_right_toolbar: true,
+          'mainSeriesProperties.priceScale.precision': 6,
+          'mainSeriesProperties.priceScale.minTick': 0.000001,
         },
         studies_overrides: {
           'volume.volume.ma.visible': false,
@@ -126,7 +128,7 @@ export const TVChart = ({
             },
           },
           priceFormatterFactory: () => {
-            return { format: (price) => formatNumber(price) };
+            return { format: (price) => price.toFixed(6) };
           },
         },
       };
@@ -141,12 +143,16 @@ export const TVChart = ({
     if (widget) {
       widget.onChartReady(() => {
         widget.applyOverrides({
+
           'mainSeriesProperties.visible': true,
           'mainSeriesProperties.style': 1,
           'paneProperties.backgroundType': 'solid',
           'paneProperties.background': '#0f0f0f', // Chart background color
           'paneProperties.vertGridProperties.color': '#1A1A1A', // Vertical grid lines color
           'paneProperties.horzGridProperties.color': '#1A1A1A', // Horizontal grid lines color
+
+          'mainSeriesProperties.priceScale.precision': 6,
+          'mainSeriesProperties.priceScale.minTick': 0.000001,
         });
 
         const savedChartState = localStorage.getItem('tradingViewDrawingState');
