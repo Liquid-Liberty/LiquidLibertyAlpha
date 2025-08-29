@@ -1,13 +1,13 @@
 # Entities
 
-type Token @entity {
+type Token @entity (immutable: true){
   id: ID!
   symbol: String
   name: String
   decimals: Int!
 }
 
-type Pair @entity {
+type Pair @entity (immutable: true) {
   id: ID!
   token0: Token!
   token1: Token!
@@ -17,7 +17,7 @@ type Pair @entity {
 # OHLCV candle entity per interval & pair
 # id format: `${pair}-${interval}-${bucketStart}`
 
-type Candle @entity {
+type Candle @entity (immutable: true) {
   id: ID!
   pair: Pair!
   interval: String!
