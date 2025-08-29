@@ -6,7 +6,7 @@ dataSources:
     name: Treasury
     network: sepolia
     source:
-      address: "0xf46c7c417c1ec1efa9240c6c1ecff293555f327f"        # e.g. 0xYourSepoliaV2Pair
+      address: "0xe758e36476376ccddf574144ab3e9a560d550de3"        # e.g. 0xYourSepoliaV2Pair
       abi: Treasury
       startBlock: 9072300        # e.g. 5820000
     mapping:

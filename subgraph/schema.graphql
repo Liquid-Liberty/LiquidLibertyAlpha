@@ -17,7 +17,7 @@ type Pair @entity (immutable: true) {
 # OHLCV candle entity per interval & pair
 # id format: `${pair}-${interval}-${bucketStart}`
 
-type Candle @entity (immutable: true) {
+type Candle @entity (immutable: false) {
   id: ID!
   pair: Pair!
   interval: String!
