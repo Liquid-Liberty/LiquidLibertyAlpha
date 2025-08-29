@@ -1,9 +1,9 @@
 {
   "listingManager": "0xc3c55d9f114F9227dE23a19bF5c875d5824Ac6C1",
-  "treasury": "0xE758e36476376ccdDF574144AB3E9a560d550dE3",
-  "lmkt": "0x58ac848dAC12e40afc52851fB26B0eB68C547415",
-  "paymentProcessor": "0x8b16a1Edf9C9De827c165CF8919cC3F1E3476AA5",
-  "faucet": "0xb818B0f10f2e7A866A441bF719d20F5153a14eFa",
-  "priceOracleConsumer": "0x6F70E587b42Fa4C7b09cBc8e7A27807f348999EE",
-  "mockDai": "0xA794bf05d685345B1324262aa0d4cE7Ad3e17319"
+  "treasury": "0xf46c7c417c1ec1efa9240c6c1ecff293555f327f",
+  "lmkt": "0x6b2f139d016e3a6693453e487be7dde97fac63eb",
+  "paymentProcessor": "0xa329594071cf56ee0c5dbf7956e556ef71ca9fec",
+  "faucet": "0xb818b0f10f2e7a866a441bf719d20f5153a14efa",
+  "priceOracleConsumer": "0x6f70e587b42fa4c7b09cbc8e7a27807f348999ee",
+  "mockDai": "0x5baaf0147e669266989fbfd20c5f6ab2de507733"
 }
