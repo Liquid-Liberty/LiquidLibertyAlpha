@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { mockDaiConfig, mockWethConfig, mockWbtcConfig, mockPlsConfig } from '../contract-config';
+import { mockDaiConfig } from '../contract-config';
 
 const Header = ({ onFaucetClick }) => {
     const { isConnected, address } = useAccount();
