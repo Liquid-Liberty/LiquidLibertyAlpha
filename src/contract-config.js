@@ -14,6 +14,3 @@ export const paymentProcessorConfig = { address: addresses.paymentProcessor, abi
 export const faucetConfig = { address: addresses.faucet, abi: FaucetABI.abi };
 export const priceOracleConsumerConfig = { address: addresses.priceOracleConsumer, abi: PriceOracleConsumerABI.abi };
 export const mockDaiConfig = { address: addresses.mockDai, abi: GenericERC20ABI.abi };
-export const mockWethConfig = { address: addresses.mockWeth, abi: GenericERC20ABI.abi };
-export const mockWbtcConfig = { address: addresses.mockWbtc, abi: GenericERC20ABI.abi };
-export const mockPlsConfig = { address: addresses.mockPls, abi: GenericERC20ABI.abi };

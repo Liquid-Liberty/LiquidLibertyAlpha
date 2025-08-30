@@ -72,7 +72,7 @@ SEPOLIA_API_KEY=your-etherscan-api-key
 npx hardhat compile
 
 # Deploy to Sepolia
-npx hardhat run scripts/deploy-v4.js --network sepolia
+npx hardhat run scripts/deploy.js --network sepolia
 
 # output contracts example:
 
