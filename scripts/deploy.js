@@ -1,7 +1,8 @@
+// scripts/deploy.js
 import hardhat from "hardhat";
 const { ethers } = hardhat;
-import 'dotenv/config';
-import fs from 'fs';
+import fs from "fs";
+import process from "process";
 
 function saveFrontendFiles(contracts) {
   console.log("\n--- Saving configuration and ABIs to frontend ---");
@@ -9,180 +10,176 @@ function saveFrontendFiles(contracts) {
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
   }
-  fs.writeFileSync(contractsDir + "/contract-addresses.json", JSON.stringify({
-    listingManager: contracts.ListingManager.target,
-    treasury: contracts.Treasury.target,
-    lmkt: contracts.LMKT.target,
-    paymentProcessor: contracts.PaymentProcessor.target,
-    faucet: contracts.Faucet.target,
-    priceOracleConsumer: contracts.PriceOracleConsumer.target,
-    mockDai: contracts.MockDai.target,
-    // mockWeth: contracts.MockWeth.target,
-    // mockWbtc: contracts.MockWbtc.target,
-    // mockPls: contracts.MockPls.target
-  }, undefined, 2));
 
-  const ListingManagerArtifact = hre.artifacts.readArtifactSync("ListingManager");
-  fs.writeFileSync(contractsDir + "/ListingManager.json", JSON.stringify(ListingManagerArtifact, null, 2));
-  const TreasuryArtifact = hre.artifacts.readArtifactSync("Treasury");
-  fs.writeFileSync(contractsDir + "/Treasury.json", JSON.stringify(TreasuryArtifact, null, 2));
-  const LmktArtifact = hre.artifacts.readArtifactSync("LMKT");
-  fs.writeFileSync(contractsDir + "/LMKT.json", JSON.stringify(LmktArtifact, null, 2));
-  const PaymentProcessorArtifact = hre.artifacts.readArtifactSync("PaymentProcessor");
-  fs.writeFileSync(contractsDir + "/PaymentProcessor.json", JSON.stringify(PaymentProcessorArtifact, null, 2));
-  const GenericERC20Artifact = hre.artifacts.readArtifactSync("GenericERC20");
-  fs.writeFileSync(contractsDir + "/GenericERC20.json", JSON.stringify(GenericERC20Artifact, null, 2));
-  const FaucetArtifact = hre.artifacts.readArtifactSync("Faucet");
-  fs.writeFileSync(contractsDir + "/Faucet.json", JSON.stringify(FaucetArtifact, null, 2));
-  const PriceOracleConsumerArtifact = hre.artifacts.readArtifactSync("PriceOracleConsumer");
-  fs.writeFileSync(contractsDir + "/PriceOracleConsumer.json", JSON.stringify(PriceOracleConsumerArtifact, null, 2));
+  fs.writeFileSync(
+    contractsDir + "/contract-addresses.json",
+    JSON.stringify(
+      {
+        treasury: contracts.Treasury.target,
+        lmkt: contracts.LMKT.target,
+        paymentProcessor: contracts.PaymentProcessor.target,
+        faucet: contracts.Faucet.target,
+        mockDai: contracts.MockDai.target,
+        daiPriceFeed: contracts.DaiPriceFeed.target,
+        listingManager: contracts.ListingManager.target,
+        priceOracleConsumer: contracts.PriceOracleConsumer.target,
+      },
+      null,
+      2
+    )
+  );
 
-  console.log("Frontend configuration and ABIs saved successfully to /src/config");
+  const artifactNames = [
+    "Treasury",
+    "LMKT",
+    "PaymentProcessor",
+    "Faucet",
+    "ListingManager",
+    "PriceOracleConsumer",
+    "GenericERC20",
+    "contracts/mocks/MockPriceFeed.sol:MockPriceFeed",
+  ];
+
+  for (const name of artifactNames) {
+    const artifact = hardhat.artifacts.readArtifactSync(name);
+    const fileName = name.includes(":") ? name.split(":")[1] : name;
+    fs.writeFileSync(
+      `${contractsDir}/${fileName}.json`,
+      JSON.stringify(artifact, null, 2)
+    );
+  }
+
+  console.log("✅ Frontend config + ABIs saved to /src/config");
 }
 
 async function main() {
-  console.log("Starting The Market Protocol deployment...");
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
-  
-  const signerPrivateKey = process.env.SIGNER_PRIVATE_KEY;
-  console.log("aria signerPrivateKey:", signerPrivateKey);
-  // if (!signerPrivateKey || !signerPrivateKey.startsWith('0x')) {
-  //   throw new Error("SIGNER_PRIVATE_KEY is not set or invalid in the .env file.");
-  // }
-  const trustedSigner = new ethers.Wallet(signerPrivateKey);
-  console.log("Backend Trusted Signer address for ListingManager:", trustedSigner.address);
+  console.log("🚀 Starting full Sepolia deployment...");
 
-  const staticPrices = { dai: 1.00, weth: 3000.00, wbtc: 60000.00, pls: 0.000045 };
-  console.log("\n--- Using static prices for initial mock price feed deployment ---");
-  console.log(staticPrices);
-  
-  console.log("\n--- Deploying Mock Tokens ---");
+  const [deployer] = await ethers.getSigners();
+  console.log("Deployer:", deployer.address);
+
+  // --- Deploy Mock DAI + LMKT ---
+  console.log("\n--- Deploying Mock DAI + LMKT ---");
   const GenericERC20 = await ethers.getContractFactory("GenericERC20");
+  const LMKT = await ethers.getContractFactory("LMKT");
+
   const mockDai = await GenericERC20.deploy("Mock DAI", "DAI", 18);
   await mockDai.waitForDeployment();
-  console.log("MockDAI deployed to:", mockDai.target);
-  // const mockWeth = await GenericERC20.deploy("Mock WETH", "WETH", 18);
-  // await mockWeth.waitForDeployment();
-  // console.log("MockWETH deployed to:", mockWeth.target);
-  // const mockWbtc = await GenericERC20.deploy("Mock WBTC", "WBTC", 8);
-  // await mockWbtc.waitForDeployment();
-  // console.log("MockWBTC deployed to:", mockWbtc.target);
-  // const mockPls = await GenericERC20.deploy("Mock PLS", "PLS", 18);
-  // await mockPls.waitForDeployment();
-  // console.log("MockPLS deployed to:", mockPls.target);
-  const lbrty = await GenericERC20.deploy("Liberty Access Token", "LBRTY", 18);
-  await lbrty.waitForDeployment();
-  console.log("LBRTY token deployed to:", lbrty.target);
-  
-  console.log("\n--- Deploying Updatable Mock Price Feeds ---");
-  const MockPriceFeed = await ethers.getContractFactory("contracts/mocks/MockPriceFeed.sol:MockPriceFeed");
-  const priceToBigInt = (price, decimals = 8) => BigInt(Math.round(price * (10 ** decimals)));
-  const daiPriceFeed = await MockPriceFeed.deploy(priceToBigInt(staticPrices.dai), 8);
-  await daiPriceFeed.waitForDeployment();
-  console.log(`MockDAI Price Feed deployed to: ${daiPriceFeed.target}`);
-  // const wethPriceFeed = await MockPriceFeed.deploy(priceToBigInt(staticPrices.weth), 8);
-  // await wethPriceFeed.waitForDeployment();
-  // console.log(`MockWETH Price Feed deployed to: ${wethPriceFeed.target}`);
-  // const wbtcPriceFeed = await MockPriceFeed.deploy(priceToBigInt(staticPrices.wbtc), 8);
-  // await wbtcPriceFeed.waitForDeployment();
-  // console.log(`MockWBTC Price Feed deployed to: ${wbtcPriceFeed.target}`);
-  // const plsPriceFeed = await MockPriceFeed.deploy(priceToBigInt(staticPrices.pls), 8);
-  // await plsPriceFeed.waitForDeployment();
-  // console.log(`MockPLS Price Feed deployed to: ${plsPriceFeed.target}`);
+  console.log("MockDAI:", mockDai.target);
 
-  console.log("\n--- Deploying Core Contracts ---");
-  const LMKT = await ethers.getContractFactory("LMKT");
   const lmkt = await LMKT.deploy();
   await lmkt.waitForDeployment();
-  console.log("LMKT deployed to:", lmkt.target);
+  console.log("LMKT:", lmkt.target);
+
+  // --- Deploy Treasury + PaymentProcessor ---
+  console.log("\n--- Deploying Treasury + PaymentProcessor ---");
   const Treasury = await ethers.getContractFactory("Treasury");
+  const PaymentProcessor = await ethers.getContractFactory("PaymentProcessor");
+
   const treasury = await Treasury.deploy();
   await treasury.waitForDeployment();
-  console.log("Treasury deployed to:", treasury.target);
-  const PriceOracleConsumerFactory = await ethers.getContractFactory("PriceOracleConsumer");
-  const priceOracleConsumer = await PriceOracleConsumerFactory.deploy("0x0000000000000000000000000000000000000001");
-  await priceOracleConsumer.waitForDeployment();
-  console.log("PriceOracleConsumer deployed to:", priceOracleConsumer.target);
-  const ListingManager = await ethers.getContractFactory("ListingManager");
-  const listingManager = await ListingManager.deploy(treasury.target, lmkt.target, trustedSigner.address);
-  await listingManager.waitForDeployment();
-  console.log("ListingManager deployed to:", listingManager.target);
-  const PaymentProcessor = await ethers.getContractFactory("PaymentProcessor");
-  const paymentProcessor = await PaymentProcessor.deploy(treasury.target, lmkt.target);
+  console.log("Treasury:", treasury.target);
+
+  const paymentProcessor = await PaymentProcessor.deploy(
+    treasury.target,
+    lmkt.target
+  );
   await paymentProcessor.waitForDeployment();
-  console.log("PaymentProcessor deployed to:", paymentProcessor.target);
+  console.log("PaymentProcessor:", paymentProcessor.target);
 
-  console.log("\n--- Performing Initial Setup ---");
-  const setLmktTx = await treasury.setLmktAddress(lmkt.target);
-  await setLmktTx.wait();
-  const setWhitelistTx = await treasury.setWhitelistedCollateral(mockDai.target, true);
-  await setWhitelistTx.wait();
-  // await treasury.setWhitelistedCollateral(mockWeth.target, true);
-  // await treasury.setWhitelistedCollateral(mockWbtc.target, true);
-  // await treasury.setWhitelistedCollateral(mockPls.target, true);
-  console.log("Whitelisted all collateral tokens in Treasury");
-  const setPriceFeedTx = await treasury.setPriceFeed(mockDai.target, daiPriceFeed.target);
-  await setPriceFeedTx.wait();
-  // await treasury.setPriceFeed(mockWeth.target, wethPriceFeed.target);
-  // await treasury.setPriceFeed(mockWbtc.target, wbtcPriceFeed.target);
-  // await treasury.setPriceFeed(mockPls.target, plsPriceFeed.target);
-  console.log("Set all price feeds in Treasury");
+  // --- Deploy Mock Price Feed for DAI ---
+  console.log("\n--- Deploying Mock Price Feed ---");
+  const MockPriceFeed = await ethers.getContractFactory(
+    "contracts/mocks/MockPriceFeed.sol:MockPriceFeed"
+  );
+  const daiPriceFeed = await MockPriceFeed.deploy(ethers.parseUnits("1", 8), 8); // $1 with 8 decimals
+  await daiPriceFeed.waitForDeployment();
+  console.log("DAI Price Feed:", daiPriceFeed.target);
 
-  const USDT_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("USDT/USD"));
-  // const ETH_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("ETH/USD"));
-  // const BTC_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("BTC/USD"));
-  // const PLS_USD_QUERY_ID = ethers.keccak256(ethers.toUtf8Bytes("PLS/USD"));
-  const setQueryIdTx = await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID);
-  await setQueryIdTx.wait();
-  // await treasury.setTokenQueryId(mockWeth.target, ETH_USD_QUERY_ID);
-  // await treasury.setTokenQueryId(mockWbtc.target, BTC_USD_QUERY_ID);
-  // await treasury.setTokenQueryId(mockPls.target, PLS_USD_QUERY_ID);
-  // console.log("Set all token Query IDs in Treasury");
-
-  // await priceOracleConsumer.fetchLatestPrice(USDT_USD_QUERY_ID);
-  // await priceOracleConsumer.fetchLatestPrice(ETH_USD_QUERY_ID);
-  // await priceOracleConsumer.fetchLatestPrice(BTC_USD_QUERY_ID);
-  // await priceOracleConsumer.fetchLatestPrice(PLS_USD_QUERY_ID);
-  // console.log("Initial prices fetched and stored in PriceOracleConsumer");
-  console.log("Treasury setup complete.");
-
-  console.log("\n--- Provisioning Initial Liquidity ---");
-  const daiMintTx = await mockDai.mint(treasury.target, ethers.parseEther("25000"));
-  await daiMintTx.wait();
-  // await mockWeth.mint(treasury.target, ethers.parseEther("25000"));
-  // await mockPls.mint(treasury.target, ethers.parseEther("25000"));
-  // await mockWbtc.mint(treasury.target, ethers.parseUnits("25000", 8));
-  const initialSupply = await lmkt.totalSupply();
-  const lmktTransferTx = await lmkt.transfer(treasury.target, initialSupply);
-  await lmktTransferTx.wait();
-  const transferOwnershipTx = await lmkt.transferOwnership(treasury.target);
-  await transferOwnershipTx.wait();
-  console.log("Initial liquidity provisioned.");
-
+  // --- Deploy Faucet ---
   console.log("\n--- Deploying Faucet ---");
   const Faucet = await ethers.getContractFactory("Faucet");
   const faucet = await Faucet.deploy(mockDai.target);
-  // const faucet = await Faucet.deploy(mockDai.target, mockWeth.target, mockWbtc.target, mockPls.target);
   await faucet.waitForDeployment();
-  console.log("Faucet deployed to:", faucet.target);
-  const addMinterTx = await mockDai.addMinter(faucet.target);
-  await addMinterTx.wait();
-  // await mockWeth.addMinter(faucet.target);
-  // await mockWbtc.addMinter(faucet.target);
-  // await mockPls.addMinter(faucet.target);
-  const addLbrtyMinter = await lbrty.addMinter(faucet.target);
-  await addLbrtyMinter.wait();
-  console.log("Faucet configured.");
+  console.log("Faucet:", faucet.target);
 
+  // --- Deploy PriceOracleConsumer ---
+  console.log("\n--- Deploying PriceOracleConsumer ---");
+  const PriceOracleConsumerFactory = await ethers.getContractFactory("PriceOracleConsumer");
+  const priceOracleConsumer = await PriceOracleConsumerFactory.deploy(deployer.address);
+  await priceOracleConsumer.waitForDeployment();
+  console.log("PriceOracleConsumer:", priceOracleConsumer.target);
+
+  // --- Deploy ListingManager ---
+  console.log("\n--- Deploying ListingManager ---");
+  const ListingManager = await ethers.getContractFactory("ListingManager");
+  const listingManager = await ListingManager.deploy(
+    treasury.target,
+    lmkt.target,
+    deployer.address // trusted signer
+  );
+  await listingManager.waitForDeployment();
+  console.log("ListingManager:", listingManager.target);
+
+  // --- Configure MockDAI minters ---
+  console.log("\n--- Configuring MockDAI minters ---");
+  await (await mockDai.addMinter(faucet.target)).wait();
+  console.log("✅ Faucet added as minter for MockDAI");
+
+  await (await mockDai.addMinter(treasury.target)).wait();
+  console.log("✅ Treasury added as minter for MockDAI");
+
+  await (await mockDai.transferOwnership(faucet.target)).wait();
+  console.log("✅ Faucet is now owner of MockDAI");
+
+  // --- Configure Treasury ---
+  console.log("\n--- Configuring Treasury ---");
+  await (await treasury.setLmktAddress(lmkt.target)).wait();
+  await (await treasury.setWhitelistedCollateral(mockDai.target, true)).wait();
+
+  // Wire Treasury to PriceOracleConsumer, not MockPriceFeed
+  const USDT_USD_QUERY_ID = ethers.keccak256(
+    ethers.toUtf8Bytes("USDT/USD")
+  );
+  await (await treasury.setPriceFeed(mockDai.target, priceOracleConsumer.target)).wait();
+  await (await treasury.setTokenQueryId(mockDai.target, USDT_USD_QUERY_ID)).wait();
+
+  // Seed PriceOracleConsumer with initial price
+  await (await priceOracleConsumer.updatePrice(
+    USDT_USD_QUERY_ID,
+    ethers.parseUnits("1", 8) // 1 USD
+  )).wait();
+  console.log("✅ Treasury configured with DAI feed + whitelist via PriceOracleConsumer");
+
+  // --- Provision Liquidity ---
+  console.log("\n--- Provisioning Initial Liquidity ---");
+  await (await mockDai.mint(treasury.target, ethers.parseEther("25000"))).wait();
+  await (await lmkt.transfer(treasury.target, await lmkt.totalSupply())).wait();
+  await (await lmkt.transferOwnership(treasury.target)).wait();
+  console.log("✅ Treasury funded + owns LMKT");
+
+  // --- Save Frontend Files ---
   saveFrontendFiles({
-    ListingManager: listingManager, Treasury: treasury, LMKT: lmkt,
-    PaymentProcessor: paymentProcessor, Faucet: faucet, PriceOracleConsumer: priceOracleConsumer,
-    MockDai: mockDai
-    // MockDai: mockDai, MockWeth: mockWeth, MockWbtc: mockWbtc, MockPls: mockPls
+    Treasury: treasury,
+    LMKT: lmkt,
+    PaymentProcessor: paymentProcessor,
+    Faucet: faucet,
+    MockDai: mockDai,
+    DaiPriceFeed: daiPriceFeed,
+    ListingManager: listingManager,
+    PriceOracleConsumer: priceOracleConsumer,
   });
 
-  console.log("\n✅ Deployment and configuration complete!");
+  console.log("\n🎉 Deployment complete!");
+  console.log("\n🔑 Final Contract Addresses:");
+  console.log("Treasury:", treasury.target);
+  console.log("LMKT:", lmkt.target);
+  console.log("MockDAI:", mockDai.target);
+  console.log("PaymentProcessor:", paymentProcessor.target);
+  console.log("Faucet:", faucet.target);
+  console.log("DaiPriceFeed:", daiPriceFeed.target);
+  console.log("ListingManager:", listingManager.target);
+  console.log("PriceOracleConsumer:", priceOracleConsumer.target);
 }
 
 main().catch((error) => {
