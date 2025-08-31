@@ -15,9 +15,9 @@ async function logBalances(contracts, accounts) {
     const treasuryLmkt = ethers.formatEther(await lmkt.balanceOf(treasury.target));
     
     console.log("--- Balances ---");
-    console.log(`Buyer:   ${parseFloat(buyerDai).toFixed(2)} mDAI | ${parseFloat(buyerLmkt).toFixed(2)} LMKT`);
-    console.log(`Seller:  ${parseFloat(sellerDai).toFixed(2)} mDAI | ${parseFloat(sellerLmkt).toFixed(2)} LMKT`);
-    console.log(`Treasury:               | ${parseFloat(treasuryLmkt).toFixed(2)} LMKT`);
+    console.log(`Buyer:    ${parseFloat(buyerDai).toFixed(2)} mDAI | ${parseFloat(buyerLmkt).toFixed(2)} LMKT`);
+    console.log(`Seller:   ${parseFloat(sellerDai).toFixed(2)} mDAI | ${parseFloat(sellerLmkt).toFixed(2)} LMKT`);
+    console.log(`Treasury:                | ${parseFloat(treasuryLmkt).toFixed(2)} LMKT`);
     console.log("----------------\n");
 }
 
@@ -41,6 +41,9 @@ async function main() {
     
     const contracts = { lmkt, mockDai, faucet, treasury, listingManager, paymentProcessor };
     const accounts = { buyer, seller, treasury };
+
+    // Required configuration step for ListingManager security
+    await listingManager.connect(owner).setPaymentProcessor(addresses.PaymentProcessor);
     
     console.log("Initial State:");
     await logBalances(contracts, accounts);
@@ -55,7 +58,10 @@ async function main() {
     // --- 3. SELLER CREATES LISTING ---
     console.log("--- 3. Seller creates a listing for $150 ---");
     const listingPriceUsd = 150 * 10**8; 
+    
+    // --- CHANGE: Added the missing variable declaration ---
     const listingId = 1;
+    
     const dataIdentifier = "ipfs://super-rare-item";
     
     // a. Seller gets signature from trusted signer
@@ -86,11 +92,12 @@ async function main() {
     const itemPriceInLmkt = (BigInt(listingPriceUsd) * (10n ** 18n)) / lmktPriceUsd;
     const commerceFee = await paymentProcessor.COMMERCE_FEE();
     const totalFeeInLmkt = (itemPriceInLmkt * commerceFee) / (await paymentProcessor.FEE_BASE());
-    const totalAmountToApprove = itemPriceInLmkt + totalFeeInLmkt;
+    const totalAmountToPay = itemPriceInLmkt + totalFeeInLmkt;
     
     // b. Buyer approves and executes payment
-    await lmkt.connect(buyer).approve(addresses.PaymentProcessor, totalAmountToApprove);
-    await paymentProcessor.connect(buyer).executePayment(listingId);
+    const maxLmktToPay = totalAmountToPay * 101n / 100n; // Allow 1% slippage
+    await lmkt.connect(buyer).approve(addresses.PaymentProcessor, maxLmktToPay);
+    await paymentProcessor.connect(buyer).executePayment(listingId, maxLmktToPay);
     console.log("Payment executed successfully!");
     
     // c. Final state check
@@ -98,11 +105,10 @@ async function main() {
     await logBalances(contracts, accounts);
 
     const listing = await listingManager.getListing(listingId);
-    // CORRECTED: Use Number() to safely compare the enum value
     console.log(`Final status of Listing #${listingId}: ${Number(listing.status) === 1 ? 'Inactive' : 'Active'}`);
 }
 
 main().catch((error) => {
-  console.error(error);
-  process.exit(1);
+    console.error(error);
+    process.exit(1);
 });
