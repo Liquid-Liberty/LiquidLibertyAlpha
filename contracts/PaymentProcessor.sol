@@ -3,87 +3,62 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ITreasury.sol";
+import "./interfaces/IListingManager.sol";
+import "./interfaces/ILMKT.sol";
 
 contract PaymentProcessor is ReentrancyGuard, Ownable {
-    // --- Events ---
-    event PurchaseMade(uint256 indexed listingId, address indexed buyer, uint256 totalAmount);
-    event FundsReleased(uint256 indexed listingId, address indexed seller, uint256 sellerAmount);
-    
-    // --- Structs ---
-    struct Escrow {
-        address buyer;
-        address seller;
-        uint256 totalAmount; // Total LMKT including item price and fee
-        bool fundsReleased;
-    }
+    using SafeERC20 for ILMKT;
 
+    // --- Events ---
+    event PurchaseMade(uint256 indexed listingId, address indexed buyer, address indexed seller, uint256 lmktAmount);
+    
     // --- Protocol Parameters ---
     uint256 public constant COMMERCE_FEE = 50; // 0.5% (50 / 10000)
     uint256 public constant FEE_BASE = 10000;
 
     // --- State Variables ---
-    address public immutable treasury;
-    address public immutable lmktToken;
-    mapping(uint256 => Escrow) public escrows;
+    ITreasury public immutable treasury;
+    IListingManager public immutable listingManager;
+    ILMKT public immutable lmktToken;
 
-    constructor(address _treasury, address _lmktToken) Ownable(msg.sender) {
-        treasury = _treasury;
-        lmktToken = _lmktToken;
-
-        // ** THE FIX IS HERE: Grant the Treasury an infinite approval to pull fee payments **
-        IERC20(_lmktToken).approve(_treasury, type(uint256).max);
+    constructor(address _treasury, address _listingManager, address _lmktToken) Ownable(msg.sender) {
+        treasury = ITreasury(_treasury);
+        listingManager = IListingManager(_listingManager);
+        lmktToken = ILMKT(_lmktToken);
     }
 
     // --- Core Functions ---
+    function executePayment(uint256 listingId) external nonReentrant {
+        IListingManager.Listing memory listing = listingManager.getListing(listingId);
+        require(listing.status == IListingManager.ListingStatus.Active, "PaymentProcessor: Listing not active");
+        require(listing.owner != msg.sender, "PaymentProcessor: Cannot buy your own listing");
 
-    function makePurchase(uint256 listingId, uint256 price, address seller) external nonReentrant {
-        // A full implementation would link to a listing management system
-        // to verify the price and seller address.
+        // Convert the listing's USD price to the required LMKT amount
+        uint256 lmktPriceInUsd = treasury.getLmktPriceInUsd(); // Returns with 8 decimals
+        require(lmktPriceInUsd > 0, "PaymentProcessor: Invalid LMKT price");
+        
+        uint256 itemPriceInLmkt = (listing.priceInUsd * (10**lmktToken.decimals())) / lmktPriceInUsd;
 
-        uint256 tokenPrice = ITreasury(treasury).getLMKTPrice();
-        require(tokenPrice > 0, "PaymentProcessor: Invalid LMKT price");
+        // Calculate commerce fee and split it
+        uint256 totalFeeInLmkt = (itemPriceInLmkt * COMMERCE_FEE) / FEE_BASE;
+        uint256 treasuryShare = totalFeeInLmkt / 2;
+        uint256 sellerBonus = totalFeeInLmkt - treasuryShare;
 
-        uint256 totalFee = (price * COMMERCE_FEE) / FEE_BASE;
-        uint256 totalAmount = price + totalFee;
-        uint256 totalAmountInUSD = (totalAmount * 1e8) / tokenPrice; // Assuming tokenPrice has 8 decimals
-        require(IERC20(lmktToken).balanceOf(msg.sender) >= totalAmountInUSD, "PaymentProcessor: Insufficient LMKT balance");
-        require(IERC20(lmktToken).allowance(msg.sender, address(this)) >= totalAmountInUSD, "PaymentProcessor: Insufficient LMKT allowance");
+        uint256 sellerAmount = itemPriceInLmkt + sellerBonus;
+        uint256 totalAmount = sellerAmount + treasuryShare;
 
-        escrows[listingId] = Escrow({
-            buyer: msg.sender,
-            seller: seller,
-            totalAmount: totalAmountInUSD,
-            fundsReleased: false
-        });
+        // Pull the total LMKT from the buyer
+        lmktToken.safeTransferFrom(msg.sender, address(this), totalAmount);
 
-        IERC20(lmktToken).transferFrom(msg.sender, address(this), totalAmountInUSD);
+        // Immediately send funds to seller and treasury (non-custodial)
+        lmktToken.safeTransfer(listing.owner, sellerAmount);
+        lmktToken.safeTransfer(address(treasury), treasuryShare);
 
-        emit PurchaseMade(listingId, msg.sender, totalAmount);
-    }
+        // Close the listing to prevent double-selling
+        listingManager.closeListing(listingId);
 
-    function releaseFunds(uint256 listingId) external nonReentrant {
-        Escrow storage escrow = escrows[listingId];
-        require(msg.sender == escrow.buyer, "PaymentProcessor: Only buyer can release funds");
-        require(!escrow.fundsReleased, "PaymentProcessor: Funds already released");
-
-        escrow.fundsReleased = true;
-
-        uint256 totalAmount = escrow.totalAmount;
-        uint256 price = (totalAmount * FEE_BASE) / (FEE_BASE + COMMERCE_FEE);
-        uint256 totalFee = totalAmount - price;
-
-        uint256 treasuryShare = totalFee / 2;
-        uint256 sellerShare = totalFee - treasuryShare;
-        uint256 sellerAmount = price + sellerShare;
-
-        // The Treasury will now be able to pull its fee share successfully.
-        ITreasury(treasury).depositCommerceFee(lmktToken, treasuryShare);
-
-        // Send the item price plus the other half of the fee to the seller
-        IERC20(lmktToken).transfer(escrow.seller, sellerAmount);
-
-        emit FundsReleased(listingId, escrow.seller, sellerAmount);
+        emit PurchaseMade(listingId, msg.sender, listing.owner, totalAmount);
     }
 }

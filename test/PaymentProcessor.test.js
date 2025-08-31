@@ -3,119 +3,156 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 
 describe("PaymentProcessor", function () {
-    let paymentProcessor, treasury, lmkt;
-    let owner, buyer, seller, otherUser;
+    let paymentProcessor, listingManager, treasury, lmkt, mockDai, mockOracle;
+    let owner, buyer, seller, trustedSigner;
 
     const LISTING_ID = 1;
-    const PRICE = ethers.parseEther("1000"); // 1000 LMKT
+    const LISTING_PRICE_USD = 2000 * 10**8; // $2000.00 with 8 decimals
 
     beforeEach(async function () {
-        [owner, buyer, seller, otherUser] = await ethers.getSigners();
+        [owner, buyer, seller, trustedSigner] = await ethers.getSigners();
 
-        // Deploy a mock LMKT Token using GenericERC20 for testing
-        const LmktFactory = await ethers.getContractFactory("GenericERC20");
-        lmkt = await LmktFactory.deploy("Liberty Market Token", "LMKT", 18);
+        // --- Deploy All Contracts in the Ecosystem ---
+        const MockOracleFactory = await ethers.getContractFactory("MockPriceOracle");
+        mockOracle = await MockOracleFactory.deploy();
 
-        // Deploy Treasury
+        const LmktFactory = await ethers.getContractFactory("LMKT");
+        lmkt = await LmktFactory.deploy();
+
+        const MockDaiFactory = await ethers.getContractFactory("GenericERC20");
+        mockDai = await MockDaiFactory.deploy("Mock DAI", "mDAI", 18);
+
         const TreasuryFactory = await ethers.getContractFactory("Treasury");
         treasury = await TreasuryFactory.deploy();
 
-        // Deploy PaymentProcessor
+        const ListingManagerFactory = await ethers.getContractFactory("ListingManager");
+        listingManager = await ListingManagerFactory.deploy(
+            await treasury.getAddress(),
+            await mockDai.getAddress(),
+            trustedSigner.address
+        );
+
         const PaymentProcessorFactory = await ethers.getContractFactory("PaymentProcessor");
         paymentProcessor = await PaymentProcessorFactory.deploy(
             await treasury.getAddress(),
+            await listingManager.getAddress(),
             await lmkt.getAddress()
         );
 
-        // Configure the Treasury with the LMKT address
-        await treasury.setLmktAddress(await lmkt.getAddress());
+        // --- Configure the Entire System ---
 
-        // Give the buyer enough LMKT to make a purchase
-        await lmkt.mint(buyer.address, ethers.parseEther("2000"));
+        // 1. Configure Treasury
+        await treasury.setLmktAddress(await lmkt.getAddress());
+        await treasury.setWhitelistedCollateral(await mockDai.getAddress(), true);
+        await treasury.setPriceFeed(await mockDai.getAddress(), await mockOracle.getAddress());
+        const daiQueryId = ethers.keccak256(ethers.toUtf8Bytes("mDAI/USD"));
+        await treasury.setTokenQueryId(await mockDai.getAddress(), daiQueryId);
+        await mockOracle.setPrice(daiQueryId, 1 * 10**8); // $1.00
+
+        // Fund Treasury with collateral to give LMKT a price
+        await mockDai.mint(await treasury.getAddress(), ethers.parseEther("1000000")); // $1M backing
+
+        // 2. Configure Listing Manager (restrict closeListing to PaymentProcessor)
+        // Note: For production, you'd add an onlyOwner function to ListingManager
+        // to set the PaymentProcessor address for secure, restricted access.
+
+        // 3. Create a Listing for the test
+        const deadline = Math.floor(Date.now() / 1000) + 3600;
+        const nonce = 1;
+        const dataIdentifier = "ipfs://item-for-sale";
+        const domain = { name: 'ListingManager', version: '1', chainId: (await ethers.provider.getNetwork()).chainId, verifyingContract: await listingManager.getAddress() };
+        const types = { CreateListing: [{ name: 'user', type: 'address' }, { name: 'dataIdentifier', type: 'string' }, { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint256' }] };
+        const value = { user: seller.address, dataIdentifier, nonce, deadline };
+        const signature = await trustedSigner.signTypedData(domain, types, value);
+        await mockDai.mint(seller.address, ethers.parseEther("5"));
+        await mockDai.connect(seller).approve(await listingManager.getAddress(), ethers.parseEther("5"));
+        await listingManager.connect(seller).createListing(0, LISTING_PRICE_USD, dataIdentifier, nonce, deadline, signature);
+
+        // 4. Fund the buyer with LMKT
+        await lmkt.mint(buyer.address, ethers.parseEther("5000000"));
     });
 
     describe("Deployment", function () {
-        it("Should set the correct treasury and lmkt addresses", async function () {
+        it("Should set the correct constructor addresses", async function () {
             expect(await paymentProcessor.treasury()).to.equal(await treasury.getAddress());
+            expect(await paymentProcessor.listingManager()).to.equal(await listingManager.getAddress());
             expect(await paymentProcessor.lmktToken()).to.equal(await lmkt.getAddress());
-        });
-
-        it("Should approve the treasury to spend its LMKT", async function () {
-            const allowance = await lmkt.allowance(
-                await paymentProcessor.getAddress(),
-                await treasury.getAddress()
-            );
-            expect(allowance).to.equal(ethers.MaxUint256);
         });
     });
 
-    describe("Transaction Lifecycle", function () {
-        let totalAmount, totalFee, treasuryShare, sellerFeeShare;
+    describe("Execute Payment", function () {
+        let itemPriceInLmkt, treasuryShare, sellerBonus, totalAmount;
 
-        beforeEach(async function () {
-            // Calculate expected amounts
+        beforeEach(async function() {
+            // Calculate expected LMKT amounts dynamically for the test
+            const lmktPriceUsd = await treasury.getLmktPriceInUsd();
+            itemPriceInLmkt = (BigInt(LISTING_PRICE_USD) * (10n ** 18n)) / lmktPriceUsd;
+
             const feeBase = await paymentProcessor.FEE_BASE();
             const commerceFee = await paymentProcessor.COMMERCE_FEE();
-            totalFee = (PRICE * commerceFee) / feeBase; // 0.5% of 1000 = 5
-            totalAmount = PRICE + totalFee; // 1005
-            treasuryShare = totalFee / 2n; // 2.5
-            sellerFeeShare = totalFee - treasuryShare; // 2.5
+            const totalFeeInLmkt = (itemPriceInLmkt * commerceFee) / feeBase;
+            
+            treasuryShare = totalFeeInLmkt / 2n;
+            sellerBonus = totalFeeInLmkt - treasuryShare;
+            totalAmount = itemPriceInLmkt + totalFeeInLmkt;
 
-            // Buyer approves the PaymentProcessor to spend their LMKT
             await lmkt.connect(buyer).approve(await paymentProcessor.getAddress(), totalAmount);
-
-            // Buyer makes the purchase
-            await paymentProcessor.connect(buyer).makePurchase(LISTING_ID, PRICE, seller.address);
         });
 
-        it("Should hold the correct amount in escrow after purchase", async function () {
-            expect(await lmkt.balanceOf(await paymentProcessor.getAddress())).to.equal(totalAmount);
-        });
-
-        it("Should release the correct amounts to the seller and treasury", async function () {
+        it("Should transfer the correct LMKT amounts to seller and treasury", async function () {
             const initialSellerBalance = await lmkt.balanceOf(seller.address);
             const initialTreasuryBalance = await lmkt.balanceOf(await treasury.getAddress());
 
-            // Buyer releases the funds
-            await paymentProcessor.connect(buyer).releaseFunds(LISTING_ID);
+            await paymentProcessor.connect(buyer).executePayment(LISTING_ID);
 
-            // Verify seller's new balance
-            const expectedSellerAmount = PRICE + sellerFeeShare;
-            expect(await lmkt.balanceOf(seller.address)).to.equal(initialSellerBalance + expectedSellerAmount);
+            const expectedSellerAmount = itemPriceInLmkt + sellerBonus;
+            const finalSellerBalance = await lmkt.balanceOf(seller.address);
+            const finalTreasuryBalance = await lmkt.balanceOf(await treasury.getAddress());
 
-            // Verify treasury's new balance
-            expect(await lmkt.balanceOf(await treasury.getAddress())).to.equal(initialTreasuryBalance + treasuryShare);
+            expect(finalSellerBalance - initialSellerBalance).to.equal(expectedSellerAmount);
+            expect(finalTreasuryBalance - initialTreasuryBalance).to.equal(treasuryShare);
+        });
 
-            // Verify the processor's balance is now zero
+        it("Should leave the PaymentProcessor with a zero balance (non-custodial)", async function () {
+            await paymentProcessor.connect(buyer).executePayment(LISTING_ID);
             expect(await lmkt.balanceOf(await paymentProcessor.getAddress())).to.equal(0);
         });
 
-        it("Should mark the escrow as released", async function () {
-            await paymentProcessor.connect(buyer).releaseFunds(LISTING_ID);
-            const escrow = await paymentProcessor.escrows(LISTING_ID);
-            expect(escrow.fundsReleased).to.be.true;
+        it("Should close the listing in the ListingManager after purchase", async function () {
+            await paymentProcessor.connect(buyer).executePayment(LISTING_ID);
+            const listing = await listingManager.getListing(LISTING_ID);
+            expect(listing.status).to.equal(1); // 1 = Inactive
+        });
+
+        it("Should emit a PurchaseMade event with correct arguments", async function () {
+            await expect(paymentProcessor.connect(buyer).executePayment(LISTING_ID))
+                .to.emit(paymentProcessor, "PurchaseMade")
+                .withArgs(LISTING_ID, buyer.address, seller.address, totalAmount);
         });
     });
 
     describe("Security and Error Handling", function () {
-        beforeEach(async function () {
-            const feeBase = await paymentProcessor.FEE_BASE();
-            const commerceFee = await paymentProcessor.COMMERCE_FEE();
-            const totalFee = (PRICE * commerceFee) / feeBase;
-            const totalAmount = PRICE + totalFee;
-            await lmkt.connect(buyer).approve(await paymentProcessor.getAddress(), totalAmount);
-            await paymentProcessor.connect(buyer).makePurchase(LISTING_ID, PRICE, seller.address);
+        it("Should fail if the listing is not active", async function () {
+            // First purchase succeeds and makes the listing inactive
+            const lmktPriceUsd = await treasury.getLmktPriceInUsd();
+            const totalAmount = ((BigInt(LISTING_PRICE_USD) * (10n ** 18n)) / lmktPriceUsd) * 1005n / 1000n; // Approx. with fee
+            await lmkt.connect(buyer).approve(await paymentProcessor.getAddress(), totalAmount * 2n);
+            await paymentProcessor.connect(buyer).executePayment(LISTING_ID);
+
+            // Second attempt should fail
+            await expect(paymentProcessor.connect(buyer).executePayment(LISTING_ID))
+                .to.be.revertedWith("PaymentProcessor: Listing not active");
         });
 
-        it("Should prevent non-buyers from releasing funds", async function () {
-            await expect(paymentProcessor.connect(otherUser).releaseFunds(LISTING_ID))
-                .to.be.revertedWith("PaymentProcessor: Only buyer can release funds");
-        });
+        it("Should prevent the seller from buying their own listing", async function () {
+            // Mint LMKT to seller and approve
+            await lmkt.mint(seller.address, ethers.parseEther("5000000"));
+            const lmktPriceUsd = await treasury.getLmktPriceInUsd();
+            const totalAmount = ((BigInt(LISTING_PRICE_USD) * (10n ** 18n)) / lmktPriceUsd) * 1005n / 1000n;
+            await lmkt.connect(seller).approve(await paymentProcessor.getAddress(), totalAmount);
 
-        it("Should prevent funds from being released twice", async function () {
-            await paymentProcessor.connect(buyer).releaseFunds(LISTING_ID);
-            await expect(paymentProcessor.connect(buyer).releaseFunds(LISTING_ID))
-                .to.be.revertedWith("PaymentProcessor: Funds already released");
+            await expect(paymentProcessor.connect(seller).executePayment(LISTING_ID))
+                .to.be.revertedWith("PaymentProcessor: Cannot buy your own listing");
         });
     });
 });

@@ -1,3 +1,5 @@
+// contracts/hardhat.config.js
+
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-verify");
 require("@nomicfoundation/hardhat-ethers");
@@ -15,6 +17,12 @@ module.exports = {
       },
     },
   },
+  
+  /*
+  // We are commenting out the network and etherscan sections for now
+  // to focus on local testing with the default Hardhat node.
+  // You can uncomment these when you are ready to deploy to a testnet.
+  
   networks: {
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL,
@@ -24,7 +32,8 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      sepolia: process.env.SEPOLIA_API_KEY, // e.g. from etherscan.io
+      sepolia: process.env.SEPOLIA_API_KEY,
     },
   },
+  */
 };

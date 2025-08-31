@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "deploy:local": "npx --node-options=\"--require dotenv/config\" hardhat run scripts/deploy.js --network localhost",
     "tailwind-init": "tailwindcss init -p",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
