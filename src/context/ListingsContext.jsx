@@ -15,8 +15,25 @@ export const ListingsProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const { address, isConnected } = useAccount();
 
-  // wagmi's public client (configured for chain)
   const publicClient = usePublicClient();
+
+  // --- Helper: Fetch IPFS JSON ---
+  const fetchIpfsJson = async (cidOrUrl) => {
+    try {
+      let url = cidOrUrl;
+      if (cidOrUrl.startsWith("ipfs://")) {
+        url = `https://ipfs.io/ipfs/${cidOrUrl.replace("ipfs://", "")}`;
+      } else if (/^[a-zA-Z0-9]{46,}$/.test(cidOrUrl)) {
+        url = `https://ipfs.io/ipfs/${cidOrUrl}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("IPFS fetch failed");
+      return await res.json();
+    } catch (e) {
+      console.warn("Failed to fetch IPFS metadata for:", cidOrUrl, e);
+      return null;
+    }
+  };
 
   const fetchListings = async () => {
     if (!isConnected || !publicClient) {
@@ -29,7 +46,6 @@ export const ListingsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      // 1. Get the total number of listings
       const totalListings = await publicClient.readContract({
         address: contractAddresses.ListingManager,
         abi: ListingManagerABI.abi,
@@ -42,7 +58,6 @@ export const ListingsProvider = ({ children }) => {
         return;
       }
 
-      // 2. Loop through and fetch all listings
       const listingPromises = [];
       for (let i = 1; i <= Number(totalListings); i++) {
         listingPromises.push(
@@ -57,28 +72,39 @@ export const ListingsProvider = ({ children }) => {
 
       const rawListings = await Promise.all(listingPromises);
 
-      // 3. Format struct data for UI
-      const formattedListings = rawListings
-        .map((listing, index) => {
-          // Struct fields: [owner, priceInUsd, listingType, status, dataIdentifier]
+      // Format + enrich with metadata
+      const formattedListings = await Promise.all(
+        rawListings.map(async (listing, index) => {
           const [owner, priceInUsd, listingType, status, dataIdentifier] = listing;
+
+          let metadata = null;
+          if (dataIdentifier && dataIdentifier !== "NO_IMAGE") {
+            metadata = await fetchIpfsJson(dataIdentifier);
+          }
 
           return {
             id: index + 1,
             owner,
-            priceInUsd: Number(priceInUsd) / 1e8, // Convert from 8 decimals
+            priceInUsd: Number(priceInUsd) / 1e8,
             listingType: Number(listingType) === 0 ? 'ForSale' : 'ServiceOffered',
             status: Number(status) === 0 ? 'Active' : 'Inactive',
             dataIdentifier,
-            // Placeholder UI metadata (real metadata can come from IPFS later)
-            title: `Listing #${index + 1}`,
-            description: 'Details fetched from blockchain.',
-            imageUrl: 'https://via.placeholder.com/150',
+            title: metadata?.title || `Listing #${index + 1}`,
+            description: metadata?.description || 'Details fetched from blockchain.',
+            imageUrl: metadata?.photos?.[0]
+              ? `https://ipfs.io/ipfs/${metadata.photos[0]}`
+              : 'https://via.placeholder.com/150',
+            category: metadata?.category || null,
+            serviceCategory: metadata?.serviceCategory || null,
+            rateType: metadata?.rateType || null,
+            zipCode: metadata?.zipCode || null,
+            deliveryMethod: metadata?.deliveryMethod || null,
+            shippingCost: metadata?.shippingCost || null,
           };
         })
-        .filter(listing => listing.status === 'Active');
+      );
 
-      setListings(formattedListings);
+      setListings(formattedListings.filter(l => l.status === 'Active'));
 
     } catch (e) {
       console.error("Failed to fetch listings:", e);
@@ -92,8 +118,7 @@ export const ListingsProvider = ({ children }) => {
     fetchListings();
   }, [isConnected, publicClient, address]);
 
-  // Context value
- const value = {
+  const value = {
     listings,
     loading,
     error,

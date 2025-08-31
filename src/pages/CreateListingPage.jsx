@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { parseUnits } from 'viem';
-import { useAccount, useChainId } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { listingManagerConfig, mockDaiConfig } from '../config/contracts'; 
 import { forSaleCategories, serviceCategories } from '../data/categories';
 
-const CreateListingPage = ({ addListing, listings }) => {
+const CreateListingPage = ({  listings }) => {
     const navigate = useNavigate();
     const { id } = useParams();
     const isEditing = id !== undefined;
@@ -24,12 +24,11 @@ const CreateListingPage = ({ addListing, listings }) => {
     const [serviceCategory, setServiceCategory] = useState(existingListing?.serviceCategory || '');
     const [description, setDescription] = useState(existingListing?.description || '');
     const [photos, setPhotos] = useState(existingListing?.photos || []);
-    
+
     // --- Web3 State Management ---
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const { address: userAddress, isConnected } = useAccount();
-    const chainId = useChainId();
     
     const { data: approveHash, writeContractAsync: approveAsync } = useWriteContract();
     const { data: createListingHash, writeContractAsync: createListingAsync } = useWriteContract();
