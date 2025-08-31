@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { parseEther, parseUnits } from 'viem';
+import { parseUnits } from 'viem';
 import { useAccount, useChainId } from 'wagmi';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-// CHANGED: Import from our new, clean config helper
 import { listingManagerConfig, mockDaiConfig } from '../config/contracts'; 
 import { forSaleCategories, serviceCategories } from '../data/categories';
-import { filesToBase64Array, validateImageFiles, compressImage } from '../utils/imageUtils';
-
 
 const CreateListingPage = ({ addListing, listings }) => {
     const navigate = useNavigate();
@@ -15,7 +12,7 @@ const CreateListingPage = ({ addListing, listings }) => {
     const isEditing = id !== undefined;
     const existingListing = isEditing ? listings.find(l => l.id.toString() === id) : null;
 
-    // --- All your original UI state is preserved ---
+    // --- All original UI state preserved ---
     const [listingType, setListingType] = useState(existingListing?.type || 'item');
     const [title, setTitle] = useState(existingListing?.title || '');
     const [category, setCategory] = useState(existingListing?.category || '');
@@ -34,22 +31,19 @@ const CreateListingPage = ({ addListing, listings }) => {
     const { address: userAddress, isConnected } = useAccount();
     const chainId = useChainId();
     
-    // RENAMED for clarity and to use async/await
     const { data: approveHash, writeContractAsync: approveAsync } = useWriteContract();
     const { data: createListingHash, writeContractAsync: createListingAsync } = useWriteContract();
     
     const { isSuccess: isApproved } = useWaitForTransactionReceipt({ hash: approveHash });
     const { isSuccess: isCreated } = useWaitForTransactionReceipt({ hash: createListingHash });
     
-    // Ref to pass signature data between handleSubmit and the useEffect hook
+    // Ref to pass signature data between handleSubmit and useEffect
     const signatureDataRef = useRef(null);
 
     useEffect(() => {
         setCategory('');
         setServiceCategory('');
     }, [listingType]);
-
-    // REMOVED: Unnecessary LMKT price fetching for this component
 
     const handlePhotoChange = (e) => {
         if (e.target.files) {
@@ -59,7 +53,7 @@ const CreateListingPage = ({ addListing, listings }) => {
         }
     };
 
-    // --- UPDATED: handleSubmit with the correct multi-step logic ---
+    // --- handleSubmit ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!isConnected || !userAddress) {
@@ -67,9 +61,7 @@ const CreateListingPage = ({ addListing, listings }) => {
             return;
         }
 
-        // Editing logic is not a blockchain transaction, so we handle it separately.
         if (isEditing) {
-            // Placeholder for your off-chain editing logic
             alert("Editing logic needs to be implemented (e.g., call an update API).");
             return;
         }
@@ -77,13 +69,12 @@ const CreateListingPage = ({ addListing, listings }) => {
         setIsLoading(true);
 
         try {
-            // STEP 1: UPLOAD TO IPFS (Placeholder logic preserved)
+            // STEP 1: Upload to IPFS (placeholder — should use Netlify fn in prod)
             setStatusMessage('1/4: Preparing listing data...');
-            // In a real app, you would upload to IPFS here. We'll use a placeholder.
-            const dataIdentifier = "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi";
+            const dataIdentifier = "ipfs://placeholder-cid";
             console.log("Using dataIdentifier:", dataIdentifier);
 
-            // STEP 2: REQUEST SIGNATURE FROM BACKEND
+            // STEP 2: Request signature from backend
             setStatusMessage('2/4: Requesting authorization from server...');
             const nonce = Date.now();
             const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour
@@ -92,12 +83,10 @@ const CreateListingPage = ({ addListing, listings }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userAddress,
-                    dataIdentifier,
+                    user: userAddress,       // ✅ field name updated
+                    dataIdentifier,          // ✅ CID or metadata hash
                     nonce,
                     deadline,
-                    chainId,
-                    verifyingContract: listingManagerConfig.address
                 })
             });
 
@@ -106,16 +95,16 @@ const CreateListingPage = ({ addListing, listings }) => {
             }
             const signatureData = await signatureResponse.json();
             signatureDataRef.current = { ...signatureData, dataIdentifier };
-            console.log("Received signature data from backend:", signatureData);
+            console.log("Received signature data:", signatureData);
 
-            // STEP 3: APPROVE FEE TRANSACTION (using Mock DAI)
+            // STEP 3: Approve fee (if still required by ListingManager)
             setStatusMessage('3/4: Please approve the listing fee...');
             const fee = listingType === 'item' ? '5' : '20';
             await approveAsync({
                 address: mockDaiConfig.address,
                 abi: mockDaiConfig.abi,
                 functionName: 'approve',
-                args: [listingManagerConfig.address, parseEther(fee)],
+                args: [listingManagerConfig.address, parseUnits(fee, 18)], // DAI decimals
             });
 
         } catch (error) {
@@ -126,17 +115,15 @@ const CreateListingPage = ({ addListing, listings }) => {
         }
     };
 
-    // --- UPDATED: useEffect hook for chaining transactions ---
+    // --- useEffect for createListing after approval ---
     useEffect(() => {
-        // This runs only when the `approve` transaction succeeds
         if (isApproved && signatureDataRef.current) {
             const { signature, nonce, deadline, dataIdentifier } = signatureDataRef.current;
             
             setStatusMessage('4/4: Fee approved! Creating listing...');
             
             const listingTypeEnum = listingType === 'item' ? 0 : 1;
-            // Convert price string from form to BigInt with 8 decimals for the contract
-            const priceInUsdBigInt = parseUnits(price, 8); 
+            const priceInUsdBigInt = parseUnits(price, 8); // ✅ USD price, 8 decimals
 
             createListingAsync({
                 address: listingManagerConfig.address,
@@ -154,7 +141,6 @@ const CreateListingPage = ({ addListing, listings }) => {
         }
     }, [isApproved, createListingAsync]);
 
-    // This useEffect handles the final success state (Unchanged)
     useEffect(() => {
         if (isCreated) {
             setIsLoading(false);
@@ -164,27 +150,36 @@ const CreateListingPage = ({ addListing, listings }) => {
         }
     }, [isCreated, navigate]);
 
-    // --- All of your original JSX and UI is preserved below ---
+    // --- JSX Layout (unchanged) ---
     return (
         <div className="container mx-auto px-6 py-12">
             <div className="bg-stone-50/95 p-8 md:p-12 rounded-lg shadow-lg max-w-4xl mx-auto">
-                <h1 className="text-4xl font-display font-bold text-center text-zinc-800 mb-8">{isEditing ? 'Edit Listing' : 'Create a Listing'}</h1>
+                <h1 className="text-4xl font-display font-bold text-center text-zinc-800 mb-8">
+                    {isEditing ? 'Edit Listing' : 'Create a Listing'}
+                </h1>
 
                 {!isEditing && (
                     <div className="flex justify-center mb-8">
                         <div className="flex p-1 bg-stone-200 rounded-lg">
-                            <button onClick={() => setListingType('item')} className={`px-6 py-2 rounded-md font-bold ${listingType === 'item' ? 'bg-teal-800 text-white' : 'text-zinc-700'}`}>Item for Sale</button>
-                            <button onClick={() => setListingType('service')} className={`px-6 py-2 rounded-md font-bold ${listingType === 'service' ? 'bg-teal-800 text-white' : 'text-zinc-700'}`}>Service Offered</button>
+                            <button onClick={() => setListingType('item')} className={`px-6 py-2 rounded-md font-bold ${listingType === 'item' ? 'bg-teal-800 text-white' : 'text-zinc-700'}`}>
+                                Item for Sale
+                            </button>
+                            <button onClick={() => setListingType('service')} className={`px-6 py-2 rounded-md font-bold ${listingType === 'service' ? 'bg-teal-800 text-white' : 'text-zinc-700'}`}>
+                                Service Offered
+                            </button>
                         </div>
                     </div>
                 )}
 
+                {/* --- Original Form Preserved --- */}
                 <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Title */}
                     <div>
                         <label htmlFor="title" className="block text-lg font-bold text-zinc-700 mb-2">Listing Title</label>
                         <input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-md focus:ring-teal-500 focus:border-teal-500 transition" />
                     </div>
 
+                    {/* Item Flow */}
                     {listingType === 'item' && (
                         <>
                             <div>
@@ -226,6 +221,7 @@ const CreateListingPage = ({ addListing, listings }) => {
                         </>
                     )}
 
+                    {/* Service Flow */}
                     {listingType === 'service' && (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -257,10 +253,13 @@ const CreateListingPage = ({ addListing, listings }) => {
                         </>
                     )}
 
+                    {/* Description */}
                     <div>
                         <label htmlFor="description" className="block text-lg font-bold text-zinc-700 mb-2">Description</label>
                         <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows="6" className="w-full px-4 py-2 bg-white border border-zinc-300 rounded-md focus:ring-teal-500 focus:border-teal-500 transition"></textarea>
                     </div>
+
+                    {/* Photos */}
                     <div>
                         <label className="block text-lg font-bold text-zinc-700 mb-2">Attach Photos</label>
                         <input type="file" id="photos" onChange={handlePhotoChange} multiple accept="image/*" className="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
@@ -274,6 +273,8 @@ const CreateListingPage = ({ addListing, listings }) => {
                             </div>
                         )}
                     </div>
+
+                    {/* Submit */}
                     <div className="text-center pt-4">
                         <button type="submit" disabled={isLoading} className="bg-teal-800 text-stone-100 py-3 px-12 rounded-md hover:bg-teal-900 transition duration-300 font-bold text-xl shadow-lg disabled:bg-zinc-400 disabled:cursor-not-allowed">
                             {isLoading ? statusMessage : (isEditing ? 'Save Changes' : 'Pay & Create Listing')}
