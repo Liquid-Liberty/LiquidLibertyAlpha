@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { parseUnits } from 'viem';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { listingManagerConfig, mockDaiConfig } from '../config/contracts'; 
 import { forSaleCategories, serviceCategories } from '../data/categories';
@@ -11,6 +11,7 @@ const CreateListingPage = ({  listings }) => {
     const { id } = useParams();
     const isEditing = id !== undefined;
     const existingListing = isEditing ? listings.find(l => l.id.toString() === id) : null;
+    const chainId = useChainId();
 
     // --- All original UI state preserved ---
     const [listingType, setListingType] = useState(existingListing?.type || 'item');
@@ -28,7 +29,7 @@ const CreateListingPage = ({  listings }) => {
     // --- Web3 State Management ---
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
-    const { address: userAddress, isConnected } = useAccount();
+    const { address, isConnected } = useAccount();
     
     const { data: approveHash, writeContractAsync: approveAsync } = useWriteContract();
     const { data: createListingHash, writeContractAsync: createListingAsync } = useWriteContract();
@@ -55,7 +56,7 @@ const CreateListingPage = ({  listings }) => {
     // --- handleSubmit ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!isConnected || !userAddress) {
+        if (!isConnected || !address) {
             alert("Please connect your wallet.");
             return;
         }
@@ -82,10 +83,12 @@ const CreateListingPage = ({  listings }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    user: userAddress,       // ✅ field name updated
+                    user: address,       // ✅ field name updated
                     dataIdentifier,          // ✅ CID or metadata hash
                     nonce,
+                    chainId,
                     deadline,
+                    verifyingContract: listingManagerConfig.address
                 })
             });
 

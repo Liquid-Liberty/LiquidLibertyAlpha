@@ -10,7 +10,7 @@ import { parseUnits } from 'viem';
 const ListingDetailPage = () => {
   const { id } = useParams();
   const { listings, loading, error, refreshListings } = useListings();
-  const { address: userAddress, isConnected } = useAccount();
+  const { address: address, isConnected } = useAccount();
 
   const listing = listings.find((l) => l.id.toString() === id);
   const [mainImage, setMainImage] = useState(listing?.imageUrl || '');
