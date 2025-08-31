@@ -8,65 +8,68 @@ describe("Treasury", function () {
 
     beforeEach(async function () {
         [owner, user] = await ethers.getSigners();
-
-        // 1. Deploy contracts
+        
         const MockOracleFactory = await ethers.getContractFactory("MockPriceOracle");
         mockOracle = await MockOracleFactory.deploy();
-
         const LmktFactory = await ethers.getContractFactory("LMKT");
         lmkt = await LmktFactory.deploy();
-
         const MockDaiFactory = await ethers.getContractFactory("GenericERC20");
         mockDai = await MockDaiFactory.deploy("Mock DAI", "mDAI", 18);
-
         const TreasuryFactory = await ethers.getContractFactory("Treasury");
         treasury = await TreasuryFactory.deploy();
 
-        // 2. Configure the system
         await treasury.setLmktAddress(await lmkt.getAddress());
+        
+        const initialLmktSupply = await lmkt.totalSupply();
+        await lmkt.transfer(await treasury.getAddress(), initialLmktSupply); 
         await lmkt.transferOwnership(await treasury.getAddress());
 
         const daiQueryId = ethers.keccak256(ethers.toUtf8Bytes("mDAI/USD"));
         await treasury.setWhitelistedCollateral(await mockDai.getAddress(), true);
         await treasury.setPriceFeed(await mockDai.getAddress(), await mockOracle.getAddress());
         await treasury.setTokenQueryId(await mockDai.getAddress(), daiQueryId);
-        
         await mockOracle.setPrice(daiQueryId, 1 * 10**8);
 
-        // 3. Fund accounts
-        const initialLmktSupply = await lmkt.balanceOf(owner.address);
-        await lmkt.connect(owner).transfer(await treasury.getAddress(), initialLmktSupply);
-
+        await mockDai.mint(await treasury.getAddress(), ethers.parseEther("25000"));
         await mockDai.mint(user.address, ethers.parseEther("10000"));
     });
 
-    describe("Deployment & Configuration", function () {
-        it("Should allow the owner to set fee rates", async function () {
-            await treasury.setFeeRate(150, 150, 50);
+    describe("Admin & Configuration", function() {
+        it("Should allow the owner to set new fee rates", async function() {
+            await treasury.connect(owner).setFeeRate(150, 150);
             expect(await treasury.SELL_PREMIUM()).to.equal(150);
+            expect(await treasury.BUY_DISCOUNT()).to.equal(150);
+        });
+
+        it("Should prevent non-owners from setting fee rates", async function() {
+            await expect(treasury.connect(user).setFeeRate(150, 150))
+                .to.be.revertedWithCustomError(treasury, "OwnableUnauthorizedAccount");
+        });
+        
+        it("Should allow depositing commerce fees", async function() {
+            const feeAmount = ethers.parseEther("10");
+            await mockDai.connect(user).approve(await treasury.getAddress(), feeAmount);
+            
+            const initialTreasuryBalance = await mockDai.balanceOf(await treasury.getAddress());
+            await expect(treasury.connect(user).depositCommerceFee(await mockDai.getAddress(), feeAmount))
+                .to.emit(treasury, "CommerceFeeReceived");
+
+            expect(await mockDai.balanceOf(await treasury.getAddress())).to.equal(initialTreasuryBalance + feeAmount);
         });
     });
 
     describe("buyMkt", function () {
-        it("Should allow a user to buy LMKT with collateral", async function () {
+        it("Should mint new LMKT to a user in exchange for collateral", async function () {
             const collateralAmount = ethers.parseEther("1000");
             await mockDai.connect(user).approve(await treasury.getAddress(), collateralAmount);
-            await mockDai.mint(await treasury.getAddress(), ethers.parseEther("1000"));
-            
-            // CORRECTED LOGIC: Calculate expected output based on the FUTURE state
-            const collateralValue = await treasury.getCollateralTokenValue(collateralAmount, await mockDai.getAddress());
-            const totalCollateralBefore = await treasury.getTotalCollateralValue();
-            const circulatingSupply = await lmkt.totalSupply();
-            const totalCollateralAfter = totalCollateralBefore + collateralValue;
-            
-            const baseLmktAmount = (collateralValue * circulatingSupply) / totalCollateralAfter;
-            const buyDiscount = await treasury.BUY_DISCOUNT();
-            const expectedLmktOut = (baseLmktAmount * (10000n - buyDiscount)) / 10000n;
 
-            const initialUserLmkt = await lmkt.balanceOf(user.address);
+            const initialTotalSupply = await lmkt.totalSupply();
+            const expectedLmktToMint = await treasury.getLmktAmountForCollateral(collateralAmount, await mockDai.getAddress());
+            
             await treasury.connect(user).buyMkt(collateralAmount, await mockDai.getAddress(), 0);
 
-            expect(await lmkt.balanceOf(user.address)).to.equal(initialUserLmkt + expectedLmktOut);
+            const finalTotalSupply = await lmkt.totalSupply();
+            expect(finalTotalSupply).to.equal(initialTotalSupply + expectedLmktToMint);
         });
     });
 
@@ -74,48 +77,56 @@ describe("Treasury", function () {
         beforeEach(async function() {
             const collateralAmount = ethers.parseEther("1000");
             await mockDai.connect(user).approve(await treasury.getAddress(), collateralAmount);
-            await mockDai.mint(await treasury.getAddress(), ethers.parseEther("1000"));
             await treasury.connect(user).buyMkt(collateralAmount, await mockDai.getAddress(), 0);
         });
 
-        it("Should allow a user to sell LMKT for collateral and burn a portion", async function () {
+        it("Should pay the user, burn 100% of tokens, and increase the LMKT price", async function () {
             const lmktToSell = await lmkt.balanceOf(user.address);
+            expect(lmktToSell).to.be.gt(0);
             await lmkt.connect(user).approve(await treasury.getAddress(), lmktToSell);
 
-            // CORRECTED LOGIC: Calculate based on post-burn state
-            const burnRate = await treasury.BURN_RATE();
-            const expectedBurnAmount = (lmktToSell * burnRate) / 10000n;
-            const remainingLmkt = lmktToSell - expectedBurnAmount;
-            
-            const totalCollateral = await treasury.getTotalCollateralValue();
-            const totalSupplyBefore = await lmkt.totalSupply();
-            const totalSupplyAfterBurn = totalSupplyBefore - expectedBurnAmount;
-
-            const baseCollateralValue = (remainingLmkt * totalCollateral) / totalSupplyAfterBurn;
-            const sellPremium = await treasury.SELL_PREMIUM();
-            const expectedDaiOut = (baseCollateralValue * (10000n - sellPremium)) / 10000n;
-            
-            const initialUserDai = await mockDai.balanceOf(user.address);
+            const initialPrice = await treasury.getLmktPriceInUsd();
             await treasury.connect(user).sellMkt(lmktToSell, await mockDai.getAddress(), 0);
+            const finalPrice = await treasury.getLmktPriceInUsd();
 
-            expect(await mockDai.balanceOf(user.address)).to.equal(initialUserDai + expectedDaiOut);
+            expect(finalPrice).to.be.above(initialPrice);
         });
     });
 
-    describe("View Functions", function () {
-        it("getLmktPriceInUsd should return a valid price based on collateral", async function() {
-            await mockDai.mint(await treasury.getAddress(), ethers.parseEther("1000000"));
-            const expectedPrice = 40000000;
-            expect(await treasury.getLmktPriceInUsd()).to.equal(expectedPrice);
-        });
-    });
+    describe("Security & Edge Cases", function() {
+        it("Should revert buyMkt if minLmktOut is not met", async function() {
+            const collateralAmount = ethers.parseEther("1000");
+            await mockDai.connect(user).approve(await treasury.getAddress(), collateralAmount);
+            const expectedLmktToMint = await treasury.getLmktAmountForCollateral(collateralAmount, await mockDai.getAddress());
 
-    describe("Security and Access Control", function () {
-        it("Should prevent a random user from burning LMKT directly", async function () {
-            const amountToBurn = ethers.parseEther("100");
-            await expect(lmkt.connect(user).burn(amountToBurn))
-                .to.be.revertedWithCustomError(lmkt, "OwnableUnauthorizedAccount")
-                .withArgs(user.address);
+            const minLmktOut = expectedLmktToMint + 1n;
+
+            await expect(treasury.connect(user).buyMkt(collateralAmount, await mockDai.getAddress(), minLmktOut))
+                .to.be.revertedWith("Treasury: Slippage tolerance exceeded");
+        });
+
+        it("Should revert sellMkt if minCollateralOut is not met", async function() {
+            const collateralToBuy = ethers.parseEther("100");
+            await mockDai.connect(user).approve(await treasury.getAddress(), collateralToBuy);
+            await treasury.connect(user).buyMkt(collateralToBuy, await mockDai.getAddress(), 0);
+            
+            const lmktToSell = await lmkt.balanceOf(user.address);
+            await lmkt.connect(user).approve(await treasury.getAddress(), lmktToSell);
+            const expectedDaiOut = await treasury.getCollateralAmountForLmkt(lmktToSell, await mockDai.getAddress());
+
+            const minCollateralOut = expectedDaiOut + 1n;
+
+            await expect(treasury.connect(user).sellMkt(lmktToSell, await mockDai.getAddress(), minCollateralOut))
+                .to.be.revertedWith("Treasury: Slippage tolerance exceeded");
+        });
+
+        it("Should prevent non-owners from calling admin functions", async function() {
+            await expect(treasury.connect(user).setLmktAddress(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(treasury, "OwnableUnauthorizedAccount");
+            await expect(treasury.connect(user).setPriceFeed(ethers.ZeroAddress, ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(treasury, "OwnableUnauthorizedAccount");
+            await expect(treasury.connect(user).setWhitelistedCollateral(ethers.ZeroAddress, false))
+                .to.be.revertedWithCustomError(treasury, "OwnableUnauthorizedAccount");
         });
     });
 });

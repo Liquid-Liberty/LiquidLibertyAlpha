@@ -138,6 +138,11 @@ async function main() {
   // d. Configure MockDai Token
   await mockDai.addMinter(faucet.target);
   console.log("MockDai configured: Faucet has been added as a minter.");
+
+  // --- CHANGE: Added required security configuration for ListingManager ---
+  // e. Configure ListingManager
+  await listingManager.setPaymentProcessor(paymentProcessor.target);
+  console.log("ListingManager configured: PaymentProcessor address set.");
   
   // --- 5. SAVE FRONTEND FILES ---
   await saveFrontendFiles({
