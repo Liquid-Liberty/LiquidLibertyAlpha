@@ -11,9 +11,10 @@ import "./interfaces/ILMKT.sol";
 contract PaymentProcessor is ReentrancyGuard, Ownable {
     using SafeERC20 for ILMKT;
 
+    // --- CHANGE: Added lmktAmount to the event ---
     event PurchaseMade(uint256 indexed listingId, address indexed buyer, address indexed seller, uint256 lmktAmount);
     
-    uint256 public constant COMMERCE_FEE = 50; // 0.5% (50 / 10000)
+    uint256 public constant COMMERCE_FEE = 50;
     uint256 public constant FEE_BASE = 10000;
 
     ITreasury public immutable treasury;
@@ -54,6 +55,7 @@ contract PaymentProcessor is ReentrancyGuard, Ownable {
             listingManager.closeListing(listingId);
         }
 
+        // --- CHANGE: Emitting the event with the totalAmount ---
         emit PurchaseMade(listingId, msg.sender, listing.owner, totalAmount);
     }
 }

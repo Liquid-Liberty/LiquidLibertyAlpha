@@ -101,6 +101,17 @@ describe("PaymentProcessor", function () {
             const listing = await listingManager.getListing(LISTING_ID_SERVICE);
             expect(listing.status).to.equal(0);
         });
+
+        it("Should emit a PurchaseMade event with correct arguments", async function () {
+            const lmktPriceUsd = await treasury.getLmktPriceInUsd();
+            const itemPriceInLmkt = (BigInt(LISTING_PRICE_USD) * (10n ** 18n)) / lmktPriceUsd;
+            const totalAmount = itemPriceInLmkt * 1005n / 1000n;
+            await lmkt.connect(buyer).approve(await paymentProcessor.getAddress(), totalAmount);
+
+            await expect(paymentProcessor.connect(buyer).executePayment(LISTING_ID_SALE, totalAmount))
+                .to.emit(paymentProcessor, "PurchaseMade")
+                .withArgs(LISTING_ID_SALE, buyer.address, seller.address, totalAmount);
+        });
     });
 
     describe("Security and Error Handling", function () {
@@ -128,7 +139,6 @@ describe("PaymentProcessor", function () {
         });
 
         it("Should prevent the seller from buying their own listing", async function () {
-            // --- CHANGE: Seller now acquires LMKT by buying from the treasury ---
             const daiForSeller = ethers.parseEther("5000");
             await mockDai.mint(seller.address, daiForSeller);
             await mockDai.connect(seller).approve(await treasury.getAddress(), daiForSeller);
