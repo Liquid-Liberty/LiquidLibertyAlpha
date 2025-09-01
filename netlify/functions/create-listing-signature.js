@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import 'dotenv/config';
 import process from 'process';
+import signListing from "../../utils/signListing.js"; // ✅ already imported
 
 // Load the private key from Netlify's environment variables
 const { SIGNER_PRIVATE_KEY } = process.env;
@@ -65,33 +66,16 @@ export async function handler(event) {
   try {
     const signer = new ethers.Wallet(SIGNER_PRIVATE_KEY);
 
-    // EIP-712 domain
-    const domain = {
-      name: "ListingManager",
-      version: "1",
-      chainId: chainId,
-      verifyingContract: verifyingContract,
-    };
-
-    // Types (must exactly match ListingManager.sol)
-    const types = {
-      ListingAuthorization: [
-        { name: "user", type: "address" },
-        { name: "dataIdentifier", type: "string" },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" },
-      ],
-    };
-
-    const value = {
+    // ✅ Reuse centralized signListing util
+    const { signature } = await signListing({
+      signer,
       user,
       dataIdentifier,
       nonce,
       deadline,
-    };
-
-    // Sign typed data (ethers v6)
-    const signature = await signer.signTypedData(domain, types, value);
+      chainId,
+      verifyingContract,
+    });
 
     return {
       statusCode: 200,

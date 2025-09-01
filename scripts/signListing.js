@@ -32,7 +32,7 @@ async function main() {
 
   // Example: sign typed data for a new listing
   const user = "0xYourTestUserAddress"; // replace with wallet you want to authorize
-  const dataIdentifier = "ipfs://placeholder-cid";
+  const dataIdentifier = "ipfs://placeholder-cid"; //TODO: Implement IPFS upload
   const nonce = 1;
   const deadline =
     Math.floor(Date.now() / 1000) +
