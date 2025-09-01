@@ -6,6 +6,9 @@ require("@nomicfoundation/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
+
+const { ACCOUNT_PRIVATE_KEY } = process.env;
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -17,6 +20,12 @@ module.exports = {
       },
     },
   },
+  networks: {
+  localhost: {
+    url: "http://127.0.0.1:8545",
+      accounts: ACCOUNT_PRIVATE_KEY ? [ACCOUNT_PRIVATE_KEY] : []
+  }
+}
   
   /*
   // We are commenting out the network and etherscan sections for now

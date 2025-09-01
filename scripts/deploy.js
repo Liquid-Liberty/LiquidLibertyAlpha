@@ -2,6 +2,7 @@ import hardhat from "hardhat";
 const { ethers } = hardhat;
 import fs from "fs";
 import "dotenv/config";
+import process from "process";
 
 // This helper function saves the contract addresses and ABIs to the front-end directory
 async function saveFrontendFiles(contracts) {
