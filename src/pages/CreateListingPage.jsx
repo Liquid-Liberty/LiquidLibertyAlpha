@@ -86,8 +86,8 @@ const CreateListingPage = ({  listings }) => {
                     user: address,       // ✅ field name updated
                     dataIdentifier,          // ✅ CID or metadata hash
                     nonce,
-                    chainId,
                     deadline,
+                    chainId,
                     verifyingContract: listingManagerConfig.address
                 })
             });
