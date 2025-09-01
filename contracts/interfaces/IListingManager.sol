@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 interface IListingManager {
-    // --- CHANGE: Using your preferred "ServiceOffered" enum name
     enum ListingType { ForSale, ServiceOffered }
     enum ListingStatus { Active, Inactive }
 
@@ -12,10 +11,13 @@ interface IListingManager {
         ListingType listingType;
         ListingStatus status;
         string dataIdentifier;
-        // --- CHANGE: Added field to track listing expiration for the renewal feature
         uint256 expirationTimestamp;
     }
 
     function getListing(uint256 listingId) external view returns (Listing memory);
     function closeListing(uint256 listingId) external;
+
+    // --- CHANGE: Added new view functions for dapp integration ---
+    function getListingsByOwner(address _owner) external view returns (uint256[] memory);
+    function getActiveListings(uint256 _cursor, uint256 _limit) external view returns (uint256[] memory listingIds, uint256 nextCursor);
 }
