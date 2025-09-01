@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAccount, usePublicClient } from 'wagmi';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAccount, usePublicClient } from "wagmi";
 
 // Import contract configurations
-import contractAddresses from '../config/contract-addresses.json';
-import ListingManagerABI from '../config/ListingManager.json';
+import contractAddresses from "../config/contract-addresses.json";
+import ListingManagerABI from "../config/ListingManager.json";
 
 const ListingsContext = createContext();
 
@@ -37,10 +37,15 @@ export const ListingsProvider = ({ children }) => {
 
   // --- Helper: Expiration check ---
   const isExpired = (expirationTimestamp) => {
-    return expirationTimestamp && Number(expirationTimestamp) < Math.floor(Date.now() / 1000);
+    return (
+      expirationTimestamp &&
+      Number(expirationTimestamp) < Math.floor(Date.now() / 1000)
+    );
   };
 
   const fetchListings = async () => {
+    const now = Date.now();
+
     if (!isConnected || !publicClient) {
       setListings([]);
       setLoading(false);
@@ -54,7 +59,7 @@ export const ListingsProvider = ({ children }) => {
       const totalListings = await publicClient.readContract({
         address: contractAddresses.ListingManager,
         abi: ListingManagerABI.abi,
-        functionName: 'listingCounter',
+        functionName: "listingCounter",
       });
 
       if (totalListings === 0n) {
@@ -69,7 +74,7 @@ export const ListingsProvider = ({ children }) => {
           publicClient.readContract({
             address: contractAddresses.ListingManager,
             abi: ListingManagerABI.abi,
-            functionName: 'getListing',
+            functionName: "getListing",
             args: [BigInt(i)],
           })
         );
@@ -80,7 +85,14 @@ export const ListingsProvider = ({ children }) => {
       // Format + enrich with metadata
       const formattedListings = await Promise.all(
         rawListings.map(async (listing, index) => {
-          const [owner, priceInUsd, listingType, status, dataIdentifier, expirationTimestamp] = listing;
+          const [
+            owner,
+            priceInUsd,
+            listingType,
+            status,
+            dataIdentifier,
+            expirationTimestamp,
+          ] = listing;
 
           let metadata = null;
           if (dataIdentifier && dataIdentifier !== "NO_IMAGE") {
@@ -91,16 +103,18 @@ export const ListingsProvider = ({ children }) => {
             id: index + 1,
             owner,
             priceInUsd: Number(priceInUsd) / 1e8,
-            listingType: Number(listingType) === 0 ? 'ForSale' : 'ServiceOffered',
-            status: Number(status) === 0 ? 'Active' : 'Inactive',
+            listingType:
+              Number(listingType) === 0 ? "ForSale" : "ServiceOffered",
+            status: Number(status) === 0 ? "Active" : "Inactive",
             dataIdentifier,
             expirationTimestamp: Number(expirationTimestamp),
             expired: isExpired(expirationTimestamp),
             title: metadata?.title || `Listing #${index + 1}`,
-            description: metadata?.description || 'Details fetched from blockchain.',
+            description:
+              metadata?.description || "Details fetched from blockchain.",
             imageUrl: metadata?.photos?.[0]
               ? `https://ipfs.io/ipfs/${metadata.photos[0]}`
-              : 'https://via.placeholder.com/150',
+              : "https://via.placeholder.com/150",
             category: metadata?.category || null,
             serviceCategory: metadata?.serviceCategory || null,
             rateType: metadata?.rateType || null,
@@ -112,11 +126,16 @@ export const ListingsProvider = ({ children }) => {
       );
 
       // ✅ Only show active, but pass along expired flag
-      setListings(formattedListings.filter(l => l.status === 'Active'));
-
+      setListings(
+        formattedListings.filter(
+          (l) =>
+            l.status === "Active" &&
+            (!l.expirationTimestamp || l.expirationTimestamp * 1000 > now)
+        )
+      );
     } catch (e) {
       console.error("Failed to fetch listings:", e);
-      setError('Failed to fetch listings from the blockchain.');
+      setError("Failed to fetch listings from the blockchain.");
     } finally {
       setLoading(false);
     }
@@ -133,8 +152,10 @@ export const ListingsProvider = ({ children }) => {
     refreshListings: fetchListings,
     getUserListings: (userAddress) => {
       if (!userAddress) return [];
-      return listings.filter(l => l.owner.toLowerCase() === userAddress.toLowerCase());
-    }
+      return listings.filter(
+        (l) => l.owner.toLowerCase() === userAddress.toLowerCase()
+      );
+    },
   };
 
   return (
