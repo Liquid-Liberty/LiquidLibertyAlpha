@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import 'dotenv/config';
 import process from 'process';
-import signListing from "../../utils/signListing.js"; // ✅ already imported
+import signListing from '../../scripts/signListing.js';
 
 // Load the private key from Netlify's environment variables
 const { SIGNER_PRIVATE_KEY } = process.env;

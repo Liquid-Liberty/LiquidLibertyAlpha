@@ -3,14 +3,14 @@ import { useParams } from 'react-router-dom';
 import { serviceCategories, mockAds } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
 import { useListings } from '../context/ListingsContext';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { mockDaiConfig, paymentProcessorConfig } from '../config/contracts';
-import { parseUnits } from 'viem';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
+import { lmktConfig, treasuryConfig, paymentProcessorConfig } from '../config/contracts';
 
 const ListingDetailPage = () => {
   const { id } = useParams();
   const { listings, loading, error, refreshListings } = useListings();
-  const { address: address, isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
   const listing = listings.find((l) => l.id.toString() === id);
   const [mainImage, setMainImage] = useState(listing?.imageUrl || '');
@@ -27,6 +27,7 @@ const ListingDetailPage = () => {
   if (!listing) return <div className="text-center py-20 font-display text-2xl">Listing not found.</div>;
 
   const isService = listing.listingType === 'ServiceOffered';
+  const isOwner = address?.toLowerCase() === listing.owner.toLowerCase(); // ✅ Prevent buying own listing
 
   const handleBuyNow = async (e) => {
     e.preventDefault();
@@ -37,27 +38,38 @@ const ListingDetailPage = () => {
 
     try {
       setIsLoading(true);
-      setStatusMessage("1/2: Approving payment...");
+      setStatusMessage("1/2: Approving LMKT...");
 
-      // Approve Mock DAI for PaymentProcessor
-      const amount = parseUnits(listing.priceInUsd.toString(), 8); // 8 decimals USD
-      await approveAsync({
-        address: mockDaiConfig.address,
-        abi: mockDaiConfig.abi,
-        functionName: 'approve',
-        args: [paymentProcessorConfig.address, amount],
+      // --- Fetch LMKT price from Treasury ---
+      const lmktPriceInUsd = await publicClient.readContract({
+        address: treasuryConfig.address,
+        abi: treasuryConfig.abi,
+        functionName: 'getLmktPriceInUsd',
       });
 
-      setStatusMessage("2/2: Waiting for purchase transaction...");
+      if (lmktPriceInUsd === 0n) {
+        throw new Error("Invalid LMKT price from Treasury");
+      }
+
+      // Convert USD price → LMKT amount
+      const itemPriceInLmkt = (BigInt(Math.floor(listing.priceInUsd * 1e8)) * BigInt(10 ** 18)) / lmktPriceInUsd;
+      const maxLmktToPay = (itemPriceInLmkt * 101n) / 100n; // 1% slippage buffer
+
+      // Step 1: Approve LMKT
+      await approveAsync({
+        address: lmktConfig.address,
+        abi: lmktConfig.abi,
+        functionName: 'approve',
+        args: [paymentProcessorConfig.address, maxLmktToPay],
+      });
+
+      setStatusMessage("2/2: Executing purchase...");
+      // Step 2: Execute Payment
       await buyAsync({
         address: paymentProcessorConfig.address,
         abi: paymentProcessorConfig.abi,
-        functionName: 'purchaseListing',
-        args: [
-          listing.id,
-          amount,
-          listing.owner,
-        ],
+        functionName: 'executePayment',
+        args: [listing.id, maxLmktToPay],
       });
     } catch (err) {
       console.error("Purchase failed:", err);
@@ -150,14 +162,28 @@ const ListingDetailPage = () => {
                   )}
                 </div>
 
-                {/* Buy Button */}
-                <button
-                  className="w-full mt-8 bg-teal-800 text-stone-100 py-3 px-12 rounded-md hover:bg-teal-900 transition duration-300 font-bold text-xl shadow-lg"
-                  onClick={handleBuyNow}
-                  disabled={isLoading}
-                >
-                  {isService ? "Contact Provider" : isLoading ? "Processing..." : "Buy Now"}
-                </button>
+                {/* Conditional Button */}
+                {isService ? (
+                  <button
+                    className="w-full mt-8 bg-blue-600 text-stone-100 py-3 px-12 rounded-md hover:bg-blue-700 transition duration-300 font-bold text-xl shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    disabled={isOwner}
+                    onClick={() => alert("Contact Provider feature coming soon!")}
+                  >
+                    {isOwner ? "You Own This Listing" : "Contact Provider"}
+                  </button>
+                ) : (
+                  <button
+                    className="w-full mt-8 bg-teal-800 text-stone-100 py-3 px-12 rounded-md hover:bg-teal-900 transition duration-300 font-bold text-xl shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    onClick={handleBuyNow}
+                    disabled={isLoading || isOwner}
+                  >
+                    {isOwner
+                      ? "You Own This Listing"
+                      : isLoading
+                      ? "Processing..."
+                      : "Buy Now"}
+                  </button>
+                )}
                 {statusMessage && (
                   <p className="text-sm text-zinc-600 mt-2">{statusMessage}</p>
                 )}

@@ -35,6 +35,11 @@ export const ListingsProvider = ({ children }) => {
     }
   };
 
+  // --- Helper: Expiration check ---
+  const isExpired = (expirationTimestamp) => {
+    return expirationTimestamp && Number(expirationTimestamp) < Math.floor(Date.now() / 1000);
+  };
+
   const fetchListings = async () => {
     if (!isConnected || !publicClient) {
       setListings([]);
@@ -75,7 +80,7 @@ export const ListingsProvider = ({ children }) => {
       // Format + enrich with metadata
       const formattedListings = await Promise.all(
         rawListings.map(async (listing, index) => {
-          const [owner, priceInUsd, listingType, status, dataIdentifier] = listing;
+          const [owner, priceInUsd, listingType, status, dataIdentifier, expirationTimestamp] = listing;
 
           let metadata = null;
           if (dataIdentifier && dataIdentifier !== "NO_IMAGE") {
@@ -89,6 +94,8 @@ export const ListingsProvider = ({ children }) => {
             listingType: Number(listingType) === 0 ? 'ForSale' : 'ServiceOffered',
             status: Number(status) === 0 ? 'Active' : 'Inactive',
             dataIdentifier,
+            expirationTimestamp: Number(expirationTimestamp),
+            expired: isExpired(expirationTimestamp),
             title: metadata?.title || `Listing #${index + 1}`,
             description: metadata?.description || 'Details fetched from blockchain.',
             imageUrl: metadata?.photos?.[0]
@@ -104,6 +111,7 @@ export const ListingsProvider = ({ children }) => {
         })
       );
 
+      // ✅ Only show active, but pass along expired flag
       setListings(formattedListings.filter(l => l.status === 'Active'));
 
     } catch (e) {

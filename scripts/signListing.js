@@ -1,13 +1,20 @@
+// scripts/signListing.js
 import { ethers } from "ethers";
 import dotenv from "dotenv";
 import ListingManagerABI from "../artifacts/contracts/ListingManager.sol/ListingManager.json";
-import contractAddresses from "../frontend/src/config/contract-addresses.json";
 import process from "process";
 
 dotenv.config();
 
-async function main() {
-  let provider, trustedSigner, listingManagerAddress;
+export default async function signListing({
+  user,
+  dataIdentifier,
+  nonce,
+  deadline,
+  chainId,
+  verifyingContract,
+}) {
+  let provider, trustedSigner;
 
   switch (process.env.DEPLOY_ENV) {
     case "local":
@@ -16,7 +23,6 @@ async function main() {
         process.env.SIGNER_PRIVATE_KEY,
         provider
       );
-      listingManagerAddress = contractAddresses.ListingManager;
       break;
 
     case "sepolia":
@@ -26,23 +32,14 @@ async function main() {
         process.env.SIGNER_PRIVATE_KEY,
         provider
       );
-      listingManagerAddress = process.env.LISTING_MANAGER_ADDRESS;
       break;
   }
-
-  // Example: sign typed data for a new listing
-  const user = "0xYourTestUserAddress"; // replace with wallet you want to authorize
-  const dataIdentifier = "ipfs://placeholder-cid"; //TODO: Implement IPFS upload
-  const nonce = 1;
-  const deadline =
-    Math.floor(Date.now() / 1000) +
-    parseInt(process.env.SIGNATURE_TTL_SECONDS || "3600");
 
   const domain = {
     name: "ListingManager",
     version: "1",
-    chainId: (await provider.getNetwork()).chainId,
-    verifyingContract: listingManagerAddress,
+    chainId,
+    verifyingContract,
   };
 
   const types = {
@@ -54,20 +51,9 @@ async function main() {
     ],
   };
 
-  const value = {
-    user,
-    dataIdentifier,
-    nonce,
-    deadline,
-  };
+  const value = { user, dataIdentifier, nonce, deadline };
 
   const signature = await trustedSigner.signTypedData(domain, types, value);
 
-  console.log("Signature:", signature);
-  console.log("Signed for user", user, "nonce", nonce, "deadline", deadline);
+  return { signature, nonce, deadline, dataIdentifier };
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});

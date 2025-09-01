@@ -5,8 +5,15 @@ import { listingManagerConfig } from '../config/contracts';
 
 const ListingRow = ({ listing, onRefetch }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Close Listing
   const { data: closeHash, writeContract: handleCloseAction } = useWriteContract();
   const { isSuccess: isClosed } = useWaitForTransactionReceipt({ hash: closeHash });
+
+  // Renew Listing
+  const { data: renewHash, writeContract: handleRenewAction } = useWriteContract();
+  const { isSuccess: isRenewed } = useWaitForTransactionReceipt({ hash: renewHash });
+
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
@@ -17,7 +24,13 @@ const ListingRow = ({ listing, onRefetch }) => {
       setStatusMessage('');
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
-  }, [isClosed, onRefetch]);
+    if (isRenewed) {
+      alert("Listing Renewed");
+      setIsLoading(false);
+      setStatusMessage('');
+      if (onRefetch) setTimeout(onRefetch, 2000);
+    }
+  }, [isClosed, isRenewed, onRefetch]);
 
   const handleClose = async (e) => {
     e.preventDefault();
@@ -31,7 +44,26 @@ const ListingRow = ({ listing, onRefetch }) => {
     });
   };
 
-  const getStatusPill = (status) => {
+  const handleRenew = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setStatusMessage('Renewing listing...');
+    handleRenewAction({
+      address: listingManagerConfig.address,
+      abi: listingManagerConfig.abi,
+      functionName: 'renewListing',
+      args: [listing.id],
+    });
+  };
+
+  const isExpired = listing.expirationTimestamp
+    ? listing.expirationTimestamp * 1000 < Date.now()
+    : false;
+
+  const getStatusPill = (status, expired) => {
+    if (expired) {
+      return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-yellow-200 text-yellow-800">Expired</span>;
+    }
     switch (status) {
       case 'Active':
         return <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-200 text-green-800">Active</span>;
@@ -44,7 +76,17 @@ const ListingRow = ({ listing, onRefetch }) => {
     }
   };
 
-  const getActionButtons = (status) => {
+  const getActionButtons = (status, expired) => {
+    if (expired) {
+      return (
+        <button
+          className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600"
+          onClick={handleRenew}
+        >
+          Renew
+        </button>
+      );
+    }
     switch (status) {
       case 'Active':
         return (
@@ -83,7 +125,7 @@ const ListingRow = ({ listing, onRefetch }) => {
           </div>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
-          {getStatusPill(listing.status)}
+          {getStatusPill(listing.status, isExpired)}
           <svg
             className={`w-5 h-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
@@ -97,17 +139,16 @@ const ListingRow = ({ listing, onRefetch }) => {
       {isExpanded && (
         <div className="px-4 pb-4 border-t border-stone-200">
           <div className="text-sm text-zinc-700 mt-3 space-y-1">
-            <p>
-              <strong>Listing ID:</strong> {listing.id}
-            </p>
+            <p><strong>Listing ID:</strong> {listing.id}</p>
             {listing.description && (
-              <p>
-                <strong>Description:</strong> {listing.description}
-              </p>
+              <p><strong>Description:</strong> {listing.description}</p>
+            )}
+            {listing.expirationTimestamp && (
+              <p><strong>Expires:</strong> {new Date(listing.expirationTimestamp * 1000).toLocaleString()}</p>
             )}
           </div>
           <div className="flex items-center space-x-2 mt-4">
-            {getActionButtons(listing.status)}
+            {getActionButtons(listing.status, isExpired)}
           </div>
         </div>
       )}
@@ -116,7 +157,7 @@ const ListingRow = ({ listing, onRefetch }) => {
 };
 
 const MyListings = () => {
-  const {  loading, error, getUserListings, refreshListings } = useListings();
+  const { loading, error, getUserListings, refreshListings } = useListings();
   const { address, isConnected } = useAccount();
 
   if (!isConnected) {
