@@ -14,7 +14,15 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
     using SafeERC20 for IERC20;
     using SafeERC20 for ILMKT;
 
-    event MKTSwap(address indexed sender, address indexed collateralToken, uint256 collateralAmount, uint256 lmktAmount, uint256 totalCollateral, uint256 circulatingSupply, bool isBuy);
+    event MKTSwap(
+        address indexed sender,
+        address indexed collateralToken,
+        uint256 collateralAmount,
+        uint256 lmktAmount,
+        uint256 totalCollateral,
+        uint256 circulatingSupply,
+        bool isBuy
+    );
     event CollateralWhitelisted(address indexed token, bool isWhitelisted);
     event CommerceFeeReceived(address indexed token, uint256 amount);
     event PriceFeedSet(address indexed token, address indexed feed);
@@ -24,7 +32,9 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
     ILMKT public lmktToken;
     mapping(address => bool) public isWhitelistedCollateral;
     address[] public whitelistedCollateralTokens;
-    mapping(address => MockPriceOracle) public tokenPriceFeeds;
+
+    // 🔑 FIX: store as raw address, not typed contract
+    mapping(address => address) public tokenPriceFeeds;
     mapping(address => bytes32) public tokenQueryIds;
 
     uint256 public SELL_PREMIUM = 100;
@@ -40,14 +50,14 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         BUY_DISCOUNT = _buyDiscount;
         emit FeeRateSet(_sellPremium, _buyDiscount);
     }
-    
+
     function setLmktAddress(address _lmktTokenAddress) external onlyOwner {
         lmktToken = ILMKT(_lmktTokenAddress);
     }
 
     function setPriceFeed(address _token, address _feedAddress) external onlyOwner {
         require(isWhitelistedCollateral[_token], "Treasury: Token not whitelisted");
-        tokenPriceFeeds[_token] = MockPriceOracle(_feedAddress);
+        tokenPriceFeeds[_token] = _feedAddress; // store address only
         emit PriceFeedSet(_token, _feedAddress);
     }
 
@@ -60,7 +70,9 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
     function setWhitelistedCollateral(address token, bool isWhitelisted) external onlyOwner {
         isWhitelistedCollateral[token] = isWhitelisted;
         if (isWhitelisted) {
-            for (uint i = 0; i < whitelistedCollateralTokens.length; i++) { if (whitelistedCollateralTokens[i] == token) return; }
+            for (uint i = 0; i < whitelistedCollateralTokens.length; i++) {
+                if (whitelistedCollateralTokens[i] == token) return;
+            }
             whitelistedCollateralTokens.push(token);
         } else {
             for (uint i = 0; i < whitelistedCollateralTokens.length; i++) {
@@ -73,7 +85,7 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         }
         emit CollateralWhitelisted(token, isWhitelisted);
     }
-    
+
     function buyMkt(uint256 collateralAmount, address collateralToken, uint256 minLmktOut) external nonReentrant {
         require(collateralAmount > 0, "Treasury: Amount must be > 0");
         require(isWhitelistedCollateral[collateralToken], "Treasury: Token not whitelisted");
@@ -81,7 +93,15 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         require(lmktToMint >= minLmktOut, "Treasury: Slippage tolerance exceeded");
         IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), collateralAmount);
         lmktToken.mint(msg.sender, lmktToMint);
-        emit MKTSwap(msg.sender, collateralToken, collateralAmount, lmktToMint, getTotalCollateralValue(), lmktToken.totalSupply(), true);
+        emit MKTSwap(
+            msg.sender,
+            collateralToken,
+            collateralAmount,
+            lmktToMint,
+            getTotalCollateralValue(),
+            lmktToken.totalSupply(),
+            true
+        );
     }
 
     function sellMkt(uint256 lmktAmount, address collateralToken, uint256 minCollateralOut) external nonReentrant {
@@ -94,8 +114,15 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
             IERC20(collateralToken).safeTransfer(msg.sender, collateralToSend);
         }
         lmktToken.burn(lmktAmount);
-        // --- CHANGE: Corrected typo from MKSwap to MKTSwap ---
-        emit MKTSwap(msg.sender, collateralToken, collateralToSend, lmktAmount, getTotalCollateralValue(), lmktToken.totalSupply(), false);
+        emit MKTSwap(
+            msg.sender,
+            collateralToken,
+            collateralToSend,
+            lmktAmount,
+            getTotalCollateralValue(),
+            lmktToken.totalSupply(),
+            false
+        );
     }
 
     function depositCommerceFee(address token, uint256 amount) external override {
@@ -103,7 +130,7 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         emit CommerceFeeReceived(token, amount);
     }
-    
+
     function getLmktAmountForCollateral(uint256 collateralAmount, address collateralToken) public view returns (uint256) {
         uint256 collateralValue = getCollateralTokenValue(collateralAmount, collateralToken);
         uint256 totalCollateral = getTotalCollateralValue();
@@ -119,14 +146,19 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         if (circulatingSupply == 0) return 0;
         uint256 baseCollateralValue = (lmktAmount * totalCollateral) / circulatingSupply;
         uint256 discountedValue = (baseCollateralValue * (SPREAD_BASE - SELL_PREMIUM)) / SPREAD_BASE;
-        MockPriceOracle priceOracle = tokenPriceFeeds[collateralToken];
-        require(address(priceOracle) != address(0), "Treasury: Price feed not set");
+
+        address feedAddr = tokenPriceFeeds[collateralToken];
+        require(feedAddr != address(0), "Treasury: Price feed not set");
+        MockPriceOracle priceOracle = MockPriceOracle(feedAddr);
+
         bytes32 queryId = tokenQueryIds[collateralToken];
         require(queryId != bytes32(0), "Treasury: Query ID not set");
+
         uint256 price = priceOracle.getPrice(queryId);
         require(price > 0, "Treasury: Oracle price is zero");
+
         uint8 tokenDecimals = IERC20Metadata(collateralToken).decimals();
-        return (discountedValue * (10**tokenDecimals)) / (price * (10**(18 - ORACLE_PRICE_DECIMALS)));
+        return (discountedValue * (10 ** tokenDecimals)) / (price * (10 ** (18 - ORACLE_PRICE_DECIMALS)));
     }
 
     function getTotalCollateralValue() public view returns (uint256) {
@@ -140,22 +172,26 @@ contract Treasury is Ownable, ReentrancyGuard, ITreasury {
         }
         return totalValue;
     }
-    
+
     function getCollateralTokenValue(uint256 amount, address token) public view override returns (uint256) {
-        MockPriceOracle priceOracle = tokenPriceFeeds[token];
-        require(address(priceOracle) != address(0), "Treasury: Price feed not set");
+        address feedAddr = tokenPriceFeeds[token];
+        require(feedAddr != address(0), "Treasury: Price feed not set");
+        MockPriceOracle priceOracle = MockPriceOracle(feedAddr);
+
         bytes32 queryId = tokenQueryIds[token];
         require(queryId != bytes32(0), "Treasury: Query ID not set");
+
         uint256 price = priceOracle.getPrice(queryId);
         require(price > 0, "Treasury: Oracle price is zero");
+
         uint8 tokenDecimals = IERC20Metadata(token).decimals();
-        return (amount * price * (10**(18 - ORACLE_PRICE_DECIMALS))) / (10**tokenDecimals);
+        return (amount * price * (10 ** (18 - ORACLE_PRICE_DECIMALS))) / (10 ** tokenDecimals);
     }
-    
+
     function getLmktPriceInUsd() public view override returns (uint256) {
         uint256 totalCollateralUSD = getTotalCollateralValue();
         uint256 circulatingSupply = lmktToken.totalSupply();
         if (circulatingSupply == 0) return 0;
-        return (totalCollateralUSD * (10**LMKT_PRICE_DECIMALS)) / circulatingSupply;
+        return (totalCollateralUSD * (10 ** LMKT_PRICE_DECIMALS)) / circulatingSupply;
     }
 }

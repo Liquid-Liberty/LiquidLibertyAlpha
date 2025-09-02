@@ -2,10 +2,10 @@
 
 export const SUBGRAPH_CONFIG = {
   // TheGraph endpoint
-    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.7",
+    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.1.8",
 
     // The Treasury contract being tracked
-    PAIR_ADDRESS: "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+    PAIR_ADDRESS: "0x28d95bfd1131abf3f76236962f39264e137cd5c5",
 
     // Default fetch options
     DEFAULT_INTERVAL: "60", // 1 minute candles

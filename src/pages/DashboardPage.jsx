@@ -11,12 +11,9 @@ import {
   useWaitForTransactionReceipt,
   useReadContract,
 } from "wagmi";
-import { parseEther, formatEther } from "ethers";
-import { useListings } from "../context/ListingsContext";
-import ListingsDebug from "../components/ListingsDebug";
+import { parseEther, formatEther } from "viem";
 import TradingViewChart from "../components/TradingViewChart";
 import { TVChart } from "../components/TVChart";
-import LMKTChart from "../components/LMKTChart";
 
 // Only LMKT token is needed for the chart
 const LMKT_TOKEN = {
@@ -58,15 +55,6 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
 
 const DashboardPage = ({ listings, userAddress }) => {
   const { isConnected, address } = useAccount();
-  const {
-    listings: blockchainListings,
-    escrows,
-    getUserListings,
-    getUserEscrows,
-    loading: listingsLoading,
-    error: listingsError,
-  } = useListings();
-  const [selectedToken, setSelectedToken] = useState(LMKT_TOKEN);
   const [amountIn, setAmountIn] = useState(0);
   const [treasuryTab, setTreasuryTab] = useState("buy");
   const { data: approveHash, writeContract: approve } = useWriteContract();
@@ -133,15 +121,6 @@ const DashboardPage = ({ listings, userAddress }) => {
 
   const [tokenAddress, setTokenAddress] = useState(mockDaiConfig.address); // Default WBTC address for collateral
 
-  // Read token balances
-  // const { data: wbtcBalance, refetch: refetchWbtcBalance } = useReadContract({
-  //     address: mockWbtcConfig.address,
-  //     abi: GenericERC20ABI.abi,
-  //     functionName: 'balanceOf',
-  //     args: [address],
-  //     query: { enabled: !!address }
-  // });
-
   const { data: daiBalance, refetch: refetchDaiBalance } = useReadContract({
     address: mockDaiConfig.address,
     abi: GenericERC20ABI.abi,
@@ -149,14 +128,6 @@ const DashboardPage = ({ listings, userAddress }) => {
     args: [address],
     query: { enabled: !!address },
   });
-
-  // const { data: wethBalance, refetch: refetchWethBalance } = useReadContract({
-  //     address: mockWethConfig.address,
-  //     abi: GenericERC20ABI.abi,
-  //     functionName: 'balanceOf',
-  //     args: [address],
-  //     query: { enabled: !!address }
-  // });
 
   const { data: lmktBalance, refetch: refetchLmktBalance } = useReadContract({
     address: lmktConfig.address,
@@ -166,108 +137,81 @@ const DashboardPage = ({ listings, userAddress }) => {
     query: { enabled: !!address },
   });
 
-  // Update balances when data changes
   useEffect(() => {
+  console.log("🎯 DAI balance raw:", daiBalance);
+  console.log("🎯 LMKT balance raw:", lmktBalance);
+}, [daiBalance, lmktBalance]);
+
+  // Update balances when data changes
+useEffect(() => {
+  if (daiBalance !== undefined && daiBalance !== null) {
+    setTokenBalances((prev) => ({
+      ...prev,
+      dai: formatEther(daiBalance),
+    }));
+  }
+  if (lmktBalance !== undefined && lmktBalance !== null) {
+    setTokenBalances((prev) => ({
+      ...prev,
+      lmkt: formatEther(lmktBalance),
+    }));
+  }
+}, [daiBalance, lmktBalance]);
+
+// ✅ Auto-refresh balances every 30s
+useEffect(() => {
+  if (!address) return;
+
+  const intervalId = setInterval(() => {
     refetchDaiBalance();
     refetchLmktBalance();
-    // if (wbtcBalance) setTokenBalances(prev => ({ ...prev, wbtc: formatEther(wbtcBalance) }));
-    if (daiBalance)
-      setTokenBalances((prev) => ({ ...prev, dai: formatEther(daiBalance) }));
-    // if (wethBalance) setTokenBalances(prev => ({ ...prev, weth: formatEther(wethBalance) }));
-    if (lmktBalance)
-      setTokenBalances((prev) => ({ ...prev, lmkt: formatEther(lmktBalance) }));
-  }, [
-    daiBalance,
-    lmktBalance,
-    address,
-    treasuryTab,
+  }, 30000); // refresh every 30 seconds
+
+  return () => clearInterval(intervalId);
+}, [address, refetchDaiBalance, refetchLmktBalance]);
+
+const parsedAmount = amountIn > 0 ? parseEther(amountIn.toString()) : 0n;
+
+  // --- Buy calculation (LMKT amount for given collateral) ---
+const { data: lmktAmount, isError: isBuyCalcError } = useReadContract({
+  address: treasuryConfig.address,
+  abi: treasuryConfig.abi,
+  functionName: "getLmktAmountForCollateral",
+  args: [
+    parsedAmount,
     tokenAddress,
-    refetchDaiBalance,
-    isBought,
-    isSold,
-  ]);
+  ],
+    enabled: amountIn > 0 && treasuryTab === "buy" && !!tokenAddress,
+});
 
-  // Periodic balance refresh
-  // useEffect(() => {
-  //     if (!address) return;
-  //     console.log("aria balance = ", tokenBalances);
-  //     const intervalId = setInterval(() => {
-  //         refetchWbtcBalance();
-  //         refetchDaiBalance();
-  //         refetchWethBalance();
-  //         refetchLmktBalance();
-  //     }, 30000); // Refresh every 30 seconds
+ // --- Sell calculation (collateral amount for given LMKT) ---
+const { data: collateralAmount, isError: isSellCalcError } = useReadContract({
+  address: treasuryConfig.address,
+  abi: treasuryConfig.abi,
+  functionName: "getCollateralAmountForLmkt",
+  args: [
+    parsedAmount,
+    tokenAddress,
+  ],
+  enabled: amountIn > 0 && treasuryTab === "sell" && !!tokenAddress,
+});
 
-  //     return () => clearInterval(intervalId);
-  // }, [address, refetchWbtcBalance, refetchDaiBalance, refetchWethBalance, refetchLmktBalance]);
-
-  const {
-    data: lmktAmount,
-    isError,
-    refetch,
-  } = useReadContract({
-    address: treasuryConfig.address,
-    abi: treasuryConfig.abi,
-    functionName: "getLmktAmountForCollateral",
-    args: [amountIn ? parseEther(amountIn) : 0n, tokenAddress],
-    query: {
-      enabled:
-        amountIn > 0 &&
-        tokenAddress !== "0x1111111111111111111111111111111111111111",
-    },
-  });
-
-  // Contract read for sell calculation (collateral amount for LMKT)
-  const {
-    data: collateralAmount,
-    isError: isSellCalcError,
-    refetch: refetchSell,
-  } = useReadContract({
-    address: treasuryConfig.address,
-    abi: treasuryConfig.abi,
-    functionName: "getCollateralAmountForLmkt",
-    args: [
-      amountIn ? parseEther(amountIn) : 0n,
-      tokenAddress, // Use LMKT address for sell calculation
-    ],
-    query: {
-      enabled:
-        amountIn > 0 &&
-        treasuryTab === "sell" &&
-        tokenAddress !== "0x1111111111111111111111111111111111111111",
-    },
-  });
-
-  // Refetch when inputs change
-  useEffect(() => {
-    if (
-      amountIn > 0 &&
-      tokenAddress !== "0x1111111111111111111111111111111111111111"
-    ) {
-      if (treasuryTab === "buy") {
-        refetch();
-        setCalculatedLmkt(lmktAmount ? formatEther(lmktAmount) : "0");
-      } else if (treasuryTab === "sell") {
-        refetchSell();
-        setCalculatedCollateral(
-          collateralAmount ? formatEther(collateralAmount) : "0"
-        );
-      }
+// --- Effect: update formatted results when reads succeed ---
+useEffect(() => {
+  if (treasuryTab === "buy") {
+    if (lmktAmount && !isBuyCalcError) {
+      setCalculatedLmkt(formatEther(lmktAmount));
     } else {
       setCalculatedLmkt("0");
+    }
+  } else if (treasuryTab === "sell") {
+    if (collateralAmount && !isSellCalcError) {
+      setCalculatedCollateral(formatEther(collateralAmount));
+    } else {
       setCalculatedCollateral("0");
     }
-  }, [
-    amountIn,
-    tokenAddress,
-    treasuryTab,
-    refetch,
-    refetchSell,
-    lmktAmount,
-    collateralAmount,
-    isError,
-    isSellCalcError,
-  ]);
+  }
+}, [treasuryTab, lmktAmount, isBuyCalcError, collateralAmount, isSellCalcError]);
 
   // Handle token selection change for collateral tokens
   const handleTokenChange = () => {
@@ -281,15 +225,8 @@ const DashboardPage = ({ listings, userAddress }) => {
 
   // Handle amount input change
   const handleAmountChange = (value) => {
-    setAmountIn(value);
+    setAmountIn(Number(value));
   };
-
-  // Update calculated LMKT amount when contract call succeeds
-  useEffect(() => {
-    if (lmktAmount && !isError) {
-      setCalculatedLmkt(formatEther(lmktAmount));
-    }
-  }, [lmktAmount, isError]);
 
   // Update calculated collateral amount when sell calculation succeeds
   useEffect(() => {
@@ -339,14 +276,14 @@ const DashboardPage = ({ listings, userAddress }) => {
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
           functionName: "buyMkt",
-          args: [parseEther(amountIn.toString()), tokenAddress],
+          args: [parseEther(amountIn.toString()), tokenAddress, 0n],
         });
       } else {
         handleSell({
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
           functionName: "sellMkt",
-          args: [parseEther(amountIn.toString()), tokenAddress],
+          args: [parseEther(amountIn.toString()), tokenAddress, 0n],
         });
       }
     }
@@ -495,14 +432,14 @@ const DashboardPage = ({ listings, userAddress }) => {
                     🔄 Calculating LMKT amount...
                   </p>
                 )}
-                {isError && amountIn > 0 && (
+                {isBuyCalcError && amountIn > 0 && (
                   <p className="text-sm text-red-600 mt-1">
                     ❌ Error calculating LMKT amount
                   </p>
                 )}
                 {amountIn > 0 &&
                   !isLoading &&
-                  !isError &&
+                  !isBuyCalcError &&
                   calculatedLmkt > 0 && (
                     <p className="text-sm text-green-600 mt-1">
                       ✅ LMKT amount calculated successfully
