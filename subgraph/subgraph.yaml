@@ -6,9 +6,9 @@ dataSources:
     name: Treasury
     network: sepolia
     source:
-      address: "0xc2eec2d9cfd7d29f498a4aed6db227d68d013c53"        # e.g. 0xYourSepoliaV2Pair
+      address: "0x7c4ae0e3a6e0e37368054674c16e9fbf46784d90"        # e.g. 0xYourSepoliaV2Pair
       abi: Treasury
-      startBlock: 9115150  # e.g. 5820000
+      startBlock: 9116135  # e.g. 5820000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

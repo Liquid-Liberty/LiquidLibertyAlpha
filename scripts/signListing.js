@@ -1,7 +1,6 @@
 // scripts/signListing.js
 import { ethers } from "ethers";
 import dotenv from "dotenv";
-import ListingManagerABI from "../artifacts/contracts/ListingManager.sol/ListingManager.json";
 import process from "process";
 
 dotenv.config();
