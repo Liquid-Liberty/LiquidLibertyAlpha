@@ -55,17 +55,17 @@ const ListingRow = ({ listing, onRefetch }) => {
   }, [isRenewed, onRefetch]);
 
   // --- Actions ---
-  const handleClose = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setStatusMessage("Closing listing...");
-    handleCloseAction({
-      address: listingManagerConfig.address,
-      abi: listingManagerConfig.abi,
-      functionName: "closeListing",
-      args: [listing.id],
-    });
-  };
+  // const handleClose = (e) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+  //   setStatusMessage("Closing listing...");
+  //   handleCloseAction({
+  //     address: listingManagerConfig.address,
+  //     abi: listingManagerConfig.abi,
+  //     functionName: "closeListing",
+  //     args: [listing.id],
+  //   });
+  // };
 
   const handleDelete = (e) => {
     e.preventDefault();
@@ -111,12 +111,6 @@ const ListingRow = ({ listing, onRefetch }) => {
         return (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-800">
             Inactive
-          </span>
-        );
-      case "Completed":
-        return (
-          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-200 text-blue-800">
-            Completed
           </span>
         );
       default:
@@ -170,12 +164,6 @@ const ListingRow = ({ listing, onRefetch }) => {
           >
             Renew
           </button>
-        );
-      case "Completed":
-        return (
-          <span className="text-xs text-zinc-500 italic">
-            Completed listings cannot be modified.
-          </span>
         );
       default:
         return null;

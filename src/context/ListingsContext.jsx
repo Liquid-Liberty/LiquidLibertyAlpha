@@ -144,7 +144,6 @@ if (chainId !== expectedChainId) {
           const listingStatusMap = {
             0: "Active",
             1: "Inactive",
-            2: "Completed",
           };
 
           console.log("📋 Raw Listing", {
