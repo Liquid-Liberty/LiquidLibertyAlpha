@@ -4,14 +4,14 @@ import { forSaleCategories } from '../data/categories';
 import ItemListingCard from '../components/ItemListingCard';
 import { useListings } from '../context/ListingsContext';
 
-const ForSaleCategoryPage = ({ listings }) => {
+const ForSaleCategoryPage = () => {
     const { categoryName } = useParams();
     const category = forSaleCategories.find(c => c.key === categoryName);
     const { listings: blockchainListings, loading, error } = useListings();
     
     // Filter blockchain listings by category (for now, we'll show all ForSale listings)
     // In the future, you can add category information to the listing data
-    const item_listings = blockchainListings.filter(l => l.listingType === 'item' && (categoryName !== 'all' ? l.category === categoryName : true));
+    const item_listings = blockchainListings.filter(l => l.listingType === 'ForSale' && (categoryName !== 'all' ? l.category === categoryName : true));
 
     return (
         <div className="container mx-auto px-6 py-12">

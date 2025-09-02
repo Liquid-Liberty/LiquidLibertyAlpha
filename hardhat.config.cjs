@@ -6,7 +6,6 @@ require("@nomicfoundation/hardhat-ethers");
 require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
-
 const { ACCOUNT_PRIVATE_KEY } = process.env;
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -21,21 +20,15 @@ module.exports = {
     },
   },
   networks: {
-  localhost: {
-    url: "http://127.0.0.1:8545",
-      accounts: ACCOUNT_PRIVATE_KEY ? [ACCOUNT_PRIVATE_KEY] : []
-  }
-}
-  
-  /*
-  // We are commenting out the network and etherscan sections for now
-  // to focus on local testing with the default Hardhat node.
-  // You can uncomment these when you are ready to deploy to a testnet.
-  
-  networks: {
+    localhost: {
+      url: "http://127.0.0.1:8545",
+      accounts: ACCOUNT_PRIVATE_KEY ? [ACCOUNT_PRIVATE_KEY] : [],
+    },
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL,
-      accounts: process.env.SIGNER_PRIVATE_KEY ? [process.env.SIGNER_PRIVATE_KEY] : [],
+      accounts: process.env.SIGNER_PRIVATE_KEY
+        ? [process.env.SIGNER_PRIVATE_KEY]
+        : [],
       chainId: 11155111,
     },
   },
@@ -44,5 +37,4 @@ module.exports = {
       sepolia: process.env.SEPOLIA_API_KEY,
     },
   },
-  */
 };

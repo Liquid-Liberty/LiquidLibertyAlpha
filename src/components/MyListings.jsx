@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useListings } from '../context/ListingsContext';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { listingManagerConfig } from '../config/contracts';
+import React, { useEffect, useState } from "react";
+import { useListings } from "../context/ListingsContext";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { listingManagerConfig } from "../config/contracts";
 
 const ListingRow = ({ listing, onRefetch }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -19,19 +19,19 @@ const ListingRow = ({ listing, onRefetch }) => {
   const { isSuccess: isRenewed } = useWaitForTransactionReceipt({ hash: renewHash });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState("");
 
   // Derived expiration check
   const isExpired =
     listing.expirationTimestamp &&
     Number(listing.expirationTimestamp) * 1000 < Date.now();
 
-  // Handle success cases
+  // --- Success effects ---
   useEffect(() => {
     if (isClosed) {
       alert("Listing Closed");
       setIsLoading(false);
-      setStatusMessage('');
+      setStatusMessage("");
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
   }, [isClosed, onRefetch]);
@@ -40,7 +40,7 @@ const ListingRow = ({ listing, onRefetch }) => {
     if (isDeleted) {
       alert("Listing Deleted");
       setIsLoading(false);
-      setStatusMessage('');
+      setStatusMessage("");
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
   }, [isDeleted, onRefetch]);
@@ -49,7 +49,7 @@ const ListingRow = ({ listing, onRefetch }) => {
     if (isRenewed) {
       alert("Listing Renewed for 30 more days");
       setIsLoading(false);
-      setStatusMessage('');
+      setStatusMessage("");
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
   }, [isRenewed, onRefetch]);
@@ -58,11 +58,11 @@ const ListingRow = ({ listing, onRefetch }) => {
   const handleClose = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setStatusMessage('Closing listing...');
+    setStatusMessage("Closing listing...");
     handleCloseAction({
       address: listingManagerConfig.address,
       abi: listingManagerConfig.abi,
-      functionName: 'closeListing',
+      functionName: "closeListing",
       args: [listing.id],
     });
   };
@@ -70,11 +70,11 @@ const ListingRow = ({ listing, onRefetch }) => {
   const handleDelete = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setStatusMessage('Deleting listing...');
+    setStatusMessage("Deleting listing...");
     handleDeleteAction({
       address: listingManagerConfig.address,
       abi: listingManagerConfig.abi,
-      functionName: 'deleteListing',
+      functionName: "deleteListing",
       args: [listing.id],
     });
   };
@@ -82,11 +82,11 @@ const ListingRow = ({ listing, onRefetch }) => {
   const handleRenew = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setStatusMessage('Renewing listing...');
+    setStatusMessage("Renewing listing...");
     handleRenewAction({
       address: listingManagerConfig.address,
       abi: listingManagerConfig.abi,
-      functionName: 'renewListing',
+      functionName: "renewListing",
       args: [listing.id],
     });
   };
@@ -101,26 +101,30 @@ const ListingRow = ({ listing, onRefetch }) => {
       );
     }
     switch (listing.status) {
-      case 'Active':
+      case "Active":
         return (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-200 text-green-800">
             Active
           </span>
         );
-      case 'Inactive':
+      case "Inactive":
         return (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-800">
             Inactive
           </span>
         );
-      case 'Completed':
+      case "Completed":
         return (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-200 text-blue-800">
             Completed
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-red-200 text-red-800">
+            Unknown
+          </span>
+        );
     }
   };
 
@@ -138,7 +142,7 @@ const ListingRow = ({ listing, onRefetch }) => {
     }
 
     switch (listing.status) {
-      case 'Active':
+      case "Active":
         return (
           <>
             <button
@@ -155,14 +159,23 @@ const ListingRow = ({ listing, onRefetch }) => {
             >
               Delete
             </button>
-            <button
-              className="text-xs bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600 ml-2"
-              onClick={handleRenew}
-              disabled={isLoading}
-            >
-              Renew
-            </button>
           </>
+        );
+      case "Inactive":
+        return (
+          <button
+            className="text-xs bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600"
+            onClick={handleRenew}
+            disabled={isLoading}
+          >
+            Renew
+          </button>
+        );
+      case "Completed":
+        return (
+          <span className="text-xs text-zinc-500 italic">
+            Completed listings cannot be modified.
+          </span>
         );
       default:
         return null;
@@ -181,20 +194,20 @@ const ListingRow = ({ listing, onRefetch }) => {
             alt={listing.title}
             className="w-12 h-12 object-cover rounded-md mr-4 flex-shrink-0"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/48x48?text=No+Image';
+              e.currentTarget.src = "/noImage.jpeg"
             }}
           />
           <div className="min-w-0">
             <p className="font-bold text-zinc-800 truncate">{listing.title}</p>
             <p className="text-sm text-zinc-600">
-              ${listing.priceInUsd?.toFixed(2) || '0.00'}
+              ${listing.priceInUsd?.toFixed(2) || "0.00"}
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
           {getStatusPill()}
           <svg
-            className={`w-5 h-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 transform transition-transform ${isExpanded ? "rotate-180" : ""}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -206,11 +219,17 @@ const ListingRow = ({ listing, onRefetch }) => {
       {isExpanded && (
         <div className="px-4 pb-4 border-t border-stone-200">
           <div className="text-sm text-zinc-700 mt-3 space-y-1">
-            <p><strong>Listing ID:</strong> {listing.id}</p>
-            {listing.description && <p><strong>Description:</strong> {listing.description}</p>}
+            <p>
+              <strong>Listing ID:</strong> {listing.id}
+            </p>
+            {listing.description && (
+              <p>
+                <strong>Description:</strong> {listing.description}
+              </p>
+            )}
             {listing.expirationTimestamp && (
               <p>
-                <strong>Expires:</strong>{' '}
+                <strong>Expires:</strong>{" "}
                 {new Date(listing.expirationTimestamp * 1000).toLocaleString()}
               </p>
             )}
@@ -262,7 +281,9 @@ const MyListings = () => {
     return (
       <div className="text-center py-8">
         <p className="text-zinc-600">You don't have any listings yet.</p>
-        <p className="text-zinc-500 text-sm mt-2">Create your first listing to get started!</p>
+        <p className="text-zinc-500 text-sm mt-2">
+          Create your first listing to get started!
+        </p>
       </div>
     );
   }
@@ -270,7 +291,11 @@ const MyListings = () => {
   return (
     <div className="space-y-3">
       {userListings.map((listing) => (
-        <ListingRow key={listing.id} listing={listing} onRefetch={refreshListings} />
+        <ListingRow
+          key={listing.id}
+          listing={listing}
+          onRefetch={refreshListings}
+        />
       ))}
     </div>
   );

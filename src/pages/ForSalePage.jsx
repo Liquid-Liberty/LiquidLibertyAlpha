@@ -7,7 +7,7 @@ import { useListings } from '../context/ListingsContext';
 
 const ForSalePage = () => {
     const { listings, loading, error } = useListings();
-    const forSaleListings = listings.filter(listing => listing.listingType === 'item');
+    const forSaleListings = listings.filter(listing => listing.listingType === 'ForSale');
 
     return (
         <div className="container mx-auto px-6 py-12">

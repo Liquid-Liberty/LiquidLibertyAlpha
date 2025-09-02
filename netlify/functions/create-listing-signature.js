@@ -1,7 +1,7 @@
-import { ethers } from 'ethers';
-import 'dotenv/config';
-import process from 'process';
-import signListing from '../../scripts/signListing.js';
+import { ethers } from "ethers";
+import "dotenv/config";
+import process from "process";
+import signListing from "../../scripts/signListing.js";
 
 // Load the private key from Netlify's environment variables
 const { SIGNER_PRIVATE_KEY } = process.env;
@@ -16,8 +16,6 @@ const validateRequest = (event) => {
     if (
       !body.user ||
       !body.dataIdentifier ||
-      !body.nonce ||
-      !body.deadline ||
       !body.chainId ||
       !body.verifyingContract
     ) {
@@ -57,14 +55,20 @@ export async function handler(event) {
   }
 
   const { body, error: validationError } = validateRequest(event);
+
+  console.log("📩 Incoming request body raw:", event.body);
+  console.log("📩 Parsed body:", body);
+
   if (validationError) {
     return { ...validationError, headers };
   }
 
-  const { user, dataIdentifier, nonce, deadline, chainId, verifyingContract } = body;
+  const { user, dataIdentifier, chainId, verifyingContract } = body;
 
   try {
     const signer = new ethers.Wallet(SIGNER_PRIVATE_KEY);
+    const nonce = Date.now();
+    const deadline = Math.floor(Date.now() / 1000) + 3600;
 
     // ✅ Reuse centralized signListing util
     const { signature } = await signListing({
