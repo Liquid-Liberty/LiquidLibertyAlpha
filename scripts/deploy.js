@@ -139,12 +139,8 @@ async function main() {
 
   // a. Configure Oracle
   const daiQueryId = ethers.keccak256(ethers.toUtf8Bytes("mDAI/USD"));
-  await mockOracle.setPrice(daiQueryId, 1 * 10 ** 8); // $1.00 with 8 decimals
+  await mockOracle.setPrice(daiQueryId, ethers.parseUnits("1", 8)); // $1.00 with 8 decimals
   console.log("Oracle configured: Mock DAI price set to $1.00");
-
-  console.log("Treasury: Attempting to whitelist LMKT as collateral.");
-  await treasury.setWhitelistedCollateral(lmkt.target, true);
-  console.log("Treasury: LMKT whitelisted as collateral.");
 
   await treasury.setLmktAddress(lmkt.target);
   console.log("Treasury: LMKT address set.");
