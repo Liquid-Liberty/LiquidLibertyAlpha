@@ -12,7 +12,6 @@ import {
   useReadContract,
 } from "wagmi";
 import { parseEther, formatEther } from "viem";
-import { useListings } from "../context/ListingsContext";
 import TradingViewChart from "../components/TradingViewChart";
 import { TVChart } from "../components/TVChart";
 
@@ -56,15 +55,6 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
 
 const DashboardPage = ({ listings, userAddress }) => {
   const { isConnected, address } = useAccount();
-  const {
-    listings: blockchainListings,
-    escrows,
-    getUserListings,
-    getUserEscrows,
-    loading: listingsLoading,
-    error: listingsError,
-  } = useListings();
-  const [selectedToken, setSelectedToken] = useState(LMKT_TOKEN);
   const [amountIn, setAmountIn] = useState(0);
   const [treasuryTab, setTreasuryTab] = useState("buy");
   const { data: approveHash, writeContract: approve } = useWriteContract();
@@ -180,73 +170,48 @@ useEffect(() => {
   return () => clearInterval(intervalId);
 }, [address, refetchDaiBalance, refetchLmktBalance]);
 
-  const {
-    data: lmktAmount,
-    isError,
-    refetch,
-  } = useReadContract({
-    address: treasuryConfig.address,
-    abi: treasuryConfig.abi,
-    functionName: "getLmktAmountForCollateral",
-    args: [amountIn ? parseEther(amountIn) : 0n, tokenAddress],
-    query: {
-      enabled:
-        amountIn > 0 &&
-        tokenAddress !== "0x1111111111111111111111111111111111111111",
-    },
-  });
+const parsedAmount = amountIn > 0 ? parseEther(amountIn.toString()) : 0n;
 
-  // Contract read for sell calculation (collateral amount for LMKT)
-  const {
-    data: collateralAmount,
-    isError: isSellCalcError,
-    refetch: refetchSell,
-  } = useReadContract({
-    address: treasuryConfig.address,
-    abi: treasuryConfig.abi,
-    functionName: "getCollateralAmountForLmkt",
-    args: [
-      amountIn ? parseEther(amountIn) : 0n,
-      tokenAddress, // Use LMKT address for sell calculation
-    ],
-    query: {
-      enabled:
-        amountIn > 0 &&
-        treasuryTab === "sell" &&
-        tokenAddress !== "0x1111111111111111111111111111111111111111",
-    },
-  });
+  // --- Buy calculation (LMKT amount for given collateral) ---
+const { data: lmktAmount, isError: isBuyCalcError } = useReadContract({
+  address: treasuryConfig.address,
+  abi: treasuryConfig.abi,
+  functionName: "getLmktAmountForCollateral",
+  args: [
+    parsedAmount,
+    tokenAddress,
+  ],
+    enabled: amountIn > 0 && treasuryTab === "buy" && !!tokenAddress,
+});
 
-  // Refetch when inputs change
-  useEffect(() => {
-    if (
-      amountIn > 0 &&
-      tokenAddress !== "0x1111111111111111111111111111111111111111"
-    ) {
-      if (treasuryTab === "buy") {
-        refetch();
-        setCalculatedLmkt(lmktAmount ? formatEther(lmktAmount) : "0");
-      } else if (treasuryTab === "sell") {
-        refetchSell();
-        setCalculatedCollateral(
-          collateralAmount ? formatEther(collateralAmount) : "0"
-        );
-      }
+ // --- Sell calculation (collateral amount for given LMKT) ---
+const { data: collateralAmount, isError: isSellCalcError } = useReadContract({
+  address: treasuryConfig.address,
+  abi: treasuryConfig.abi,
+  functionName: "getCollateralAmountForLmkt",
+  args: [
+    parsedAmount,
+    tokenAddress,
+  ],
+  enabled: amountIn > 0 && treasuryTab === "sell" && !!tokenAddress,
+});
+
+// --- Effect: update formatted results when reads succeed ---
+useEffect(() => {
+  if (treasuryTab === "buy") {
+    if (lmktAmount && !isBuyCalcError) {
+      setCalculatedLmkt(formatEther(lmktAmount));
     } else {
       setCalculatedLmkt("0");
+    }
+  } else if (treasuryTab === "sell") {
+    if (collateralAmount && !isSellCalcError) {
+      setCalculatedCollateral(formatEther(collateralAmount));
+    } else {
       setCalculatedCollateral("0");
     }
-  }, [
-    amountIn,
-    tokenAddress,
-    treasuryTab,
-    refetch,
-    refetchSell,
-    lmktAmount,
-    collateralAmount,
-    isError,
-    isSellCalcError,
-  ]);
+  }
+}, [treasuryTab, lmktAmount, isBuyCalcError, collateralAmount, isSellCalcError]);
 
   // Handle token selection change for collateral tokens
   const handleTokenChange = () => {
@@ -260,15 +225,8 @@ useEffect(() => {
 
   // Handle amount input change
   const handleAmountChange = (value) => {
-    setAmountIn(value);
+    setAmountIn(Number(value));
   };
-
-  // Update calculated LMKT amount when contract call succeeds
-  useEffect(() => {
-    if (lmktAmount && !isError) {
-      setCalculatedLmkt(formatEther(lmktAmount));
-    }
-  }, [lmktAmount, isError]);
 
   // Update calculated collateral amount when sell calculation succeeds
   useEffect(() => {
@@ -474,14 +432,14 @@ useEffect(() => {
                     🔄 Calculating LMKT amount...
                   </p>
                 )}
-                {isError && amountIn > 0 && (
+                {isBuyCalcError && amountIn > 0 && (
                   <p className="text-sm text-red-600 mt-1">
                     ❌ Error calculating LMKT amount
                   </p>
                 )}
                 {amountIn > 0 &&
                   !isLoading &&
-                  !isError &&
+                  !isBuyCalcError &&
                   calculatedLmkt > 0 && (
                     <p className="text-sm text-green-600 mt-1">
                       ✅ LMKT amount calculated successfully

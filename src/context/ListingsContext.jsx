@@ -67,14 +67,20 @@ export const ListingsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      // Network guard
-      const chainId = await publicClient.getChainId();
-      if (chainId !== 31337) {
-        // adjust if not Hardhat default
-        setError("Wrong network: please connect to Hardhat localhost.");
-        setLoading(false);
-        return;
-      }
+     // --- Network guard ---
+const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+
+// pick expected chainId
+const expectedChainId = DEPLOY_ENV === "sepolia" ? 11155111 : 31337;
+
+const chainId = await publicClient.getChainId();
+if (chainId !== expectedChainId) {
+  setError(
+    `Wrong network: please connect to ${DEPLOY_ENV === "sepolia" ? "Sepolia Testnet" : "Hardhat localhost"}.`
+  );
+  setLoading(false);
+  return;
+}
 
       // Get total listings
       const totalListings = await publicClient.readContract({

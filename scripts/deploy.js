@@ -18,13 +18,13 @@ async function saveFrontendFiles(contracts) {
     contractsDir + "/contract-addresses.json",
     JSON.stringify(
       {
-        ListingManager: contracts.listingManager.target,
-        PaymentProcessor: contracts.paymentProcessor.target,
-        Treasury: contracts.treasury.target,
-        LMKT: contracts.lmkt.target,
-        MockDai: contracts.mockDai.target,
-        Faucet: contracts.faucet.target,
-        MockPriceOracle: contracts.mockOracle.target,
+        ListingManager: contracts.ListingManager.target,
+        PaymentProcessor: contracts.PaymentProcessor.target,
+        Treasury: contracts.Treasury.target,
+        LMKT: contracts.LMKT.target,
+        MockDai: contracts.MockDai.target,
+        Faucet: contracts.Faucet.target,
+        MockPriceOracle: contracts.MockPriceOracle.target,
       },
       undefined,
       2
@@ -34,10 +34,10 @@ async function saveFrontendFiles(contracts) {
   // Save the contract ABIs
   const ListingManagerArtifact = await hardhat.artifacts.readArtifact("ListingManager");
   fs.writeFileSync(contractsDir + "/ListingManager.json", JSON.stringify(ListingManagerArtifact, null, 2));
-  
+
   const PaymentProcessorArtifact = await hardhat.artifacts.readArtifact("PaymentProcessor");
   fs.writeFileSync(contractsDir + "/PaymentProcessor.json", JSON.stringify(PaymentProcessorArtifact, null, 2));
-  
+
   const TreasuryArtifact = await hardhat.artifacts.readArtifact("Treasury");
   fs.writeFileSync(contractsDir + "/Treasury.json", JSON.stringify(TreasuryArtifact, null, 2));
 
@@ -109,13 +109,7 @@ async function main() {
   await faucet.waitForDeployment();
   console.log("Faucet deployed to:", faucet.target);
 
-  // --- 3. SEED TREASURY WITH INITIAL COLLATERAL ---
-  console.log("\n--- Seeding Treasury with initial collateral ---");
-  await mockDai.mint(treasury.target, ethers.parseEther("1000000")); // Seed with $1M
-  console.log("Treasury seeded with $1,000,000 of MockDai.");
-
-
-  // --- 4. CONFIGURE ALL CONTRACTS ---
+  // --- 3. CONFIGURE ALL CONTRACTS ---
   console.log("\n--- Configuring all contracts ---");
 
   // a. Configure Oracle
@@ -123,12 +117,41 @@ async function main() {
   await mockOracle.setPrice(daiQueryId, 1 * 10 ** 8); // $1.00 with 8 decimals
   console.log("Oracle configured: Mock DAI price set to $1.00");
 
-  // b. Configure Treasury
-  await treasury.setLmktAddress(lmkt.target);
-  await treasury.setWhitelistedCollateral(mockDai.target, true);
-  await treasury.setPriceFeed(mockDai.target, mockOracle.target);
-  await treasury.setTokenQueryId(mockDai.target, daiQueryId);
-  console.log("Treasury configured: LMKT address, collateral, and price feed set.");
+console.log("Treasury: Attempting to whitelist LMKT as collateral.");
+// 1. Whitelist LMKT first
+await treasury.setWhitelistedCollateral(lmkt.target, true);
+console.log("Treasury: LMKT whitelisted as collateral.");
+
+// 2. Set LMKT address
+await treasury.setLmktAddress(lmkt.target);
+console.log("Treasury: LMKT address set.");
+
+console.log("Treasury: Attempting to whitelist MockDai as collateral.");
+// 3. Whitelist MockDAI
+const tx1 = await treasury.setWhitelistedCollateral(mockDai.target, true);
+await tx1.wait();
+console.log("Treasury: MockDai whitelisted as collateral.");
+
+const isWhitelisted = await treasury.isWhitelistedCollateral(mockDai.target);
+console.log("Treasury reports MockDai whitelist status:", isWhitelisted);
+
+
+
+console.log("Treasury: Attempting to set queryID for MockDai.");
+// 4. Set queryId for MockDai
+const tx2 = await treasury.setTokenQueryId(mockDai.target, daiQueryId);
+await tx2.wait();
+console.log("Treasury: QueryId set for MockDai.");
+
+// 5. Attach price feed for MockDAI
+const tx3 = await treasury.setPriceFeed(mockDai.target, mockOracle.target);
+await tx3.wait();
+console.log("Treasury: Price feed set for MockDAI at", mockOracle.target);
+
+  // --- 4. SEED TREASURY WITH INITIAL COLLATERAL ---
+  console.log("\n--- Seeding Treasury with initial collateral ---");
+  await mockDai.mint(treasury.target, ethers.parseEther("1000000")); // Seed with $1M
+  console.log("Treasury seeded with $1,000,000 of MockDai.");
 
   // c. Configure LMKT Token
   const initialLmktSupply = await lmkt.totalSupply();
@@ -140,21 +163,29 @@ async function main() {
   await mockDai.addMinter(faucet.target);
   console.log("MockDai configured: Faucet has been added as a minter.");
 
-  // --- CHANGE: Added required security configuration for ListingManager ---
   // e. Configure ListingManager
   await listingManager.setPaymentProcessor(paymentProcessor.target);
   console.log("ListingManager configured: PaymentProcessor address set.");
-  
+
   // --- 5. SAVE FRONTEND FILES ---
-  await saveFrontendFiles({
-    listingManager,
-    paymentProcessor,
-    treasury,
-    lmkt,
-    mockDai,
-    faucet,
-    mockOracle
-  });
+await saveFrontendFiles({
+  ListingManager: listingManager,
+  PaymentProcessor: paymentProcessor,
+  Treasury: treasury,
+  LMKT: lmkt,
+  MockDai: mockDai,
+  Faucet: faucet,
+  MockPriceOracle: mockOracle,
+});
+
+const priceFeed = await treasury.tokenPriceFeeds(mockDai.target);
+console.log("Treasury reports price feed for MockDAI:", priceFeed);
+
+const queryId = await treasury.tokenQueryIds(mockDai.target);
+console.log("Treasury reports queryId for MockDAI:", queryId);
+
+const oraclePrice = await mockOracle.getPrice(daiQueryId);
+console.log("MockOracle price for DAI:", oraclePrice.toString());
 
   console.log("\n✅ Deployment and configuration complete!");
 }

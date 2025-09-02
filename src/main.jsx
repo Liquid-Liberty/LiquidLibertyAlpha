@@ -12,6 +12,7 @@ import { WagmiProvider, useAccount } from 'wagmi';
 import { defineChain } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { sepolia } from 'wagmi/chains';
 
 // --- 0. Create a TanStack Query Client ---
 const queryClient = new QueryClient();
@@ -27,6 +28,10 @@ const hardhatLocalNode = defineChain({
     testnet: true,
 });
 
+// --- 2. Select chains based on ENV ---
+const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+const chains = DEPLOY_ENV === 'sepolia' ? [sepolia] : [hardhatLocalNode];
+
 // --- 2. Web3Modal & Wagmi v2 Configuration ---
 const projectId = '71a4eca65a4a5eeed8ea2de7b9d2ab44'; // This can be a public value
 
@@ -37,7 +42,6 @@ const metadata = {
   icons: ['/your-logo.png']
 };
 
-const chains = [hardhatLocalNode]; // CHANGED to use our local node
 const wagmiConfig = defaultWagmiConfig({
   chains,
   projectId,

@@ -16,7 +16,7 @@ export default async function signListing({
 }) {
   let provider, trustedSigner;
 
-  switch (process.env.DEPLOY_ENV) {
+  switch (process.env.VITE_DEPLOY_ENV) {
     case "local":
       provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
       trustedSigner = new ethers.Wallet(
