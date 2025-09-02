@@ -27,28 +27,31 @@ export const ListingsProvider = ({ children }) => {
   // --- Helper: Fetch IPFS JSON ---
   const fetchIpfsJson = async (cidOrUrl) => {
     try {
-      let url = cidOrUrl;
-      if (!cidOrUrl) {
-        console.log(`No cidOrURL provided to fetchIpfsJson`);
+      if (!cidOrUrl || cidOrUrl === "NO_METADATA") {
         return null;
       }
+
+      let url = cidOrUrl;
       if (cidOrUrl.startsWith("ipfs://")) {
-        url = `https://ipfs.io/ipfs/${cidOrUrl.replace("ipfs://", "")}`;
+        url = `https://gateway.pinata.cloud/ipfs/${cidOrUrl.replace(
+          "ipfs://",
+          ""
+        )}`;
       } else if (/^[a-zA-Z0-9]{46,}$/.test(cidOrUrl)) {
-        url = `https://ipfs.io/ipfs/${cidOrUrl}`;
+        url = `https://gateway.pinata.cloud/ipfs/${cidOrUrl}`;
       }
-      console.log("🔎 Fetching metadata from:", cidOrUrl, "→", url);
-      
+
+      console.log("🔎 Fetching metadata from:", url);
       const res = await fetch(url);
       if (!res.ok) {
-      console.error("❌ IPFS fetch failed:", res.status, res.statusText);
-      return null;
-    }
+        console.error("❌ IPFS fetch failed:", res.status, res.statusText);
+        return null;
+      }
 
-    const json = await res.json();
-    console.log("✅ Metadata fetched:", json);
-    return json;
-  } catch (e) {
+      const json = await res.json();
+      console.log("✅ Metadata fetched:", json);
+      return json;
+    } catch (e) {
       console.warn("Failed to fetch IPFS metadata for:", cidOrUrl, e);
       return null;
     }
@@ -67,20 +70,20 @@ export const ListingsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-     // --- Network guard ---
-const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+      // --- Network guard ---
+      const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+      const expectedChainId = DEPLOY_ENV === "sepolia" ? 11155111 : 31337;
 
-// pick expected chainId
-const expectedChainId = DEPLOY_ENV === "sepolia" ? 11155111 : 31337;
-
-const chainId = await publicClient.getChainId();
-if (chainId !== expectedChainId) {
-  setError(
-    `Wrong network: please connect to ${DEPLOY_ENV === "sepolia" ? "Sepolia Testnet" : "Hardhat localhost"}.`
-  );
-  setLoading(false);
-  return;
-}
+      const chainId = await publicClient.getChainId();
+      if (chainId !== expectedChainId) {
+        setError(
+          `Wrong network: please connect to ${
+            DEPLOY_ENV === "sepolia" ? "Sepolia Testnet" : "Hardhat localhost"
+          }.`
+        );
+        setLoading(false);
+        return;
+      }
 
       // Get total listings
       const totalListings = await publicClient.readContract({
@@ -111,11 +114,9 @@ if (chainId !== expectedChainId) {
 
       const rawListings = await Promise.all(listingPromises);
 
-      // Format + enrich
-
+      // Format + enrich with metadata
       const formattedListings = await Promise.all(
         rawListings.map(async (listing, index) => {
-          // ✅ Use object destructuring, not array
           const {
             owner,
             priceInUsd,
@@ -126,34 +127,18 @@ if (chainId !== expectedChainId) {
           } = listing;
 
           let metadata = null;
-          console.log("🔎 Fetching metadata from:", dataIdentifier);
-          // Always try to fetch metadata JSON, even if no image was uploaded
           if (dataIdentifier && dataIdentifier !== "NO_METADATA") {
-            try {
-              metadata = await fetchIpfsJson(dataIdentifier);
-            } catch (e) {
-              console.warn(
-                "Failed to fetch listing metadata:",
-                dataIdentifier,
-                e
-              );
-            }
+            metadata = await fetchIpfsJson(dataIdentifier);
           }
 
-          const listingTypeMap = { 0: "ForSale", 1: "ServiceOffered" };
-          const listingStatusMap = {
-            0: "Active",
-            1: "Inactive",
-          };
-
-          console.log("📋 Raw Listing", {
-            id: index + 1,
-            owner,
-            priceInUsd: Number(priceInUsd) / 1e8,
-            listingType: listingTypeMap[Number(listingType)],
-            status: listingStatusMap[Number(status)],
-            expirationTimestamp: Number(expirationTimestamp),
+          console.log("📦 Listing metadata result:", {
+            listingId: index + 1,
+            dataIdentifier,
+            metadata,
           });
+
+          const listingTypeMap = { 0: "ForSale", 1: "ServiceOffered" };
+          const listingStatusMap = { 0: "Active", 1: "Inactive" };
 
           return {
             id: index + 1,
@@ -163,12 +148,22 @@ if (chainId !== expectedChainId) {
             status: listingStatusMap[Number(status)] ?? "Unknown",
             dataIdentifier,
             expirationTimestamp: Number(expirationTimestamp),
+
+            // --- Metadata injection with safe fallbacks ---
             title: metadata?.title || `Listing #${index + 1}`,
             description:
               metadata?.description || "Details fetched from blockchain.",
-            imageUrl: metadata?.photos?.[0]
-              ? `https://ipfs.io/ipfs/${metadata.photos[0]}`
-              : "/noImage.jpeg",
+            imageUrl:
+              metadata?.images?.[0]?.gatewayUrl ||
+              (metadata?.imageUrl?.startsWith("ipfs://")
+                ? `https://gateway.pinata.cloud/ipfs/${metadata.imageUrl.replace(
+                    "ipfs://",
+                    ""
+                  )}`
+                : metadata?.imageUrl) ||
+              (metadata?.photos?.[0]
+                ? `https://gateway.pinata.cloud/ipfs/${metadata.photos[0]}`
+                : "/noImage.jpeg"),
             category: metadata?.category || null,
             serviceCategory: metadata?.serviceCategory || null,
             rateType: metadata?.rateType || null,
