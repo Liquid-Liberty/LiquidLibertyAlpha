@@ -39,21 +39,21 @@ export const handler = async (event) => {
     }
 
     // ⚡ MOCK MODE for local dev
-    if (!PINATA_JWT || NODE_ENV === "development") {
-      console.log("⚡ Mocking IPFS upload (local dev mode).");
+if (!PINATA_JWT) {
+  console.log("⚡ Mocking IPFS upload (no Pinata JWT set).");
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          listingMetadataHash: "bafyMockMetadataCid12345",
-          listingMetadataUrl: "ipfs://bafyMockMetadataCid12345",
-          images: [], // no actual uploads in mock
-          isMock: true,
-        }),
-      };
-    }
+  return {
+    statusCode: 200,
+    headers,
+    body: JSON.stringify({
+      success: true,
+      listingMetadataHash: "bafyMockMetadataCid12345",
+      listingMetadataUrl: "ipfs://bafyMockMetadataCid12345",
+      images: [], // no actual uploads in mock
+      isMock: true,
+    }),
+  };
+}
 
     // -------------------------------
     // ✅ Production flow using Pinata
@@ -172,6 +172,7 @@ export const handler = async (event) => {
         success: true,
         listingMetadataHash: metadataResult.IpfsHash,
         listingMetadataUrl: `ipfs://${metadataResult.IpfsHash}`,
+        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.IpfsHash}`,
         images: uploadedImages,
         errors: errors.length > 0 ? errors : undefined,
         isMock: false,

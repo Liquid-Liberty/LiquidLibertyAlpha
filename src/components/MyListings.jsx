@@ -55,17 +55,17 @@ const ListingRow = ({ listing, onRefetch }) => {
   }, [isRenewed, onRefetch]);
 
   // --- Actions ---
-  // const handleClose = (e) => {
-  //   e.preventDefault();
-  //   setIsLoading(true);
-  //   setStatusMessage("Closing listing...");
-  //   handleCloseAction({
-  //     address: listingManagerConfig.address,
-  //     abi: listingManagerConfig.abi,
-  //     functionName: "closeListing",
-  //     args: [listing.id],
-  //   });
-  // };
+  const handleClose = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setStatusMessage("Closing listing...");
+    handleCloseAction({
+      address: listingManagerConfig.address,
+      abi: listingManagerConfig.abi,
+      functionName: "closeListing",
+      args: [listing.id],
+    });
+  };
 
   const handleDelete = (e) => {
     e.preventDefault();
