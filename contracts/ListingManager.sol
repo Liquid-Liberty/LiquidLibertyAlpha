@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -12,11 +14,13 @@ import "./interfaces/IListingManager.sol";
 contract ListingManager is Ownable, EIP712, IListingManager {
     using SafeERC20 for IERC20;
 
+    // --- Events ---
     event ListingCreated(uint256 indexed listingId, address indexed owner, ListingType listingType, uint256 feePaid);
     event ListingDeleted(uint256 indexed listingId);
     event ListingClosed(uint256 indexed listingId);
     event ListingRenewed(uint256 indexed listingId, uint256 newExpiration);
 
+    // --- State Variables ---
     ITreasury public immutable treasury;
     IERC20 public immutable feeToken;
     address public trustedSigner;
@@ -25,6 +29,10 @@ contract ListingManager is Ownable, EIP712, IListingManager {
     uint256 public listingCounter;
     mapping(uint256 => Listing) public listings;
     mapping(bytes32 => bool) public usedSignatures;
+
+    mapping(address => uint256[]) public listingsByOwner;
+    mapping(uint256 => uint256) private _listingIdToIndex;
+    mapping(uint256 => address) private _listingIdToOwner;
 
     uint256 public forSaleFee = 5 * 10**8;  
     uint256 public serviceFee = 20 * 10**8;
@@ -71,6 +79,10 @@ contract ListingManager is Ownable, EIP712, IListingManager {
             expirationTimestamp: block.timestamp + 30 days
         });
 
+        listingsByOwner[msg.sender].push(newListingId);
+        _listingIdToIndex[newListingId] = listingsByOwner[msg.sender].length - 1;
+        _listingIdToOwner[newListingId] = msg.sender;
+
         emit ListingCreated(newListingId, msg.sender, _type, feeInToken);
     }
     
@@ -78,6 +90,20 @@ contract ListingManager is Ownable, EIP712, IListingManager {
         Listing storage listing = listings[_listingId];
         require(listing.owner == msg.sender, "ListingManager: Not your listing");
         require(listing.status == ListingStatus.Active, "ListingManager: Listing not active");
+        
+        address ownerAddress = _listingIdToOwner[_listingId];
+        uint256 indexToRemove = _listingIdToIndex[_listingId];
+        uint256 lastIndex = listingsByOwner[ownerAddress].length - 1;
+        uint256 lastListingId = listingsByOwner[ownerAddress][lastIndex];
+
+        if (indexToRemove != lastIndex) {
+            listingsByOwner[ownerAddress][indexToRemove] = lastListingId;
+            _listingIdToIndex[lastListingId] = indexToRemove;
+        }
+        
+        listingsByOwner[ownerAddress].pop();
+        delete _listingIdToIndex[_listingId];
+        delete _listingIdToOwner[_listingId];
         
         delete listings[_listingId];
         emit ListingDeleted(_listingId);
@@ -100,9 +126,60 @@ contract ListingManager is Ownable, EIP712, IListingManager {
         return listings[listingId];
     }
     
+    function getListingsByOwner(address _owner) external view override returns (uint256[] memory) {
+        return listingsByOwner[_owner];
+    }
+
+    function getActiveListings(uint256 _cursor, uint256 _limit) external view override returns (uint256[] memory listingIds, uint256 nextCursor) {
+        uint256 maxId = listingCounter;
+        if (_limit == 0 || maxId == 0) {
+            return (new uint256[](0), 0);
+        }
+        uint256 startId = (_cursor == 0 || _cursor > maxId) ? maxId : _cursor;
+        
+        listingIds = new uint256[](_limit);
+        uint256 count = 0;
+        uint256 i = startId;
+
+        console.log("--- Starting getActiveListings ---");
+        // --- CHANGE: Broke the multi-argument log into separate, valid calls ---
+        console.log("Cursor:", _cursor);
+        console.log("Limit:", _limit);
+        console.log("Start ID:", startId);
+
+        while(i > 0 && count < _limit) {
+            Listing storage item = listings[i];
+
+            console.log("Checking Listing ID:", i);
+            console.log("  - Owner:", item.owner);
+            console.log("  - Status (0=Active):", uint(item.status));
+            console.log("  - Expiration:", item.expirationTimestamp);
+            console.log("  - Current Time:", block.timestamp);
+            console.log("  - Is Active?", (item.owner != address(0) && item.status == ListingStatus.Active && item.expirationTimestamp > block.timestamp));
+            
+            if (
+                item.owner != address(0) &&
+                item.status == ListingStatus.Active &&
+                item.expirationTimestamp > block.timestamp
+            ) {
+                listingIds[count] = i;
+                count++;
+            }
+            i--;
+        }
+
+        nextCursor = (i > 0) ? i : 0;
+        
+        assembly {
+            mstore(listingIds, count)
+        }
+        
+        console.log("--- Finished getActiveListings ---");
+        return (listingIds, nextCursor);
+    }
+    
     function closeListing(uint256 listingId) external override {
         require(msg.sender == paymentProcessor, "LM: Caller is not the PaymentProcessor");
-
         Listing storage listing = listings[listingId];
         require(listing.status == ListingStatus.Active, "ListingManager: Listing not active");
         listing.status = ListingStatus.Inactive;
