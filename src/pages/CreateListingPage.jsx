@@ -75,6 +75,39 @@ const CreateListingPage = ({ listings }) => {
     }
   };
 
+  // --- Helper: call Netlify moderation function ---
+  const moderateText = async (text) => {
+    const res = await fetch("/.netlify/functions/moderate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    return res.json();
+  };
+
+  const moderateImage = async (file) => {
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+      reader.onloadend = async () => {
+        try {
+          const res = await fetch("/.netlify/functions/moderate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              image: { data: reader.result, name: file.name, type: file.type },
+            }),
+          });
+          const result = await res.json();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   // --- handleSubmit ---
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,6 +124,41 @@ const CreateListingPage = ({ listings }) => {
     setIsLoading(true);
 
     try {
+      // STEP 0: Frontend Moderation
+      setStatusMessage("0/4: Checking content moderation...");
+
+      // Title check
+      if (title) {
+        const titleCheck = await moderateText(title);
+        if (titleCheck.profane) {
+          alert(`❌ Title rejected. Issues: ${titleCheck.type.join(", ")}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Description check
+      if (description) {
+        const descCheck = await moderateText(description);
+        if (descCheck.profane) {
+          alert(
+            `❌ Description rejected. Issues: ${descCheck.type.join(", ")}`
+          );
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Image checks
+      for (let p of photos) {
+        const imageCheck = await moderateImage(p.file);
+        if (imageCheck.nsfw) {
+          alert(`❌ Image rejected. Issues: ${imageCheck.type.join(", ")}`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // STEP 1: Upload metadata + images to Netlify → Pinata/IPFS
       setStatusMessage("1/4: Uploading metadata & images to IPFS...");
 
@@ -121,7 +189,7 @@ const CreateListingPage = ({ listings }) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            images: imagePayloads, // ✅ Always an array (empty or filled)
+            images: imagePayloads,
             listingData: {
               title,
               description,
@@ -140,7 +208,17 @@ const CreateListingPage = ({ listings }) => {
       );
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload images/metadata to IPFS.");
+        const rawError = await uploadResponse.text();
+        let errorResult;
+        try {
+          errorResult = JSON.parse(rawError);
+        } catch {
+          errorResult = { error: rawError }; // fallback to plain text
+        }
+        throw new Error(
+          errorResult.error ||
+            "Failed to upload images/metadata to IPFS (moderation may have blocked content)."
+        );
       }
 
       const uploadResult = await uploadResponse.json();
@@ -165,7 +243,16 @@ const CreateListingPage = ({ listings }) => {
       );
 
       if (!signatureResponse.ok) {
-        throw new Error("Failed to get a signature from the server.");
+        const rawError = await signatureResponse.text();
+        let errorResult;
+        try {
+          errorResult = JSON.parse(rawError);
+        } catch {
+          errorResult = { error: rawError };
+        }
+        throw new Error(
+          errorResult.error || "Failed to get a signature from the server."
+        );
       }
       const signatureData = await signatureResponse.json();
       signatureDataRef.current = { ...signatureData, dataIdentifier };

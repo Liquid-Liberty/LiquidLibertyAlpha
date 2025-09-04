@@ -190,14 +190,12 @@ export const TVChart = ({
   }, [widget, chartReady, onLoaded]);
 
   return (
-    <AnimatePresence>
-      <motion.div
+      <div
         key='chart'
         ref={chartContainerRef}
         className={`min-h-[500px] h-full w-full overflow-hidden rounded-md object-cover ${
           chartReady ? 'opacity-100' : 'opacity-0'
         }`}
       />
-    </AnimatePresence>
   );
 };
