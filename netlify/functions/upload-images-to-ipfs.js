@@ -20,7 +20,10 @@ const filter = new Filter({
 if (defaultWords.length > 0) filter.addWords(...defaultWords);
 if (bannedWords.length > 0) filter.addWords(...bannedWords);
 
-console.log("🔑 API Key value (first 8 chars):", OPEN_MODERATOR_API_KEY?.slice(0, 8));
+console.log(
+  "🔑 API Key value (first 8 chars):",
+  OPEN_MODERATOR_API_KEY?.slice(0, 8)
+);
 console.log("🔎 Default banned words count IPFS:", defaultWords.length);
 console.log("🔎 Custom banned words count IPFS:", bannedWords.length);
 
@@ -50,27 +53,50 @@ function containsBannedWord(text) {
 }
 
 // ---------------- Safe Moderation Wrappers ----------------
-async function safeTextCheck(text) {
+async function safeTextCheck(originalText) {
+  const normalized = normalizeText(originalText);
   // 1. Manual check first
-  if (containsBannedWord(text)) {
+  if (containsBannedWord(normalized)) {
     return { profane: true, type: ["custom-banned"] };
   }
 
-  // 2. AI moderation check
+  // 2. Skip AI check if original text is empty
+  if (!originalText || !originalText.trim()) {
+    return { profane: false, type: ["empty"] };
+  }
+
+  // 3. AI moderation on the original input
   try {
-    return await filter.isProfaneAI(text, {
-      provider: "openmoderator",
+    console.log("🚀 Sending to OpenModerator:", {
+      prompt: originalText,
+      config: { provider: "google-perspective-api", checkManualProfanityList: true },
+    });
+    const result = await filter.isProfaneAI(originalText, {
+      provider: "google-perspective-api",
       checkManualProfanityList: true,
     });
+    console.log("✅ OpenModerator JSON result:", result);
+    return result;
   } catch (err) {
-    console.error("⚠️ OpenModerator text check failed:", err.message);
-    return { profane: false, type: ["fallback"] }; // fail safe
+    // Instead of just err.message, dump raw text
+    if (err.response) {
+      const raw = await err.response.text();
+      console.error("❌ Raw response from OpenModerator:", raw);
+    } else {
+      console.error("❌ OpenModerator error:", err);
+    }
+
+    return { profane: false, type: ["fallback"] };
   }
 }
 
-async function safeImageCheck(fakeFile) {
+async function safeImageCheck(img) {
   try {
-    return await filter.isImageNSFW(fakeFile, { provider: "openmoderator" });
+    const buffer = Buffer.from(img.data.split(",")[1], "base64");
+
+    // 👇 Convert Buffer to Blob (fix)
+    const blob = new Blob([buffer], { type: img.type });
+    return await filter.isImageNSFW(blob);
   } catch (err) {
     console.error("⚠️ OpenModerator image check failed:", err.message);
     return { nsfw: false, type: ["fallback"] }; // fail safe
@@ -113,8 +139,7 @@ export const handler = async (event) => {
     // ✅ Moderation
     if (DISABLE_MODERATION !== "true") {
       if (listingData.title) {
-        const normalizedTitle = normalizeText(listingData.title);
-        const titleCheck = await safeTextCheck(normalizedTitle);
+        const titleCheck = await safeTextCheck(listingData.title);
         if (titleCheck.profane) {
           return {
             statusCode: 400,
@@ -128,8 +153,7 @@ export const handler = async (event) => {
       }
 
       if (listingData.description) {
-        const normalizedDesc = normalizeText(listingData.description);
-        const descCheck = await safeTextCheck(normalizedDesc);
+        const descCheck = await safeTextCheck(listingData.description);
         if (descCheck.profane) {
           return {
             statusCode: 400,
@@ -147,20 +171,7 @@ export const handler = async (event) => {
           const img = images[i];
           if (!img.data || !img.type || !img.name) continue;
 
-          const buffer = Buffer.from(img.data.split(",")[1], "base64");
-          const fakeFile = {
-            name: img.name,
-            type: img.type,
-            size: buffer.length,
-            arrayBuffer: async () =>
-              buffer.buffer.slice(
-                buffer.byteOffset,
-                buffer.byteOffset + buffer.byteLength
-              ),
-            stream: () => Readable.from(buffer),
-          };
-
-          const imageCheck = await safeImageCheck(fakeFile);
+          const imageCheck = await safeImageCheck(img);
           if (imageCheck.nsfw) {
             return {
               statusCode: 400,
@@ -198,7 +209,10 @@ export const handler = async (event) => {
       for (let i = 0; i < images.length; i++) {
         try {
           const imageData = images[i];
-          const imageBuffer = Buffer.from(imageData.data.split(",")[1], "base64");
+          const imageBuffer = Buffer.from(
+            imageData.data.split(",")[1],
+            "base64"
+          );
 
           const formData = new FormData();
           const stream = Readable.from(imageBuffer);

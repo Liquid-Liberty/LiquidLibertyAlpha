@@ -44,16 +44,26 @@ function containsBannedWord(text) {
 }
 
 // ---------------- Safe Wrappers ----------------
-async function safeTextCheck(text) {
+async function safeTextCheck(originalText) {
+  const normalized = normalizeText(originalText);
   // 1. Manual check first
-  if (containsBannedWord(text)) {
+  if (containsBannedWord(normalized)) {
     return { profane: true, type: ["custom-banned"] };
   }
 
-  // 2. AI moderation check
+  // 2. Skip AI check if original text is empty
+  if (!originalText || !originalText.trim()) {
+    return { profane: false, type: ["empty"] };
+  }
+
+  // 3. AI moderation on raw text
   try {
-    return await filter.isProfaneAI(text, {
-      provider: "openmoderator",
+    console.log("🚀 Sending to OpenModerator:", {
+      prompt: originalText,
+      config: { provider: "google-perspective-api", checkManualProfanityList: true },
+    });
+    return await filter.isProfaneAI(originalText, {
+      provider: "google-perspective-api",
       checkManualProfanityList: true,
     });
   } catch (err) {
@@ -62,9 +72,13 @@ async function safeTextCheck(text) {
   }
 }
 
-async function safeImageCheck(fakeFile) {
+async function safeImageCheck(img) {
   try {
-    return await filter.isImageNSFW(fakeFile, { provider: "openmoderator" });
+    const buffer = Buffer.from(img.data.split(",")[1], "base64");
+
+    // 👇 Convert Buffer to Blob (fix)
+    const blob = new Blob([buffer], { type: img.type });
+    return await filter.isImageNSFW(blob);
   } catch (err) {
     console.error("⚠️ Image moderation failed:", err.message);
     return { nsfw: false, type: ["fallback"] };
@@ -97,8 +111,7 @@ export const handler = async (event) => {
 
     // Case 1: Text Moderation
     if (text) {
-      const normalized = normalizeText(text);
-      const result = await safeTextCheck(normalized);
+      const result = await safeTextCheck(text);
 
       return {
         statusCode: 200,
@@ -106,48 +119,32 @@ export const handler = async (event) => {
         body: JSON.stringify({
           type: "text",
           input: text,
-          normalized,
           ...result,
         }),
       };
     }
 
     // Case 2: Image Moderation
-    if (image) {
-      const { data, name = "upload.jpg", type = "image/jpeg" } = image;
-
-      if (!data) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: "Image data missing." }),
-        };
+    if (Array.isArray(image) && image.length > 0) {
+      const results = [];
+      for (const img of image) {
+        if (!img.data) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: "Image data missing." }),
+          };
+        }
+        const result = await safeImageCheck(img);
+        results.push({ input: img.name || "upload.jpg", ...result });
       }
-
-      const buffer = Buffer.from(data.split(",")[1], "base64");
-
-      // ✅ Proper File emulation for Node
-      const fakeFile = {
-        name,
-        type,
-        size: buffer.length,
-        arrayBuffer: async () =>
-          buffer.buffer.slice(
-            buffer.byteOffset,
-            buffer.byteOffset + buffer.byteLength
-          ),
-        stream: () => Readable.from(buffer),
-      };
-
-      const result = await safeImageCheck(fakeFile);
 
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           type: "image",
-          input: name,
-          ...result,
+          results,
         }),
       };
     }
