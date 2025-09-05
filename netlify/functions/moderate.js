@@ -3,13 +3,13 @@ import process from "process";
 import { Buffer } from "buffer";
 import { Readable } from "stream";
 import { bannedWords } from "./banned-words.js";
-import badwords from "badwords-list";
+import {array as badwordsArray} from "badwords-list";
 
 const filter = new Filter({
   openModeratorAPIKey: process.env.OPEN_MODERATOR_API_KEY,
 });
 
-const defaultWords = badwords.array || [];
+const defaultWords = badwordsArray || [];
 
 // ✅ Load custom + default banned words into the filter
 if (defaultWords.length > 0) filter.addWords(...defaultWords);
