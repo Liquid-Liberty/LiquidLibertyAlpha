@@ -1,0 +1,40 @@
+{
+  "name": "liquid-liberty-subquery",
+  "version": "0.0.1",
+  "description": "Subgraph for fetching OHLCV data for TradingView price charts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "subql codegen && subql build",
+    "codegen": "subql codegen",
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
+    "dev:docker": "subql codegen && subql build && docker-compose pull && docker-compose up --remove-orphans",
+    "dev:local": "subql-node-ethereum -f . --watch",
+    "prepack": "rm -rf dist && npm run build",
+    "test": "subql build && subql-node-ethereum test",
+    "build:develop": "NODE_ENV=develop subql codegen && NODE_ENV=develop subql build"
+  },
+  "homepage": "https://github.com/YOUR_REPO/liquid-liberty-subquery",
+  "repository": "github:YOUR_REPO/liquid-liberty-subquery",
+  "files": [
+    "dist",
+    "schema.graphql",
+    "project.ts"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@subql/query": "^2.23.5",
+    "assert": "^2.0.0",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "@subql/cli": "^6.2.2",
+    "@subql/node-ethereum": "^6.2.1",
+    "@subql/testing": "latest",
+    "@subql/types": "^3.14.1",
+    "@subql/types-core": "^2.1.1",
+    "@subql/types-ethereum": "^4.2.2",
+    "dotenv": "latest",
+    "typescript": "latest"
+  }
+}
