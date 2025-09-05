@@ -107,7 +107,7 @@ Config file - This file is responsible for passing the `SUBGRAPH_URL` and `PASS_
 `src/config/subgraph-config.js`
 
 ```
-export const SUBGRAPH_CONFIG = {
+export const SUBQUERY_CONFIG = {
   URL: import.meta.env.VITE_SUBGRAPH_URL,
   PAIR_ADDRESS: import.meta.env.VITE_TREASURY_ADDRESS.toLowerCase(),
   DEFAULT_INTERVAL: "60",

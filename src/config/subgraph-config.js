@@ -1,8 +1,8 @@
 // Subgraph + Pair configuration
 
-export const SUBGRAPH_CONFIG = {
+export const SUBQUERY_CONFIG = {
   // TheGraph endpoint
-    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.1.8",
+    URL: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
 
     // The Treasury contract being tracked
     PAIR_ADDRESS: "0x28d95bfd1131abf3f76236962f39264e137cd5c5",

@@ -1,8 +1,8 @@
-import { SUBGRAPH_CONFIG } from '../config/subgraph-config';
+import { SUBQUERY_CONFIG } from '../config/subgraph-config';
 
 export const fetchFromSubgraph = async (query, variables = {}) => {
     try {
-        const response = await fetch(SUBGRAPH_CONFIG.URL, {
+        const response = await fetch(SUBQUERY_CONFIG.URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

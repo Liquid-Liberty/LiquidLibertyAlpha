@@ -1,6 +1,6 @@
 // Simplified chartingDatafeed for demo purposes
 // Based on the main project's chartingDatafeed.ts
-import { SUBGRAPH_CONFIG } from "../config/subgraph-config";
+import { SUBQUERY_CONFIG } from "../config/subgraph-config";
 
 // Resolutions user can pick in TradingView and how we convert to subgraph seconds
 export const SUPPORTED_RESOLUTIONS = [
@@ -115,7 +115,7 @@ export const SUPPORTED_RESOLUTIONS = [
         onErrorCallback
       ) => {
         try {
-          const pairAddress = SUBGRAPH_CONFIG.PAIR_ADDRESS|| symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
+          const pairAddress = SUBQUERY_CONFIG.PAIR_ADDRESS|| symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
           const intervalParam = mapResolutionToSeconds(resolution);
   
           // TradingView Charting Library passes from/to in milliseconds
@@ -144,7 +144,7 @@ export const SUPPORTED_RESOLUTIONS = [
 
   
           const doFetch = async (q) => {
-            const res = await fetch(SUBGRAPH_CONFIG.URL, {
+            const res = await fetch(SUBQUERY_CONFIG.URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query: q }),
@@ -209,7 +209,7 @@ export const SUPPORTED_RESOLUTIONS = [
         subscriberUID,
         onResetCacheNeededCallback
       ) => {
-        const pairAddress = SUBGRAPH_CONFIG.PAIR_ADDRESS || symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
+        const pairAddress = SUBQUERY_CONFIG.PAIR_ADDRESS || symbolInfo?.pairAddress || symbolInfo?.address || data.poolAddress;
         const intervalParam = mapResolutionToSeconds(resolution);
   
         const poll = async () => {
@@ -230,7 +230,7 @@ export const SUPPORTED_RESOLUTIONS = [
               }
             }`;
   
-            const response = await fetch(SUBGRAPH_CONFIG.URL, {
+            const response = await fetch(SUBQUERY_CONFIG.URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query }),

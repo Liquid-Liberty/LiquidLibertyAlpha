@@ -58,14 +58,14 @@ VITE_TREASURY_ADDRESS=0xe758e36476376ccddf574144ab3e9a560d550de3
 
 `subgraph-config` - this is the config helper that sets the value for:  
 
-- `SUBGRAPH_CONFIG.URL` - graph URL route
-- `SUBGRAPH_CONFIG.PAIR_ADDRESS` - `Treasury address`
+- `SUBQUERY_CONFIG.URL` - graph URL route
+- `SUBQUERY_CONFIG.PAIR_ADDRESS` - `Treasury address`
 
 ```
 
 // Subgraph + Pair configuration
 
-export const SUBGRAPH_CONFIG = {
+export const SUBQUERY_CONFIG = {
   // TheGraph endpoint
     URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.7", make it your current version
 

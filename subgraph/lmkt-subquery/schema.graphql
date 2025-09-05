@@ -1,0 +1,27 @@
+type Token @entity {
+  id: ID!
+  symbol: String
+  name: String
+  decimals: Int!
+}
+
+type Pair @entity {
+  id: ID!
+  token0Id: ID!
+  token1Id: ID!
+  createdAt: BigInt!
+}
+
+type Candle @entity {
+  id: ID!
+  pairId: ID!
+  interval: String!
+  bucketStart: Int!
+  open: Float!
+  high: Float!
+  low: Float!
+  close: Float!
+  volumeToken0: Float!
+  volumeToken1: Float!
+  trades: Int!
+}

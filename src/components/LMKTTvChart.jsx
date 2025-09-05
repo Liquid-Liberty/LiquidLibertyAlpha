@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createChart } from "lightweight-charts";
 import { LMKT_CONFIG } from "../config/lmkt-config";
-import { SUBGRAPH_CONFIG } from "../config/subgraph-config";
+import { SUBQUERY_CONFIG } from "../config/subgraph-config";
 
 const LMKTTvChart = ({
   pairAddress = LMKT_CONFIG.PAIR_ADDRESS,
@@ -206,7 +206,7 @@ const LMKTTvChart = ({
         }
       }`;
 
-      const response = await fetch(SUBGRAPH_CONFIG.URL, {
+      const response = await fetch(SUBQUERY_CONFIG.URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
