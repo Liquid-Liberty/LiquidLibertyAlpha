@@ -4,12 +4,12 @@ import process from "process";
 import FormData from "form-data";
 import { Buffer } from "buffer";
 import { Filter } from "content-checker";
-import badwords from "badwords-list";
+import { array as badwordsArray } from "badwords-list";
 import { bannedWords } from "./banned-words.js";
 
 const { PINATA_JWT, OPEN_MODERATOR_API_KEY, DISABLE_MODERATION } = process.env;
 
-const defaultWords = badwords.array || [];
+const defaultWords = badwordsArray || [];
 
 // ✅ Initialize filter
 const filter = new Filter({
