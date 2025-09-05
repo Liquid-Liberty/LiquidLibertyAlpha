@@ -53,7 +53,6 @@ async function safeTextCheck(text) {
   // 2. AI moderation check
   try {
     return await filter.isProfaneAI(text, {
-      provider: "openmoderator",
       checkManualProfanityList: true,
     });
   } catch (err) {
@@ -64,7 +63,7 @@ async function safeTextCheck(text) {
 
 async function safeImageCheck(fakeFile) {
   try {
-    return await filter.isImageNSFW(fakeFile, { provider: "openmoderator" });
+    return await filter.isImageNSFW(fakeFile);
   } catch (err) {
     console.error("⚠️ Image moderation failed:", err.message);
     return { nsfw: false, type: ["fallback"] };
