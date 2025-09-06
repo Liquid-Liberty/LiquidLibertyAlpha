@@ -2,7 +2,7 @@
 
 export const SUBQUERY_CONFIG = {
   // TheGraph endpoint
-    URL: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
+    URL: "https://index-api.onfinality.io/sq/liquid-liberty/lmkt-chart/graphql",
 
     // The Treasury contract being tracked
     PAIR_ADDRESS: "0x28d95bfd1131abf3f76236962f39264e137cd5c5",

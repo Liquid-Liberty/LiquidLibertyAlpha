@@ -145,7 +145,7 @@ export function GetDatafeedProvider(data, ws_pool) {
                 where: {
                   pair: { id_eq: "${pairAddress}" },
                   interval_eq: "${intervalParam}",
-                  volumeToken0_gt: 0
+                  volumeToken0_gt: "0"
                 }
               ) {
                 bucketStart
@@ -181,7 +181,11 @@ export function GetDatafeedProvider(data, ws_pool) {
                 first: 1000,
                 orderBy: bucketStart,
                 orderDirection: asc,
-                where: {pair: "${pairAddress}", interval: "${intervalParam}", volumeToken0_gt: "0"}
+                where: {
+                  pair: { id_eq: "${pairAddress}" },
+                  interval_eq: "${intervalParam}",
+                  volumeToken0_gt: "0"
+                }
               ) {
                 bucketStart
                 open
@@ -249,7 +253,7 @@ export function GetDatafeedProvider(data, ws_pool) {
                 where: {
                   pair: { id_eq: "${pairAddress}" },
                   interval_eq: "${intervalParam}",
-                  volumeToken0_gt: 0
+                  volumeToken0_gt: "0"
                 }
               ) {
                 bucketStart
