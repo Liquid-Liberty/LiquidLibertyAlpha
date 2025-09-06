@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { serviceCategories, mockAds } from '../data/mockData';
+import { serviceCategories } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
 import { useListings } from '../context/ListingsContext';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { lmktConfig, treasuryConfig, paymentProcessorConfig } from '../config/contracts';
+import { localAds } from '../data/ads';
+
 
 const ListingDetailPage = () => {
   const { id } = useParams();
@@ -90,6 +92,18 @@ const ListingDetailPage = () => {
     alert("Purchase successful!");
     refreshListings();
   }
+
+      //Marketing
+      const adKey = 'cvre'
+      const selectedAd = localAds[adKey];
+      const adImages = import.meta.glob('../assets/marketing/*', { eager: true, as: 'url' });
+      const matchedImage = Object.entries(adImages).find(([path]) =>
+          path.endsWith(selectedAd.imagePath)
+      );
+      const resolvedAd = {
+          ...selectedAd,
+          imageUrl: matchedImage?.[1] || '',
+      }
 
   return (
     <div className="container mx-auto px-6 py-12">
@@ -197,7 +211,7 @@ const ListingDetailPage = () => {
               <h3 className="font-display text-xl font-bold mb-4 text-zinc-800">
                 Sponsored
               </h3>
-              <AdSidebar ad={mockAds.sidebar} />
+              <AdSidebar ad={resolvedAd} />
             </div>
           </div>
         </div>

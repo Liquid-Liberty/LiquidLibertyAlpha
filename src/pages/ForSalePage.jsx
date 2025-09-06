@@ -2,19 +2,30 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { forSaleCategories } from '../data/categories';
 import AdBanner from '../components/AdBanner';
-import { mockAds } from '../data/mockData';
 import { useListings } from '../context/ListingsContext';
+import { localAds } from '../data/ads';
 
 const ForSalePage = () => {
     const { listings, loading, error } = useListings();
     const forSaleListings = listings.filter(listing => listing.listingType === 'ForSale');
+    //Marketing
+    const adKey = 'shillBanner'
+    const selectedAd = localAds[adKey];
+    const adImages = import.meta.glob('../assets/marketing/*', { eager: true, as: 'url' });
+    const matchedImage = Object.entries(adImages).find(([path]) =>
+        path.endsWith(selectedAd.imagePath)
+    );
+    const resolvedAd = {
+        ...selectedAd,
+        imageUrl: matchedImage?.[1] || '',
+    }
 
     return (
         <div className="container mx-auto px-6 py-12">
             <div className="bg-stone-50/95 p-8 md:p-12 rounded-lg shadow-lg">
                 <h1 className="text-4xl font-display font-bold text-center text-zinc-800 mb-8">For Sale</h1>
 
-                <AdBanner ad={mockAds.banner} />
+                <AdBanner ad={resolvedAd} />
 
                 {loading && (
                     <div className="text-center py-8">
