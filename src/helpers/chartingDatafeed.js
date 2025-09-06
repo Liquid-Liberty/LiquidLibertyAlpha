@@ -231,6 +231,16 @@ export function GetDatafeedProvider(data, ws_pool) {
                 (b) => b.time >= fromSec * 1000 && b.time <= toSec * 1000
               )
             : nonEmptyBars;
+        console.log(
+          "sample bars",
+          (candles || []).slice(0, 5).map((c) => ({
+            t: c.bucketStart,
+            o: c.open,
+            h: c.high,
+            l: c.low,
+            c: c.close,
+          }))
+        );
 
         onHistoryCallback(barsInWindow, { noData: barsInWindow.length === 0 });
       } catch (error) {
