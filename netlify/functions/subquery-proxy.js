@@ -1,9 +1,7 @@
-// /netlify/functions/subquery-proxy.js
 export async function handler(event) {
   try {
-    // Forward body from frontend → OnFinality
     const response = await fetch(
-      "https://index-api.onfinality.io/sq/liquid-liberty/lmkt-chart/graphql",
+      "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart/graphql",
       {
         method: "POST",
         headers: {
@@ -13,14 +11,14 @@ export async function handler(event) {
       }
     );
 
-    const data = await response.text();
+    const data = await response.json();
 
     return {
       statusCode: 200,
-      body: data,
+      body: JSON.stringify(data),
       headers: {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*", // Allow dApp frontend
+        "Access-Control-Allow-Origin": "*",
       },
     };
   } catch (error) {
@@ -31,6 +29,10 @@ export async function handler(event) {
         error: "Proxy request failed",
         details: error.message,
       }),
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
     };
   }
 }

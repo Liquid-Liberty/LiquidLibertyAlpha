@@ -127,9 +127,6 @@ export const TVChart = ({
               return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
             },
           },
-          priceFormatterFactory: () => {
-            return { format: (price) => price.toFixed(6) };
-          },
         },
       };
 

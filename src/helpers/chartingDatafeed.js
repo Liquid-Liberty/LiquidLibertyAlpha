@@ -81,6 +81,9 @@ export function GetDatafeedProvider(data, ws_pool) {
       onResolveErrorCallback,
       extension
     ) => {
+      const PRICE_DECIMALS = 6; // 6 decimals -> tick = 0.000001
+      const PRICE_SCALE = 10 ** PRICE_DECIMALS;
+
       const symbolInfo = {
         address: data.poolAddress,
         base_name: [`${data.baseSymbol}/${data.quoteSymbol}`],
@@ -93,16 +96,17 @@ export function GetDatafeedProvider(data, ws_pool) {
         data_status: "streaming",
         type: "Crypto",
         session: "24x7",
-        timezone: "Europe/Athens",
+        timezone: "Etc/UTC",
         exchange: "memetrend",
-        minmov: 0.00000000001,
-        pricescale: 10 ** 9,
+        minmov: 1,
+        pricescale: PRICE_SCALE,
         has_intraday: true,
         visible_plots_set: "ohlcv",
         has_weekly_and_monthly: true,
         supported_resolutions: data_vars.supported_resolutions,
         volume24h: data.v24hUSD || 0,
-        volume_precision: 4,
+        volume_precision: 6,
+        has_no_volume: false,
         liquidity: data.liquidity,
         pairAddress: data.poolAddress,
         source: "All pairs",
@@ -138,35 +142,40 @@ export function GetDatafeedProvider(data, ws_pool) {
         // 1m often returns empty with tight windows; bypass server-side window for 1m
         const includeFilterInServer = resolution !== "1";
         const query = `{
-              candles(
-                first: 1000,
-                orderBy: bucketStart,
-                orderDirection: asc,
-                where: {
-                  pair: { id_eq: "${pairAddress}" },
-                  interval_eq: "${intervalParam}",
-                  volumeToken0_gt: "0"
-                }
-              ) {
-                bucketStart
-                open
-                high
-                low
-                close
-                volumeToken0
-              }
-            }`;
+          candles(
+            first: 1000,
+            orderBy: BUCKET_START_ASC,
+            filter: {
+              pairId: { equalTo: "${pairAddress}" },
+              interval: { equalTo: "${intervalParam}" },
+              volumeToken0: { greaterThan: 0 }
+            }
+          ) {
+            nodes {
+              bucketStart
+              open
+              high
+              low
+              close
+              volumeToken0
+            }
+          }
+        }`;
 
         console.log("Fetching candles with query:", query);
 
         const doFetch = async (q) => {
-          const res = await fetch(SUBQUERY_CONFIG.URL, {
+          console.log(
+            "Outgoing GraphQL request body:",
+            JSON.stringify({ query: q })
+          );
+          const res = await fetch("/.netlify/functions/subquery-proxy", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ query: q }),
           });
           const json = await res.json();
-          return json?.data?.candles ?? [];
+          return json?.data?.candles?.nodes ?? [];
         };
 
         // First try with time filter
@@ -177,16 +186,16 @@ export function GetDatafeedProvider(data, ws_pool) {
         // Fallback: if no data returned (common for 1m small windows), refetch without time filter
         if ((!candles || candles.length === 0) && fromSec && toSec) {
           const fallbackQuery = `{
-              candles(
-                first: 1000,
-                orderBy: bucketStart,
-                orderDirection: asc,
-                where: {
-                  pair: { id_eq: "${pairAddress}" },
-                  interval_eq: "${intervalParam}",
-                  volumeToken0_gt: "0"
-                }
-              ) {
+            candles(
+              first: 1000,
+              orderBy: BUCKET_START_ASC,
+              filter: {
+                pairId: { equalTo: "${pairAddress}" },
+                interval: { equalTo: "${intervalParam}" },
+                volumeToken0: { greaterThan: 0 }
+              }
+            ) {
+              nodes {
                 bucketStart
                 open
                 high
@@ -194,7 +203,8 @@ export function GetDatafeedProvider(data, ws_pool) {
                 close
                 volumeToken0
               }
-            }`;
+            }
+          }`;
           candles = await doFetch(fallbackQuery);
         }
 
@@ -246,16 +256,16 @@ export function GetDatafeedProvider(data, ws_pool) {
       const poll = async () => {
         try {
           const query = `{
-              candles(
-                first: 1,
-                orderBy: bucketStart,
-                orderDirection: desc,
-                where: {
-                  pair: { id_eq: "${pairAddress}" },
-                  interval_eq: "${intervalParam}",
-                  volumeToken0_gt: "0"
-                }
-              ) {
+            candles(
+              first: 1,
+              orderBy: BUCKET_START_DESC,
+              filter: {
+                pairId: { equalTo: "${pairAddress}" },
+                interval: { equalTo: "${intervalParam}" },
+                volumeToken0: { greaterThan: 0 }
+              }
+            ) {
+              nodes {
                 bucketStart
                 open
                 high
@@ -263,7 +273,8 @@ export function GetDatafeedProvider(data, ws_pool) {
                 close
                 volumeToken0
               }
-            }`;
+            }
+          }`;
 
           const response = await fetch(SUBQUERY_CONFIG.URL, {
             method: "POST",
@@ -271,11 +282,11 @@ export function GetDatafeedProvider(data, ws_pool) {
             body: JSON.stringify({ query }),
           });
           const { data: gql } = await response.json();
-          const latest = gql?.candles?.[0];
+          const latest = gql?.candles?.nodes?.[0];
           if (!latest) return;
 
+          // milliseconds
           const bar = {
-            // milliseconds
             time: parseInt(latest.bucketStart) * 1000,
             low: parseFloat(latest.low),
             high: parseFloat(latest.high),
@@ -337,10 +348,13 @@ export function GetDatafeedProvider(data, ws_pool) {
 
       // start polling
       poll();
-      const everyMs = Math.max(
-        1000,
-        Math.min(5000, Math.floor(getIntervalMs(resolution) / 2))
-      );
+      poll();
+      const everyMs = 30 * 1000; // 30 seconds
+      subscriberIntervals[subscriberUID] = window.setInterval(poll, everyMs);
+      // const everyMs = Math.max(
+      //   1000,
+      //   Math.min(5000, Math.floor(getIntervalMs(resolution) / 2))
+      // );
       subscriberIntervals[subscriberUID] = window.setInterval(poll, everyMs);
     },
 
