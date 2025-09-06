@@ -7,15 +7,21 @@ import process from "process";
 // This helper function saves the contract addresses and ABIs to the front-end directory
 async function saveFrontendFiles(contracts) {
   console.log("\n--- Saving configuration and ABIs to frontend ---");
-  const contractsDir = "./src/config";
+
+    // Get the current network name (e.g., 'sepolia', 'pulse', 'localhost')
+  const network = await ethers.provider.getNetwork();
+  const networkName = network.name || `chain-${network.chainId}`;
+
+  const contractsDir = `./src/config/${networkName}`;
 
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
   }
 
+  const addressFilePath = `${contractsDir}/contract-addresses.json`;
   // Save the contract addresses
   fs.writeFileSync(
-    contractsDir + "/contract-addresses.json",
+    addressFilePath,
     JSON.stringify(
       {
         ListingManager: contracts.ListingManager.target,

@@ -1,10 +1,10 @@
 import addresses from './contract-addresses.json';
-import listingManagerAbi from './ListingManager.json';
-import paymentProcessorAbi from './PaymentProcessor.json';
-import treasuryAbi from './Treasury.json';
-import lmktAbi from './LMKT.json';
-import mockDaiAbi from './GenericERC20.json'; // MockDai uses the GenericERC20 ABI
-import faucetAbi from './Faucet.json';
+import listingManagerAbi from '../ListingManager.json';
+import paymentProcessorAbi from '../PaymentProcessor.json';
+import treasuryAbi from '../Treasury.json';
+import lmktAbi from '../LMKT.json';
+import mockDaiAbi from '../GenericERC20.json'; // MockDai uses the GenericERC20 ABI
+import faucetAbi from '../Faucet.json';
 
 export const listingManagerConfig = {
   address: addresses.ListingManager,
