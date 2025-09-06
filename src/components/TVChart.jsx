@@ -127,9 +127,6 @@ export const TVChart = ({
               return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
             },
           },
-          priceFormatterFactory: () => {
-            return { format: (price) => price.toFixed(6) };
-          },
         },
       };
 
@@ -145,7 +142,7 @@ export const TVChart = ({
         widget.applyOverrides({
 
           'mainSeriesProperties.visible': true,
-          'mainSeriesProperties.style': 1,
+          // 'mainSeriesProperties.style': 1,
           'paneProperties.backgroundType': 'solid',
           'paneProperties.background': '#0f0f0f', // Chart background color
           'paneProperties.vertGridProperties.color': '#1A1A1A', // Vertical grid lines color
