@@ -31,6 +31,13 @@ module.exports = {
         : [],
       chainId: 11155111,
     },
+    pulse: {
+      url: process.env.PULSECHAIN_RPC_URL,
+      accounts: process.env.SIGNER_PRIVATE_KEY
+      ? [process.env.SIGNER_PRIVATE_KEY]
+        : [],
+      chainId: 943,
+    }
   },
   etherscan: {
     apiKey: {

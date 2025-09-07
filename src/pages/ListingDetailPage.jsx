@@ -4,11 +4,12 @@ import { serviceCategories } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
 import { useListings } from '../context/ListingsContext';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
-import { lmktConfig, treasuryConfig, paymentProcessorConfig } from '../config/contracts';
+import { useContractConfig } from '../hooks/useContractConfig';
 import { localAds } from '../data/ads';
 
 
 const ListingDetailPage = () => {
+  const { lmktConfig, treasuryConfig, paymentProcessorConfig } = useContractConfig();
   const { id } = useParams();
   const { listings, loading, error, refreshListings } = useListings();
   const { address, isConnected } = useAccount();

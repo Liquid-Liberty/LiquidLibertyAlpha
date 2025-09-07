@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { parseUnits } from "viem";
-import { useAccount, useChainId } from "wagmi";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { listingManagerConfig, mockDaiConfig } from "../config/contracts";
+import {
+  useAccount,
+  useChainId,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { forSaleCategories, serviceCategories } from "../data/categories";
+import {useContractConfig} from "../hooks/useContractConfig"; // ✅ NEW
 
 const CreateListingPage = ({ listings }) => {
   const navigate = useNavigate();
@@ -13,9 +17,11 @@ const CreateListingPage = ({ listings }) => {
   const existingListing = isEditing
     ? listings.find((l) => l.id.toString() === id)
     : null;
-  const chainId = useChainId();
 
-  // --- Form State ---
+  const chainId = useChainId();
+  const { address, isConnected } = useAccount();
+  const { listingManagerConfig, mockDaiConfig } = useContractConfig(); // ✅ dynamic configs
+
   const [listingType, setListingType] = useState(
     existingListing?.type || "item"
   );
@@ -40,10 +46,8 @@ const CreateListingPage = ({ listings }) => {
   );
   const [photos, setPhotos] = useState(existingListing?.photos || []);
 
-  // --- Web3 State ---
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const { address, isConnected } = useAccount();
 
   const { data: approveHash, writeContractAsync: approveAsync } =
     useWriteContract();
@@ -75,7 +79,6 @@ const CreateListingPage = ({ listings }) => {
     }
   };
 
-  // --- Helper: call Netlify moderation function ---
   const moderateText = async (text) => {
     const res = await fetch("/.netlify/functions/moderate", {
       method: "POST",
@@ -97,8 +100,7 @@ const CreateListingPage = ({ listings }) => {
               image: { data: reader.result, name: file.name, type: file.type },
             }),
           });
-          const result = await res.json();
-          resolve(result);
+          resolve(await res.json());
         } catch (err) {
           reject(err);
         }
@@ -108,82 +110,58 @@ const CreateListingPage = ({ listings }) => {
     });
   };
 
-  // --- handleSubmit ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isConnected || !address) {
-      alert("Please connect your wallet.");
-      return;
-    }
-
-    if (isEditing) {
-      alert("Editing logic needs to be implemented.");
-      return;
-    }
+    if (!isConnected || !address) return alert("Please connect your wallet.");
+    if (isEditing) return alert("Editing logic not yet implemented.");
 
     setIsLoading(true);
-
     try {
-      // STEP 0: Frontend Moderation
       setStatusMessage("0/4: Checking content moderation...");
 
-      // Title check
       if (title) {
         const titleCheck = await moderateText(title);
         if (titleCheck.profane) {
-          alert(`❌ Title rejected. Issues: ${titleCheck.type.join(", ")}`);
-          setIsLoading(false);
-          return;
+          alert(`❌ Title rejected: ${titleCheck.type.join(", ")}`);
+          return setIsLoading(false);
         }
       }
 
-      // Description check
       if (description) {
         const descCheck = await moderateText(description);
         if (descCheck.profane) {
-          alert(
-            `❌ Description rejected. Issues: ${descCheck.type.join(", ")}`
-          );
-          setIsLoading(false);
-          return;
+          alert(`❌ Description rejected: ${descCheck.type.join(", ")}`);
+          return setIsLoading(false);
         }
       }
 
-      // Image checks
       for (let p of photos) {
         const imageCheck = await moderateImage(p.file);
         if (imageCheck.nsfw) {
-          alert(`❌ Image rejected. Issues: ${imageCheck.type.join(", ")}`);
-          setIsLoading(false);
-          return;
+          alert(`❌ Image rejected: ${imageCheck.type.join(", ")}`);
+          return setIsLoading(false);
         }
       }
 
-      // STEP 1: Upload metadata + images to Netlify → Pinata/IPFS
       setStatusMessage("1/4: Uploading metadata & images to IPFS...");
+      const imagePayloads = await Promise.all(
+        photos.map((p) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve({
+                name: p.file.name,
+                type: p.file.type,
+                data: reader.result,
+              });
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(p.file);
+          });
+        })
+      );
 
-      let imagePayloads = [];
-      if (photos.length > 0) {
-        imagePayloads = await Promise.all(
-          photos.map(
-            (p) =>
-              new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  resolve({
-                    name: p.file.name,
-                    type: p.file.type,
-                    data: reader.result,
-                  });
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(p.file);
-              })
-          )
-        );
-      }
-
-      const uploadResponse = await fetch(
+      const uploadRes = await fetch(
         "/.netlify/functions/upload-images-to-ipfs",
         {
           method: "POST",
@@ -207,28 +185,21 @@ const CreateListingPage = ({ listings }) => {
         }
       );
 
-      if (!uploadResponse.ok) {
-        const rawError = await uploadResponse.text();
-        let errorResult;
+      if (!uploadRes.ok) {
+        const rawError = await uploadRes.text();
+        let error = { error: rawError };
         try {
-          errorResult = JSON.parse(rawError);
-        } catch {
-          errorResult = { error: rawError }; // fallback to plain text
-        }
-        throw new Error(
-          errorResult.error ||
-            "Failed to upload images/metadata to IPFS (moderation may have blocked content)."
-        );
+          error = JSON.parse(rawError);
+        } catch {}
+        throw new Error(error.error || "IPFS upload failed.");
       }
 
-      const uploadResult = await uploadResponse.json();
+      const uploadResult = await uploadRes.json();
       const dataIdentifier = uploadResult.listingMetadataUrl;
-
       console.log("✅ Uploaded to IPFS:", uploadResult);
 
-      // STEP 2: Request typed-data signature
       setStatusMessage("2/4: Requesting authorization from server...");
-      const signatureResponse = await fetch(
+      const sigRes = await fetch(
         "/.netlify/functions/create-listing-signature",
         {
           method: "POST",
@@ -242,24 +213,20 @@ const CreateListingPage = ({ listings }) => {
         }
       );
 
-      if (!signatureResponse.ok) {
-        const rawError = await signatureResponse.text();
-        let errorResult;
+      if (!sigRes.ok) {
+        const rawError = await sigRes.text();
+        let error = { error: rawError };
         try {
-          errorResult = JSON.parse(rawError);
-        } catch {
-          errorResult = { error: rawError };
-        }
-        throw new Error(
-          errorResult.error || "Failed to get a signature from the server."
-        );
+          error = JSON.parse(rawError);
+        } catch {}
+        throw new Error(error.error || "Signature request failed.");
       }
-      const signatureData = await signatureResponse.json();
-      signatureDataRef.current = { ...signatureData, dataIdentifier };
-      console.log("✅ Received signature data:", signatureData);
 
-      // STEP 3: Approve fee
-      setStatusMessage("3/4: Please approve the listing fee...");
+      const signatureData = await sigRes.json();
+      signatureDataRef.current = { ...signatureData, dataIdentifier };
+      console.log("✅ Received signature:", signatureData);
+
+      setStatusMessage("3/4: Approving token transfer...");
       const fee = listingType === "item" ? "5" : "20";
       await approveAsync({
         address: mockDaiConfig.address,
@@ -267,25 +234,22 @@ const CreateListingPage = ({ listings }) => {
         functionName: "approve",
         args: [listingManagerConfig.address, parseUnits(fee, 18)],
       });
-    } catch (error) {
-      console.error("❌ Listing creation failed:", error);
-      alert(`Error: ${error.message}`);
+    } catch (err) {
+      console.error("❌ Error:", err);
+      alert(err.message);
       setIsLoading(false);
       setStatusMessage("");
     }
   };
 
-  // --- Create Listing after approval ---
   useEffect(() => {
     if (isApproved && signatureDataRef.current) {
       const { signature, nonce, deadline, dataIdentifier } =
         signatureDataRef.current;
-
-      setStatusMessage("4/4: Fee approved! Creating listing...");
-
       const listingTypeEnum = listingType === "item" ? 0 : 1;
       const priceInUsdBigInt = parseUnits(price, 8);
 
+      setStatusMessage("4/4: Creating listing...");
       createListingAsync({
         address: listingManagerConfig.address,
         abi: listingManagerConfig.abi,
@@ -300,13 +264,13 @@ const CreateListingPage = ({ listings }) => {
         ],
       });
     }
-  }, [isApproved, createListingAsync, listingType, price]);
+  }, [isApproved]);
 
   useEffect(() => {
     if (isCreated) {
       setIsLoading(false);
       setStatusMessage("");
-      alert("Listing created successfully!");
+      alert("✅ Listing created!");
       navigate("/");
     }
   }, [isCreated, navigate]);

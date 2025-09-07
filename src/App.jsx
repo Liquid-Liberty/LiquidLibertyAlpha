@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useListings } from './context/ListingsContext';
-import { faucetConfig } from './contract-config';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -16,15 +15,19 @@ import DashboardPage from './pages/DashboardPage';
 import VendorsPage from './pages/VendorsPage';
 import LocateVendorPage from './pages/LocateVendorPage';
 import NotFoundPage from './pages/NotFoundPage';
+import { useContractConfig } from './hooks/useContractConfig';
 
 function App() {
-    const { listings, refreshData } = useListings();
+    const { listings, refreshListings } = useListings();
     const [notification, setNotification] = useState('');
     const location = useLocation();
     const { address, isConnected } = useAccount();
 
     const { data: faucetHash, writeContract: requestTokens } = useWriteContract();
     const { isSuccess: isFaucetSuccess } = useWaitForTransactionReceipt({ hash: faucetHash });
+
+    const { contracts, loading: contractsLoading } = useContractConfig();
+    const faucetConfig = contracts?.faucetConfig;
 
     useEffect(() => {
         if (isFaucetSuccess) {
@@ -39,14 +42,14 @@ function App() {
 
     const addListing = (newListing, isEditing) => {
         // Refresh data from blockchain after adding listing
-        refreshData();
+        refreshListings();
         setNotification('Listing created successfully!');
         setTimeout(() => setNotification(''), 4000);
     };
 
     const deleteListing = (id) => {
         // Refresh data from blockchain after deleting listing
-        refreshData();
+        refreshListings();
         setNotification('Listing deleted.');
         setTimeout(() => setNotification(''), 4000);
     };
