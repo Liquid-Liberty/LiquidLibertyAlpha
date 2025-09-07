@@ -1,62 +1,51 @@
 import React, { useEffect, useState } from "react";
 import { useListings } from "../context/ListingsContext";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { listingManagerConfig } from "../config/contracts";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useContractConfig } from "../hooks/useContractConfig";
 
 const ListingRow = ({ listing, onRefetch }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // --- Close ---
-  const { data: closeHash, writeContract: handleCloseAction } = useWriteContract();
-  const { isSuccess: isClosed } = useWaitForTransactionReceipt({ hash: closeHash });
-
-  // --- Delete ---
-  const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
-  const { isSuccess: isDeleted } = useWaitForTransactionReceipt({ hash: deleteHash });
-
-  // --- Renew ---
-  const { data: renewHash, writeContract: handleRenewAction } = useWriteContract();
-  const { isSuccess: isRenewed } = useWaitForTransactionReceipt({ hash: renewHash });
-
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  // Derived expiration check
+  const { contracts, loading: configLoading } = useContractConfig();
+  const listingManagerConfig = contracts?.listingManagerConfig;
+
+  const { data: closeHash, writeContract: handleCloseAction } = useWriteContract();
+  const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
+  const { data: renewHash, writeContract: handleRenewAction } = useWriteContract();
+
+  const { isSuccess: isClosed } = useWaitForTransactionReceipt({ hash: closeHash });
+  const { isSuccess: isDeleted } = useWaitForTransactionReceipt({ hash: deleteHash });
+  const { isSuccess: isRenewed } = useWaitForTransactionReceipt({ hash: renewHash });
+
   const isExpired =
     listing.expirationTimestamp &&
     Number(listing.expirationTimestamp) * 1000 < Date.now();
 
-  // --- Success effects ---
   useEffect(() => {
-    if (isClosed) {
-      alert("Listing Closed");
+    if (isClosed || isDeleted || isRenewed) {
+      const msg =
+        isClosed
+          ? "Listing Closed"
+          : isDeleted
+          ? "Listing Deleted"
+          : "Listing Renewed for 30 more days";
+
+      alert(msg);
       setIsLoading(false);
       setStatusMessage("");
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
-  }, [isClosed, onRefetch]);
+  }, [isClosed, isDeleted, isRenewed, onRefetch]);
 
-  useEffect(() => {
-    if (isDeleted) {
-      alert("Listing Deleted");
-      setIsLoading(false);
-      setStatusMessage("");
-      if (onRefetch) setTimeout(onRefetch, 2000);
-    }
-  }, [isDeleted, onRefetch]);
-
-  useEffect(() => {
-    if (isRenewed) {
-      alert("Listing Renewed for 30 more days");
-      setIsLoading(false);
-      setStatusMessage("");
-      if (onRefetch) setTimeout(onRefetch, 2000);
-    }
-  }, [isRenewed, onRefetch]);
-
-  // --- Actions ---
   const handleClose = (e) => {
     e.preventDefault();
+    if (!listingManagerConfig) return;
     setIsLoading(true);
     setStatusMessage("Closing listing...");
     handleCloseAction({
@@ -69,6 +58,7 @@ const ListingRow = ({ listing, onRefetch }) => {
 
   const handleDelete = (e) => {
     e.preventDefault();
+    if (!listingManagerConfig) return;
     setIsLoading(true);
     setStatusMessage("Deleting listing...");
     handleDeleteAction({
@@ -81,6 +71,7 @@ const ListingRow = ({ listing, onRefetch }) => {
 
   const handleRenew = (e) => {
     e.preventDefault();
+    if (!listingManagerConfig) return;
     setIsLoading(true);
     setStatusMessage("Renewing listing...");
     handleRenewAction({
@@ -91,7 +82,6 @@ const ListingRow = ({ listing, onRefetch }) => {
     });
   };
 
-  // --- UI Helpers ---
   const getStatusPill = () => {
     if (isExpired) {
       return (
@@ -170,6 +160,14 @@ const ListingRow = ({ listing, onRefetch }) => {
     }
   };
 
+  if (configLoading || !listingManagerConfig) {
+    return (
+      <div className="bg-stone-100 rounded-lg p-4 text-sm text-zinc-500">
+        Loading contract config...
+      </div>
+    );
+  }
+
   return (
     <div className="bg-stone-100 rounded-lg">
       <div
@@ -182,7 +180,7 @@ const ListingRow = ({ listing, onRefetch }) => {
             alt={listing.title}
             className="w-12 h-12 object-cover rounded-md mr-4 flex-shrink-0"
             onError={(e) => {
-              e.currentTarget.src = "/noImage.jpeg"
+              e.currentTarget.src = "/noImage.jpeg";
             }}
           />
           <div className="min-w-0">
@@ -195,12 +193,19 @@ const ListingRow = ({ listing, onRefetch }) => {
         <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
           {getStatusPill()}
           <svg
-            className={`w-5 h-5 transform transition-transform ${isExpanded ? "rotate-180" : ""}`}
+            className={`w-5 h-5 transform transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M19 9l-7 7-7-7"
+            ></path>
           </svg>
         </div>
       </div>

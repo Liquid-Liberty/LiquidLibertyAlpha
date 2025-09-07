@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import LMKTTvChart from "../components/LMKTTvChart";
 import MyListings from "../components/MyListings";
-import { treasuryConfig, lmktConfig, mockDaiConfig } from "../contract-config";
-import { LMKT_CONFIG } from "../config/lmkt-config";
+import { useContractConfig } from "../hooks/useContractConfig";
 import GenericERC20ABI from "../config/GenericERC20.json";
 import {
   useAccount,
@@ -14,14 +12,6 @@ import {
 import { parseEther, formatEther } from "viem";
 import TradingViewChart from "../components/TradingViewChart";
 import { TVChart } from "../components/TVChart";
-
-// Only LMKT token is needed for the chart
-const LMKT_TOKEN = {
-  id: "lmkt",
-  name: "Liberty Market Token",
-  symbol: "LMKT",
-  contractAddress: lmktConfig.address,
-};
 
 const AccordionSection = ({ title, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -55,6 +45,13 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
 
 const DashboardPage = ({ listings, userAddress }) => {
   const { isConnected, address } = useAccount();
+
+  // ✅ Load configs from hook (dynamic per network)
+  const { contracts, loading: cfgLoading } = useContractConfig();
+  const treasuryConfig = contracts?.treasuryConfig;
+  const lmktConfig = contracts?.lmktConfig;
+  const mockDaiConfig = contracts?.mockDaiConfig;
+
   const [amountIn, setAmountIn] = useState(0);
   const [treasuryTab, setTreasuryTab] = useState("buy");
   const { data: approveHash, writeContract: approve } = useWriteContract();
@@ -119,133 +116,137 @@ const DashboardPage = ({ listings, userAddress }) => {
     { value: "1M", label: "1M" },
   ];
 
-  const [tokenAddress, setTokenAddress] = useState(mockDaiConfig.address); // Default WBTC address for collateral
+  // ⛑️ tokenAddress depends on configs being loaded
+  const [tokenAddress, setTokenAddress] = useState(undefined);
 
+  useEffect(() => {
+    if (mockDaiConfig?.address) {
+      setTokenAddress(mockDaiConfig.address);
+    }
+  }, [mockDaiConfig?.address]);
+
+  // Balances
   const { data: daiBalance, refetch: refetchDaiBalance } = useReadContract({
-    address: mockDaiConfig.address,
+    address: mockDaiConfig?.address,
     abi: GenericERC20ABI.abi,
     functionName: "balanceOf",
     args: [address],
-    query: { enabled: !!address },
+    // ✅ only run when address AND config are ready
+    query: { enabled: !!address && !!mockDaiConfig?.address },
   });
 
   const { data: lmktBalance, refetch: refetchLmktBalance } = useReadContract({
-    address: lmktConfig.address,
+    address: lmktConfig?.address,
     abi: GenericERC20ABI.abi,
     functionName: "balanceOf",
     args: [address],
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!lmktConfig?.address },
   });
 
   useEffect(() => {
-  console.log("🎯 DAI balance raw:", daiBalance);
-  console.log("🎯 LMKT balance raw:", lmktBalance);
-}, [daiBalance, lmktBalance]);
+    console.log("🎯 DAI balance raw:", daiBalance);
+    console.log("🎯 LMKT balance raw:", lmktBalance);
+  }, [daiBalance, lmktBalance]);
 
-  // Update balances when data changes
-useEffect(() => {
-  if (daiBalance !== undefined && daiBalance !== null) {
-    setTokenBalances((prev) => ({
-      ...prev,
-      dai: formatEther(daiBalance),
-    }));
-  }
-  if (lmktBalance !== undefined && lmktBalance !== null) {
-    setTokenBalances((prev) => ({
-      ...prev,
-      lmkt: formatEther(lmktBalance),
-    }));
-  }
-}, [daiBalance, lmktBalance]);
+  useEffect(() => {
+    if (daiBalance !== undefined && daiBalance !== null) {
+      setTokenBalances((prev) => ({ ...prev, dai: formatEther(daiBalance) }));
+    }
+    if (lmktBalance !== undefined && lmktBalance !== null) {
+      setTokenBalances((prev) => ({ ...prev, lmkt: formatEther(lmktBalance) }));
+    }
+  }, [daiBalance, lmktBalance]);
 
-// ✅ Auto-refresh balances every 30s
-useEffect(() => {
-  if (!address) return;
+  // ✅ Auto-refresh balances every 30s
+  useEffect(() => {
+    if (!address) return;
+    const intervalId = setInterval(() => {
+      refetchDaiBalance();
+      refetchLmktBalance();
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [address, refetchDaiBalance, refetchLmktBalance]);
 
-  const intervalId = setInterval(() => {
-    refetchDaiBalance();
-    refetchLmktBalance();
-  }, 30000); // refresh every 30 seconds
-
-  return () => clearInterval(intervalId);
-}, [address, refetchDaiBalance, refetchLmktBalance]);
-
-const parsedAmount = amountIn > 0 ? parseEther(amountIn.toString()) : 0n;
+  const parsedAmount = amountIn > 0 ? parseEther(amountIn.toString()) : 0n;
 
   // --- Buy calculation (LMKT amount for given collateral) ---
-const { data: lmktAmount, isError: isBuyCalcError } = useReadContract({
-  address: treasuryConfig.address,
-  abi: treasuryConfig.abi,
-  functionName: "getLmktAmountForCollateral",
-  args: [
-    parsedAmount,
-    tokenAddress,
-  ],
-    enabled: amountIn > 0 && treasuryTab === "buy" && !!tokenAddress,
-});
+  const { data: lmktAmount, isError: isBuyCalcError } = useReadContract({
+    address: treasuryConfig?.address,
+    abi: treasuryConfig?.abi,
+    functionName: "getLmktAmountForCollateral",
+    args: [parsedAmount, tokenAddress],
+    enabled:
+      !!treasuryConfig?.address &&
+      !!treasuryConfig?.abi &&
+      amountIn > 0 &&
+      treasuryTab === "buy" &&
+      !!tokenAddress,
+  });
 
- // --- Sell calculation (collateral amount for given LMKT) ---
-const { data: collateralAmount, isError: isSellCalcError } = useReadContract({
-  address: treasuryConfig.address,
-  abi: treasuryConfig.abi,
-  functionName: "getCollateralAmountForLmkt",
-  args: [
-    parsedAmount,
-    tokenAddress,
-  ],
-  enabled: amountIn > 0 && treasuryTab === "sell" && !!tokenAddress,
-});
+  // --- Sell calculation (collateral amount for given LMKT) ---
+  const { data: collateralAmount, isError: isSellCalcError } = useReadContract({
+    address: treasuryConfig?.address,
+    abi: treasuryConfig?.abi,
+    functionName: "getCollateralAmountForLmkt",
+    args: [parsedAmount, tokenAddress],
+    enabled:
+      !!treasuryConfig?.address &&
+      !!treasuryConfig?.abi &&
+      amountIn > 0 &&
+      treasuryTab === "sell" &&
+      !!tokenAddress,
+  });
 
-// --- Effect: update formatted results when reads succeed ---
-useEffect(() => {
-  if (treasuryTab === "buy") {
-    if (lmktAmount && !isBuyCalcError) {
-      setCalculatedLmkt(formatEther(lmktAmount));
-    } else {
-      setCalculatedLmkt("0");
+  // --- Effect: update formatted results when reads succeed ---
+  useEffect(() => {
+    if (treasuryTab === "buy") {
+      if (lmktAmount && !isBuyCalcError) {
+        setCalculatedLmkt(formatEther(lmktAmount));
+      } else {
+        setCalculatedLmkt("0");
+      }
+    } else if (treasuryTab === "sell") {
+      if (collateralAmount && !isSellCalcError) {
+        setCalculatedCollateral(formatEther(collateralAmount));
+      } else {
+        setCalculatedCollateral("0");
+      }
     }
-  } else if (treasuryTab === "sell") {
-    if (collateralAmount && !isSellCalcError) {
-      setCalculatedCollateral(formatEther(collateralAmount));
-    } else {
-      setCalculatedCollateral("0");
-    }
-  }
-}, [treasuryTab, lmktAmount, isBuyCalcError, collateralAmount, isSellCalcError]);
+  }, [
+    treasuryTab,
+    lmktAmount,
+    isBuyCalcError,
+    collateralAmount,
+    isSellCalcError,
+  ]);
 
   // Handle token selection change for collateral tokens
   const handleTokenChange = () => {
-    setTokenAddress(mockDaiConfig.address);
-    // Refresh balances when token selection changes
-    // refetchWbtcBalance();
-    refetchDaiBalance();
-    // refetchWethBalance();
-    refetchLmktBalance();
+    if (mockDaiConfig?.address) {
+      setTokenAddress(mockDaiConfig.address);
+      refetchDaiBalance();
+      refetchLmktBalance();
+    }
   };
 
-  // Handle amount input change
   const handleAmountChange = (value) => {
     setAmountIn(Number(value));
   };
 
-  // Update calculated collateral amount when sell calculation succeeds
   useEffect(() => {
     if (collateralAmount && !isSellCalcError) {
       setCalculatedCollateral(formatEther(collateralAmount));
     }
   }, [collateralAmount, isSellCalcError]);
 
-  // Reset calculations when switching tabs
   useEffect(() => {
-    if (treasuryTab === "buy") {
-      setCalculatedCollateral("0");
-    } else if (treasuryTab === "sell") {
-      setCalculatedLmkt("0");
-    }
+    if (treasuryTab === "buy") setCalculatedCollateral("0");
+    else if (treasuryTab === "sell") setCalculatedLmkt("0");
   }, [treasuryTab]);
 
   const handleBuySubmit = async (e) => {
     e.preventDefault();
+    if (!tokenAddress || !treasuryConfig?.address) return;
     setIsLoading(true);
     setStatusMessage("Waiting Approval ...");
     approve({
@@ -258,6 +259,7 @@ useEffect(() => {
 
   const handleSellSubmit = async (e) => {
     e.preventDefault();
+    if (!lmktConfig?.address || !treasuryConfig?.address) return;
     setIsLoading(true);
     setStatusMessage("Waiting Approval ...");
     approve({
@@ -269,9 +271,10 @@ useEffect(() => {
   };
 
   useEffect(() => {
-    if (isApproved) {
+    if (isApproved && treasuryConfig?.address && treasuryConfig?.abi) {
       setStatusMessage("Approved! Please confirm the final transaction...");
       if (treasuryTab === "buy") {
+        if (!tokenAddress) return;
         handleBuy({
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
@@ -279,6 +282,7 @@ useEffect(() => {
           args: [parseEther(amountIn.toString()), tokenAddress, 0n],
         });
       } else {
+        if (!tokenAddress) return;
         handleSell({
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
@@ -296,10 +300,7 @@ useEffect(() => {
       setAmountIn(0);
       alert("Purchase successful!");
       setChartRefreshKey((k) => k + 1);
-      // Refresh all balances after successful purchase
-      // refetchWbtcBalance();
       refetchDaiBalance();
-      // refetchWethBalance();
       refetchLmktBalance();
     }
   }, [isBought, refetchDaiBalance, refetchLmktBalance]);
@@ -311,10 +312,7 @@ useEffect(() => {
       setAmountIn(0);
       alert("Sale successful!");
       setChartRefreshKey((k) => k + 1);
-      // Refresh all balances after successful sale
-      // refetchWbtcBalance();
       refetchDaiBalance();
-      // refetchWethBalance();
       refetchLmktBalance();
     }
   }, [isSold, refetchDaiBalance, refetchLmktBalance]);
@@ -323,6 +321,15 @@ useEffect(() => {
     return (
       <div className="p-8 text-center text-xl">
         Please connect your wallet to view the dashboard.
+      </div>
+    );
+  }
+
+  // ⛳ Show a lightweight loader until configs ready to avoid undefined.address errors
+  if (cfgLoading || !treasuryConfig || !lmktConfig || !mockDaiConfig) {
+    return (
+      <div className="p-8 text-center text-xl">
+        Loading network configuration…
       </div>
     );
   }
@@ -365,26 +372,17 @@ useEffect(() => {
 
             {treasuryTab === "buy" && (
               <div className="space-y-4">
-                {/* Token Balance Display */}
                 <div className="bg-stone-100 p-4 rounded-lg">
                   <h3 className="text-sm font-bold text-zinc-700 mb-3">
                     Token Balances
                   </h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    {/* <div className="flex justify-between">
-                                            <span className="text-zinc-600">WBTC:</span>
-                                            <span className="font-mono font-bold">{parseFloat(tokenBalances.wbtc).toFixed(8)}</span>
-                                        </div> */}
                     <div className="flex justify-between">
                       <span className="text-zinc-600">DAI:</span>
                       <span className="font-mono font-bold">
                         {parseFloat(tokenBalances.dai).toFixed(2)}
                       </span>
                     </div>
-                    {/* <div className="flex justify-between">
-                                            <span className="text-zinc-600">WETH:</span>
-                                            <span className="font-mono font-bold">{parseFloat(tokenBalances.weth).toFixed(6)}</span>
-                                        </div> */}
                     <div className="flex justify-between">
                       <span className="text-zinc-600">LMKT:</span>
                       <span className="font-mono font-bold">
@@ -426,25 +424,6 @@ useEffect(() => {
                     LMKT
                   </span>
                 </div>
-                {/* Show loading and error states */}
-                {isLoading && amountIn > 0 && (
-                  <p className="text-sm text-blue-600 mt-1">
-                    🔄 Calculating LMKT amount...
-                  </p>
-                )}
-                {isBuyCalcError && amountIn > 0 && (
-                  <p className="text-sm text-red-600 mt-1">
-                    ❌ Error calculating LMKT amount
-                  </p>
-                )}
-                {amountIn > 0 &&
-                  !isLoading &&
-                  !isBuyCalcError &&
-                  calculatedLmkt > 0 && (
-                    <p className="text-sm text-green-600 mt-1">
-                      ✅ LMKT amount calculated successfully
-                    </p>
-                  )}
 
                 <button
                   onClick={handleBuySubmit}
@@ -461,26 +440,17 @@ useEffect(() => {
 
             {treasuryTab === "sell" && (
               <div className="space-y-4">
-                {/* Token Balance Display */}
                 <div className="bg-stone-100 p-4 rounded-lg">
                   <h3 className="text-sm font-bold text-zinc-700 mb-3">
                     Token Balances
                   </h3>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    {/* <div className="flex justify-between">
-                                            <span className="text-zinc-600">WBTC:</span>
-                                            <span className="font-mono font-bold">{parseFloat(tokenBalances.wbtc).toFixed(8)}</span>
-                                        </div> */}
                     <div className="flex justify-between">
                       <span className="text-zinc-600">DAI:</span>
                       <span className="font-mono font-bold">
                         {parseFloat(tokenBalances.dai).toFixed(2)}
                       </span>
                     </div>
-                    {/* <div className="flex justify-between">
-                                            <span className="text-zinc-600">WETH:</span>
-                                            <span className="font-mono font-bold">{parseFloat(tokenBalances.weth).toFixed(6)}</span>
-                                        </div> */}
                     <div className="flex justify-between">
                       <span className="text-zinc-600">LMKT:</span>
                       <span className="font-mono font-bold">
@@ -526,25 +496,6 @@ useEffect(() => {
                       <option value="dai">DAI</option>
                     </select>
                   </div>
-                  {/* Show loading and error states for sell calculation */}
-                  {isLoading && amountIn > 0 && (
-                    <p className="text-sm text-blue-600 mt-1">
-                      🔄 Calculating collateral amount...
-                    </p>
-                  )}
-                  {isSellCalcError && amountIn > 0 && (
-                    <p className="text-sm text-red-600 mt-1">
-                      ❌ Error calculating collateral amount
-                    </p>
-                  )}
-                  {amountIn > 0 &&
-                    !isLoading &&
-                    !isSellCalcError &&
-                    calculatedCollateral > 0 && (
-                      <p className="text-sm text-green-600 mt-1">
-                        ✅ Collateral amount calculated successfully
-                      </p>
-                    )}
                 </div>
                 <button
                   onClick={handleSellSubmit}

@@ -1,16 +1,21 @@
-import addresses from './config/contract-addresses.json';
-import ListingManagerABI from './config/ListingManager.json';
-import TreasuryABI from './config/Treasury.json';
-import LmktABI from './config/LMKT.json';
-import PaymentProcessorABI from './config/PaymentProcessor.json';
-import GenericERC20ABI from './config/GenericERC20.json';
-import FaucetABI from './config/Faucet.json';
-import PriceOracleConsumerABI from './config/PriceOracleConsumer.json';
+// contract-config.js
+import { loadContractConfig } from './utils/loadContractConfig';
 
-export const listingManagerConfig = { address: addresses.ListingManager, abi: ListingManagerABI.abi };
-export const treasuryConfig = { address: addresses.Treasury, abi: TreasuryABI.abi };
-export const lmktConfig = { address: addresses.LMKT, abi: LmktABI.abi };
-export const paymentProcessorConfig = { address: addresses.PaymentProcessor, abi: PaymentProcessorABI.abi };
-export const faucetConfig = { address: addresses.Faucet, abi: FaucetABI.abi };
-export const priceOracleConsumerConfig = { address: addresses.PriceOracleConsumer, abi: PriceOracleConsumerABI.abi };
-export const mockDaiConfig = { address: addresses.MockDai, abi: GenericERC20ABI.abi };
+// Utility function to get all configs dynamically
+export async function getContractConfigs(networkName) {
+  if (!networkName) {
+    throw new Error("No network name provided to getContractConfigs");
+  }
+
+  const config = await loadContractConfig(networkName);
+
+  return {
+    listingManagerConfig: config.listingManagerConfig,
+    treasuryConfig: config.treasuryConfig,
+    lmktConfig: config.lmktConfig,
+    paymentProcessorConfig: config.paymentProcessorConfig,
+    faucetConfig: config.faucetConfig,
+    priceOracleConsumerConfig: config.priceOracleConsumerConfig,
+    mockDaiConfig: config.mockDaiConfig,
+  };
+}

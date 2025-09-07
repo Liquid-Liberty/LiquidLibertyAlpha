@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount } from 'wagmi';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
-import { mockDaiConfig } from '../contract-config';
+import { useContractConfig } from '../hooks/useContractConfig';
+
 
 const Header = ({ onFaucetClick }) => {
+    const { mockDaiConfig } = useContractConfig(); 
     const { isConnected, address } = useAccount();
     const { open } = useWeb3Modal();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
