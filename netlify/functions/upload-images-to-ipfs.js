@@ -9,6 +9,11 @@ import { bannedWords } from "./banned-words.js";
 
 const { PINATA_JWT, OPEN_MODERATOR_API_KEY, DISABLE_MODERATION } = process.env;
 
+const RAW_GATEWAY =
+  process.env.VITE_PINATA_GATEWAY || "https://cloudflare-ipfs.com";
+const PREFERRED_GATEWAY = RAW_GATEWAY.replace(/\/+$/, "");
+const toGatewayUrl = (cid) => `${PREFERRED_GATEWAY}/ipfs/${cid}`;
+
 const defaultWords = badwordsArray || [];
 
 // ✅ Initialize filter
@@ -20,6 +25,7 @@ const filter = new Filter({
 if (defaultWords.length > 0) filter.addWords(...defaultWords);
 if (bannedWords.length > 0) filter.addWords(...bannedWords);
 
+console.log("🛰️ Using IPFS gateway:", PREFERRED_GATEWAY);
 console.log(
   "🔑 API Key value (first 8 chars):",
   OPEN_MODERATOR_API_KEY?.slice(0, 8)
@@ -246,7 +252,7 @@ export const handler = async (event) => {
             originalName: imageData.name,
             ipfsHash: result.IpfsHash,
             ipfsUrl: `ipfs://${result.IpfsHash}`,
-            gatewayUrl: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`,
+            gatewayUrl: toGatewayUrl(metadataResult.IpfsHash),
             size: imageBuffer.length,
             isMock: false,
           });
@@ -284,7 +290,7 @@ export const handler = async (event) => {
         success: true,
         listingMetadataHash: metadataResult.IpfsHash,
         listingMetadataUrl: `ipfs://${metadataResult.IpfsHash}`,
-        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.IpfsHash}`,
+        gatewayUrl: toGatewayUrl(metadataResult.IpfsHash),
         images: uploadedImages,
         errors: errors.length > 0 ? errors : undefined,
         isMock: false,

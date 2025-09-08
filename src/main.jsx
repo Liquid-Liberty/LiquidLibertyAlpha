@@ -29,17 +29,21 @@ const hardhatLocalNode = defineChain({
 });
 
 // --- 2. Select chains based on ENV ---
-const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV ?? 'sepolia';
 const chains = DEPLOY_ENV === 'sepolia' ? [sepolia] : [hardhatLocalNode];
 
 // --- 2. Web3Modal & Wagmi v2 Configuration ---
-const projectId = '71a4eca65a4a5eeed8ea2de7b9d2ab44'; // This can be a public value
+const projectId = '71a4eca65a4a5eeed8ea2de7b9d2ab44';
+
+const SITE_URL =
+    import.meta.env.VITE_SITE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : 'https://liquidlibertymkt.netlify.app');
 
 const metadata = {
-  name: 'Liberty Market',
-  description: 'Access the Liberty Market DApp.',
-  url: 'http://localhost:5173', // Changed for local dev
-  icons: ['/your-logo.png']
+    name: 'Liberty Market',
+    description: 'Access the Liberty Market DApp.',
+    url: SITE_URL,                                 // ← no localhost in prod
+    icons: [`${SITE_URL}/icon-512.png`],           // absolute icon URL
 };
 
 const wagmiConfig = defaultWagmiConfig({
