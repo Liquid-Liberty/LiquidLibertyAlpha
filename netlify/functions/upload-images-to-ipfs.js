@@ -36,7 +36,7 @@ console.log("🔎 Custom banned words count IPFS:", bannedWords.length);
 // ---------------- Normalize Text ----------------
 function normalizeText(text) {
   if (!text) return "";
-  text = text.replace(/(\b\w\s+)+\w\b/g, (match) => match.replace(/\s+/g, ""));
+  text = text.replace(/(\b\w\s+)+\w\b/g, (m) => m.replace(/\s+/g, ""));
   return text
     .replace(/@/g, "a")
     .replace(/4/g, "a")
@@ -51,47 +51,32 @@ function normalizeText(text) {
     .toLowerCase();
 }
 
-// ---------------- Manual banned word check ----------------
 function containsBannedWord(text) {
   if (!text) return false;
   const normalized = normalizeText(text);
-  return bannedWords.some((word) => normalized.includes(word.toLowerCase()));
+  return bannedWords.some((w) => normalized.includes(w.toLowerCase()));
 }
 
-// ---------------- Safe Moderation Wrappers ----------------
 async function safeTextCheck(originalText) {
   const normalized = normalizeText(originalText);
-  // 1. Manual check first
-  if (containsBannedWord(normalized)) {
+  if (containsBannedWord(normalized))
     return { profane: true, type: ["custom-banned"] };
-  }
-
-  // 2. Skip AI check if original text is empty
-  if (!originalText || !originalText.trim()) {
+  if (!originalText || !originalText.trim())
     return { profane: false, type: ["empty"] };
-  }
 
-  // 3. AI moderation on the original input
   try {
-    console.log("🚀 Sending to OpenModerator:", {
-      prompt: originalText,
-      config: { provider: "google-perspective-api", checkManualProfanityList: true },
-    });
     const result = await filter.isProfaneAI(originalText, {
       provider: "google-perspective-api",
       checkManualProfanityList: true,
     });
-    console.log("✅ OpenModerator JSON result:", result);
     return result;
   } catch (err) {
-    // Instead of just err.message, dump raw text
     if (err.response) {
       const raw = await err.response.text();
       console.error("❌ Raw response from OpenModerator:", raw);
     } else {
       console.error("❌ OpenModerator error:", err);
     }
-
     return { profane: false, type: ["fallback"] };
   }
 }
@@ -99,13 +84,11 @@ async function safeTextCheck(originalText) {
 async function safeImageCheck(img) {
   try {
     const buffer = Buffer.from(img.data.split(",")[1], "base64");
-
-    // 👇 Convert Buffer to Blob (fix)
     const blob = new Blob([buffer], { type: img.type });
     return await filter.isImageNSFW(blob);
   } catch (err) {
     console.error("⚠️ OpenModerator image check failed:", err.message);
-    return { nsfw: false, type: ["fallback"] }; // fail safe
+    return { nsfw: false, type: ["fallback"] };
   }
 }
 
@@ -121,7 +104,6 @@ export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers, body: "" };
   }
-
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -157,7 +139,6 @@ export const handler = async (event) => {
           };
         }
       }
-
       if (listingData.description) {
         const descCheck = await safeTextCheck(listingData.description);
         if (descCheck.profane) {
@@ -171,12 +152,10 @@ export const handler = async (event) => {
           };
         }
       }
-
       if (Array.isArray(images) && images.length > 0) {
         for (let i = 0; i < images.length; i++) {
           const img = images[i];
-          if (!img.data || !img.type || !img.name) continue;
-
+          if (!img?.data || !img?.type || !img?.name) continue;
           const imageCheck = await safeImageCheck(img);
           if (imageCheck.nsfw) {
             return {
@@ -207,7 +186,7 @@ export const handler = async (event) => {
       };
     }
 
-    // ✅ Upload images to Pinata
+    // ✅ Upload images first
     const uploadedImages = [];
     const errors = [];
 
@@ -247,12 +226,13 @@ export const handler = async (event) => {
             }
           );
 
-          const result = response.data;
+          const { IpfsHash } = response.data;
+
           uploadedImages.push({
             originalName: imageData.name,
-            ipfsHash: result.IpfsHash,
-            ipfsUrl: `ipfs://${result.IpfsHash}`,
-            gatewayUrl: toGatewayUrl(metadataResult.IpfsHash),
+            ipfsHash: IpfsHash,
+            ipfsUrl: `ipfs://${IpfsHash}`,
+            gatewayUrl: toGatewayUrl(IpfsHash),
             size: imageBuffer.length,
             isMock: false,
           });
@@ -262,7 +242,7 @@ export const handler = async (event) => {
       }
     }
 
-    // ✅ Upload metadata JSON
+    // ✅ Upload metadata JSON (include images array)
     const listingMetadata = {
       ...listingData,
       images: uploadedImages,
@@ -281,18 +261,18 @@ export const handler = async (event) => {
       }
     );
 
-    const metadataResult = metadataResponse.data;
+    const { IpfsHash: metadataCid } = metadataResponse.data;
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        listingMetadataHash: metadataResult.IpfsHash,
-        listingMetadataUrl: `ipfs://${metadataResult.IpfsHash}`,
-        gatewayUrl: toGatewayUrl(metadataResult.IpfsHash),
+        listingMetadataHash: metadataCid,
+        listingMetadataUrl: `ipfs://${metadataCid}`,
+        gatewayUrl: toGatewayUrl(metadataCid),
         images: uploadedImages,
-        errors: errors.length > 0 ? errors : undefined,
+        errors: errors.length ? errors : undefined,
         isMock: false,
       }),
     };

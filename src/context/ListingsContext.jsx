@@ -15,31 +15,46 @@ export const ListingsProvider = ({ children }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
-  // ✅ flattened return from your updated hook
+  // flattened return from your updated hook
   const { listingManagerConfig, loading: cfgLoading } = useContractConfig();
 
   // ---------- Gateway helpers ----------
   const GATEWAY =
     import.meta.env.VITE_PINATA_GATEWAY?.replace(/\/+$/, "") ||
-    "https://cloudflare-ipfs.com"; // default fallback
+    "https://cloudflare-ipfs.com";
 
-  const toCid = (v) =>
-    typeof v === "string" && v.startsWith("ipfs://") ? v.slice(7) : v;
+  // If ipfs://CID => CID; if https URL => leave as-is; else return as given (CID/path)
+  const toCid = (v) => {
+    if (!v || typeof v !== "string") return null;
+    if (v.startsWith("ipfs://")) return v.slice(7);
+    return v;
+  };
 
-  const isBareCid = (v) =>
-    typeof v === "string" && /^[A-Za-z0-9]{46,}$/.test(v); // loose check
-
+  // Convert anything IPFS-like to an https URL on our preferred gateway
   const ipfsToHttp = (v) => {
-    if (!v || v === "NO_METADATA") return null;
-    const cid = toCid(v);
-    if (isBareCid(cid) || typeof cid === "string") {
-      return `${GATEWAY}/ipfs/${cid}`;
-    }
-    // already an https URL
-    return cid;
+    if (!v || typeof v !== "string") return null;
+    if (v.startsWith("http://") || v.startsWith("https://")) return v;
+    if (v.startsWith("ipfs://")) return `${GATEWAY}/ipfs/${v.slice(7)}`;
+    // treat any other string as a CID/path
+    return `${GATEWAY}/ipfs/${v}`;
   };
 
   const fetchIpfsJson = async (cidOrUrl) => {
+    if (!cidOrUrl) return null;
+
+    if (
+      typeof cidOrUrl === "string" &&
+      (cidOrUrl.startsWith("http://") || cidOrUrl.startsWith("https://"))
+    ) {
+      try {
+        const r = await fetch(cidOrUrl, { cache: "no-store" });
+        if (r.ok) return await r.json();
+      } catch {
+        /* ignore and return null below */
+      }
+      return null;
+    }
+
     const cid = toCid(cidOrUrl);
     if (!cid || cid === "NO_METADATA") return null;
 
@@ -136,9 +151,11 @@ export const ListingsProvider = ({ children }) => {
         rawListings.map(async (row, idx) => {
           // tolerate field name variants and positional structs
           const owner = row.owner ?? row.seller ?? row.user ?? row[0];
-          const priceRaw = row.priceInUsd ?? row.price ?? row.amount ?? row[1] ?? 0n;
+          const priceRaw =
+            row.priceInUsd ?? row.price ?? row.amount ?? row[1] ?? 0n;
           const type = row.listingType ?? row.kind ?? row[2] ?? 0;
-          const uri = row.dataIdentifier ?? row.uri ?? row.metadata ?? row[3] ?? "NO_METADATA";
+          const uri =
+            row.dataIdentifier ?? row.uri ?? row.metadata ?? row[3] ?? "NO_METADATA";
           const statusRaw = row.status ?? row[4] ?? 0;
           const exp = row.expirationTimestamp ?? row.expiresAt ?? row[5] ?? 0;
 
@@ -146,7 +163,9 @@ export const ListingsProvider = ({ children }) => {
 
           const firstGatewayImage =
             meta?.images?.[0]?.gatewayUrl ||
-            (meta?.images?.[0]?.ipfsUrl ? ipfsToHttp(meta.images[0].ipfsUrl) : undefined) ||
+            (meta?.images?.[0]?.ipfsUrl
+              ? ipfsToHttp(meta.images[0].ipfsUrl)
+              : undefined) ||
             (meta?.imageUrl ? ipfsToHttp(meta.imageUrl) : undefined) ||
             (Array.isArray(meta?.photos) && meta.photos[0]
               ? ipfsToHttp(meta.photos[0])
@@ -212,6 +231,7 @@ export const ListingsProvider = ({ children }) => {
         (l) => (l.owner || "").toLowerCase() === userAddress.toLowerCase()
       );
     },
+  // expose helper if you need it elsewhere
     isExpired,
   };
 
