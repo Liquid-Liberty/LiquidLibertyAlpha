@@ -15,37 +15,58 @@ export const ListingsProvider = ({ children }) => {
   const { address } = useAccount();
   const publicClient = usePublicClient();
 
-  // ✅ new flattened return from your updated hook
-  const { listingManagerConfig, loading: cfgLoading, networkName } = useContractConfig();
+  // ✅ flattened return from your updated hook
+  const { listingManagerConfig, loading: cfgLoading } = useContractConfig();
 
-  const isExpired = (expirationTimestamp) => {
-    const now = Math.floor(Date.now() / 1000);
-    return Number(expirationTimestamp) <= now;
-    // (<= so "now" counts as expired)
-  };
+  // ---------- Gateway helpers ----------
+  const GATEWAY =
+    import.meta.env.VITE_PINATA_GATEWAY?.replace(/\/+$/, "") ||
+    "https://cloudflare-ipfs.com"; // default fallback
 
-  const toGateway = (uriOrCid) => {
-    if (!uriOrCid || uriOrCid === "NO_METADATA") return null;
-    if (uriOrCid.startsWith("ipfs://")) return `https://gateway.pinata.cloud/ipfs/${uriOrCid.slice(7)}`;
-    // bare CID?
-    if (/^[a-zA-Z0-9]{46,}$/.test(uriOrCid)) return `https://gateway.pinata.cloud/ipfs/${uriOrCid}`;
-    return uriOrCid; // already https
+  const toCid = (v) =>
+    typeof v === "string" && v.startsWith("ipfs://") ? v.slice(7) : v;
+
+  const isBareCid = (v) =>
+    typeof v === "string" && /^[A-Za-z0-9]{46,}$/.test(v); // loose check
+
+  const ipfsToHttp = (v) => {
+    if (!v || v === "NO_METADATA") return null;
+    const cid = toCid(v);
+    if (isBareCid(cid) || typeof cid === "string") {
+      return `${GATEWAY}/ipfs/${cid}`;
+    }
+    // already an https URL
+    return cid;
   };
 
   const fetchIpfsJson = async (cidOrUrl) => {
-    const url = toGateway(cidOrUrl);
-    if (!url) return null;
-    try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) return null;
-      return await res.json();
-    } catch {
-      return null;
+    const cid = toCid(cidOrUrl);
+    if (!cid || cid === "NO_METADATA") return null;
+
+    const candidates = [
+      `${GATEWAY}/ipfs/${cid}`, // dedicated gateway (preferred)
+      `https://cloudflare-ipfs.com/ipfs/${cid}`,
+      `https://ipfs.io/ipfs/${cid}`,
+    ];
+
+    for (const url of candidates) {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (res.ok) return await res.json();
+      } catch {
+        // try next
+      }
     }
+    return null;
+  };
+
+  // ---------- Misc helpers ----------
+  const isExpired = (expirationTimestamp) => {
+    const now = Math.floor(Date.now() / 1000);
+    return Number(expirationTimestamp) <= now;
   };
 
   const readTotalListings = async () => {
-    // Try common names in order
     const fns = ["listingCounter", "listingCount", "totalListings"];
     for (const fn of fns) {
       try {
@@ -55,13 +76,16 @@ export const ListingsProvider = ({ children }) => {
           functionName: fn,
         });
         if (typeof n === "bigint" || typeof n === "number") return Number(n);
-      } catch { /* empty */ }
+      } catch {
+        /* try next */
+      }
     }
-    throw new Error("No listing count function found (tried listingCounter / listingCount / totalListings)");
+    throw new Error(
+      "No listing count function found (tried listingCounter / listingCount / totalListings)"
+    );
   };
 
   const readListingById = async (id) => {
-    // Try getListing(id), then listings(id)
     try {
       return await publicClient.readContract({
         address: listingManagerConfig.address,
@@ -81,7 +105,12 @@ export const ListingsProvider = ({ children }) => {
 
   const fetchListings = async () => {
     if (cfgLoading) return;
-    if (!publicClient || !listingManagerConfig?.address || !listingManagerConfig?.abi) {
+
+    if (
+      !publicClient ||
+      !listingManagerConfig?.address ||
+      !listingManagerConfig?.abi
+    ) {
       setAllListings([]);
       setMarketplaceListings([]);
       setLoading(false);
@@ -105,29 +134,36 @@ export const ListingsProvider = ({ children }) => {
 
       const formatted = await Promise.all(
         rawListings.map(async (row, idx) => {
-          // Tolerate field name variants and positional structs
+          // tolerate field name variants and positional structs
           const owner = row.owner ?? row.seller ?? row.user ?? row[0];
-          const price = row.priceInUsd ?? row.price ?? row.amount ?? row[1] ?? 0n;
-          const type  = row.listingType ?? row.kind ?? row[2] ?? 0;
-          const uri   = row.dataIdentifier ?? row.uri ?? row.metadata ?? row[3] ?? "NO_METADATA";
+          const priceRaw = row.priceInUsd ?? row.price ?? row.amount ?? row[1] ?? 0n;
+          const type = row.listingType ?? row.kind ?? row[2] ?? 0;
+          const uri = row.dataIdentifier ?? row.uri ?? row.metadata ?? row[3] ?? "NO_METADATA";
           const statusRaw = row.status ?? row[4] ?? 0;
-          const exp   = row.expirationTimestamp ?? row.expiresAt ?? row[5] ?? 0;
+          const exp = row.expirationTimestamp ?? row.expiresAt ?? row[5] ?? 0;
 
           const meta = await fetchIpfsJson(String(uri));
+
           const firstGatewayImage =
             meta?.images?.[0]?.gatewayUrl ||
-            (meta?.images?.[0]?.ipfsUrl ? toGateway(meta.images[0].ipfsUrl) : undefined) ||
-            (meta?.imageUrl ? toGateway(meta.imageUrl) : undefined) ||
-            (Array.isArray(meta?.photos) && meta.photos[0] ? toGateway(meta.photos[0]) : undefined) ||
+            (meta?.images?.[0]?.ipfsUrl ? ipfsToHttp(meta.images[0].ipfsUrl) : undefined) ||
+            (meta?.imageUrl ? ipfsToHttp(meta.imageUrl) : undefined) ||
+            (Array.isArray(meta?.photos) && meta.photos[0]
+              ? ipfsToHttp(meta.photos[0])
+              : undefined) ||
             "/noImage.jpeg";
 
           const listingTypeMap = { 0: "ForSale", 1: "ServiceOffered" };
           const listingStatusMap = { 0: "Active", 1: "Inactive" };
 
+          // priceInUsd expects 8 decimals per your contract
+          const priceBig =
+            typeof priceRaw === "bigint" ? priceRaw : BigInt(priceRaw || 0);
+
           return {
-            id: ids[idx], // the actual on-chain id (not index+1)
+            id: ids[idx],
             owner,
-            priceInUsd: Number(typeof price === "bigint" ? price : BigInt(price || 0)) / 1e8, // adjust if not 8 dp
+            priceInUsd: Number(priceBig) / 1e8,
             listingType: listingTypeMap[Number(type)] ?? "Unknown",
             status: listingStatusMap[Number(statusRaw)] ?? "Unknown",
             dataIdentifier: String(uri),
@@ -148,7 +184,9 @@ export const ListingsProvider = ({ children }) => {
 
       setAllListings(formatted);
       setMarketplaceListings(
-        formatted.filter((l) => l.status === "Active" && !isExpired(l.expirationTimestamp))
+        formatted.filter(
+          (l) => l.status === "Active" && !isExpired(l.expirationTimestamp)
+        )
       );
     } catch (e) {
       console.error("Failed to fetch listings:", e);
@@ -160,7 +198,6 @@ export const ListingsProvider = ({ children }) => {
 
   useEffect(() => {
     fetchListings();
-    // Re-fetch when the user/account or contract address changes
   }, [address, publicClient, listingManagerConfig?.address, cfgLoading]);
 
   const value = {
@@ -178,5 +215,9 @@ export const ListingsProvider = ({ children }) => {
     isExpired,
   };
 
-  return <ListingsContext.Provider value={value}>{children}</ListingsContext.Provider>;
+  return (
+    <ListingsContext.Provider value={value}>
+      {children}
+    </ListingsContext.Provider>
+  );
 };
