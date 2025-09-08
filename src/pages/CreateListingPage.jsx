@@ -107,28 +107,6 @@ const CreateListingPage = ({ listings }) => {
     return text ? JSON.parse(text) : {};
   };
 
-  // const moderateImage = async (file) => {
-  //   const reader = new FileReader();
-  //   return new Promise((resolve, reject) => {
-  //     reader.onloadend = async () => {
-  //       try {
-  //         const res = await fetch("/.netlify/functions/moderate", {
-  //           method: "POST",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify({
-  //             image: { data: reader.result, name: file.name, type: file.type },
-  //           }),
-  //         });
-  //         resolve(await res.json());
-  //       } catch (err) {
-  //         reject(err);
-  //       }
-  //     };
-  //     reader.onerror = reject;
-  //     reader.readAsDataURL(file);
-  //   });
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isConnected || !address) return alert("Please connect your wallet.");

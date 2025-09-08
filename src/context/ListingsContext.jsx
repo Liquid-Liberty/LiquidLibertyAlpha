@@ -55,7 +55,7 @@ export const ListingsProvider = ({ children }) => {
           functionName: fn,
         });
         if (typeof n === "bigint" || typeof n === "number") return Number(n);
-      } catch {}
+      } catch { /* empty */ }
     }
     throw new Error("No listing count function found (tried listingCounter / listingCount / totalListings)");
   };
@@ -80,7 +80,7 @@ export const ListingsProvider = ({ children }) => {
   };
 
   const fetchListings = async () => {
-    if (cfgLoading) return; // wait for config
+    if (cfgLoading) return;
     if (!publicClient || !listingManagerConfig?.address || !listingManagerConfig?.abi) {
       setAllListings([]);
       setMarketplaceListings([]);
@@ -91,9 +91,6 @@ export const ListingsProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-
-      // Optional: sanity log (helps debug)
-      // console.log("📡 Reading from", networkName, "@", listingManagerConfig.address);
 
       const total = await readTotalListings();
       if (!total) {
