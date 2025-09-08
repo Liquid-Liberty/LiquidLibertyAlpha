@@ -46,11 +46,12 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
 const DashboardPage = ({ listings, userAddress }) => {
   const { isConnected, address } = useAccount();
 
-  // ✅ Load configs from hook (dynamic per network)
-  const { contracts, loading: cfgLoading } = useContractConfig();
-  const treasuryConfig = contracts?.treasuryConfig;
-  const lmktConfig = contracts?.lmktConfig;
-  const mockDaiConfig = contracts?.mockDaiConfig;
+  const {
+    loading: cfgLoading,
+    treasuryConfig,
+    lmktConfig,
+    mockDaiConfig,
+  } = useContractConfig();
 
   const [amountIn, setAmountIn] = useState(0);
   const [treasuryTab, setTreasuryTab] = useState("buy");

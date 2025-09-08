@@ -1,168 +1,87 @@
 import { Filter } from "content-checker";
-import process from "process";
-import { Buffer } from "buffer";
-import { Readable } from "stream";
 import { bannedWords } from "./banned-words.js";
-import {array as badwordsArray} from "badwords-list";
+import { array as badwordsArray } from "badwords-list";
 
-const filter = new Filter({
-  openModeratorAPIKey: process.env.OPEN_MODERATOR_API_KEY,
-});
+const filter = new Filter({ openModeratorAPIKey: process.env.OPEN_MODERATOR_API_KEY });
+if (badwordsArray?.length) filter.addWords(...badwordsArray);
+if (bannedWords?.length)  filter.addWords(...bannedWords);
 
-const defaultWords = badwordsArray || [];
+const H = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
 
-// ✅ Load custom + default banned words into the filter
-if (defaultWords.length > 0) filter.addWords(...defaultWords);
-if (bannedWords.length > 0) filter.addWords(...bannedWords);
+const normalizeText = (t="") =>
+  t.replace(/(\b\w\s+)+\w\b/g, m => m.replace(/\s+/g, ""))
+   .replace(/@|4/g,"a").replace(/3/g,"e").replace(/1|¡/g,"i")
+   .replace(/0/g,"o").replace(/\$|5/g,"s").replace(/µ/g,"u")
+   .replace(/\*/g,"").toLowerCase();
 
-console.log("🔎 Default words:", defaultWords.length);
-console.log("🔎 Custom words:", bannedWords.length);
+const containsBannedWord = (t) => {
+  const n = normalizeText(t);
+  return (bannedWords||[]).some(w => n.includes(String(w).toLowerCase()));
+};
 
-// 🔥 Normalize obfuscated/leet text before moderation
-function normalizeText(text) {
-  if (!text) return "";
-  text = text.replace(/(\b\w\s+)+\w\b/g, (match) => match.replace(/\s+/g, ""));
-  return text
-    .replace(/@/g, "a")
-    .replace(/4/g, "a")
-    .replace(/3/g, "e")
-    .replace(/1/g, "i")
-    .replace(/0/g, "o")
-    .replace(/\$/g, "s")
-    .replace(/µ/g, "u")
-    .replace(/¡/g, "i")
-    .replace(/5/g, "s")
-    .replace(/\*/g, "")
-    .toLowerCase();
-}
-
-// ---------------- Manual banned word check ----------------
-function containsBannedWord(text) {
-  if (!text) return false;
-  const normalized = normalizeText(text);
-  return bannedWords.some((word) => normalized.includes(word.toLowerCase()));
-}
-
-// ---------------- Safe Wrappers ----------------
-async function safeTextCheck(originalText) {
-  const normalized = normalizeText(originalText);
-  // 1. Manual check first
-  if (containsBannedWord(normalized)) {
-    return { profane: true, type: ["custom-banned"] };
-  }
-
-  // 2. Skip AI check if original text is empty
-  if (!originalText || !originalText.trim()) {
-    return { profane: false, type: ["empty"] };
-  }
-
-  // 3. AI moderation on raw text
+async function safeTextCheck(text) {
+  if (!text?.trim()) return { profane:false, type:["empty"] };
+  if (containsBannedWord(text)) return { profane:true, type:["custom-banned"] };
   try {
-    console.log("🚀 Sending to OpenModerator:", {
-      prompt: originalText,
-      config: { provider: "google-perspective-api", checkManualProfanityList: true },
-    });
-    return await filter.isProfaneAI(originalText, {
-      provider: "google-perspective-api",
-      checkManualProfanityList: true,
-    });
-  } catch (err) {
-    console.error("⚠️ Text moderation failed:", err.message);
-    return { profane: false, type: ["fallback"] };
+    return await filter.isProfaneAI(text, { provider:"google-perspective-api", checkManualProfanityList:true });
+  } catch (e) {
+    console.error("Text moderation failed:", e?.message);
+    return { profane:false, type:["fallback"] };
   }
 }
 
 async function safeImageCheck(img) {
   try {
-    const buffer = Buffer.from(img.data.split(",")[1], "base64");
-
-    // 👇 Convert Buffer to Blob (fix)
-    const blob = new Blob([buffer], { type: img.type });
-    return await filter.isImageNSFW(blob);
-  } catch (err) {
-    console.error("⚠️ Image moderation failed:", err.message);
-    return { nsfw: false, type: ["fallback"] };
+    const [, b64] = String(img.data).split(",");
+    if (!b64) throw new Error("dataURL missing comma separator");
+    const blob = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: img.type || "image/jpeg" });
+    return await filter.isImageNSFW(blob); // { nsfw:boolean, type?: string[] }
+  } catch (e) {
+    console.error("Image moderation failed:", e?.message);
+    return { nsfw:false, type:["fallback"] };
   }
 }
 
-// ---------------- Main Handler ----------------
 export const handler = async (event) => {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
-
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers, body: "" };
-  }
-
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: "Method Not Allowed" }),
-    };
-  }
+  if (event.httpMethod === "OPTIONS") return { statusCode:204, headers:H, body:"" };
+  if (event.httpMethod !== "POST")   return { statusCode:405, headers:H, body:JSON.stringify({ error:"Method Not Allowed" }) };
 
   try {
     const body = JSON.parse(event.body || "{}");
     const { text, image } = body;
 
-    // Case 1: Text Moderation
     if (text) {
       const result = await safeTextCheck(text);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          type: "text",
-          input: text,
-          ...result,
-        }),
-      };
+      return { statusCode:200, headers:H, body:JSON.stringify({ type:"text", input:text, ...result }) };
     }
 
-    // Case 2: Image Moderation
-    if (Array.isArray(image) && image.length > 0) {
+    if (image) {
+      // accept single or array; validate carefully and give explicit 4xx reasons
+      const imgs = Array.isArray(image) ? image : [image];
       const results = [];
-      for (const img of image) {
-        if (!img.data) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: "Image data missing." }),
-          };
-        }
-        const result = await safeImageCheck(img);
-        results.push({ input: img.name || "upload.jpg", ...result });
+      for (const img of imgs) {
+        if (!img || typeof img !== "object")
+          return { statusCode:400, headers:H, body:JSON.stringify({ error:"Invalid image payload" }) };
+        if (typeof img.data !== "string" || !img.data.includes(","))
+          return { statusCode:400, headers:H, body:JSON.stringify({ error:"image.data must be a dataURL string" }) };
+        if (img.data.length > 6_000_000)
+          return { statusCode:413, headers:H, body:JSON.stringify({ error:"Image too large for moderation (>~6MB dataURL)" }) };
+        results.push({ input: img.name || "upload.jpg", ...(await safeImageCheck(img)) });
       }
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          type: "image",
-          results,
-        }),
-      };
+      if (!Array.isArray(image)) {
+        const { nsfw, type = [], input } = results[0] || {};
+        return { statusCode:200, headers:H, body:JSON.stringify({ type:"image", input, nsfw, categories:type }) };
+      }
+      return { statusCode:200, headers:H, body:JSON.stringify({ type:"image", results }) };
     }
 
-    return {
-      statusCode: 400,
-      headers,
-      body: JSON.stringify({ error: "No text or image provided." }),
-    };
-  } catch (err) {
-    console.error("❌ Moderation error:", err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: "Moderation failed",
-        details: err.message,
-      }),
-    };
+    return { statusCode:400, headers:H, body:JSON.stringify({ error:"No text or image provided" }) };
+  } catch (e) {
+    return { statusCode:500, headers:H, body:JSON.stringify({ error:"Moderation failed", details:e?.message }) };
   }
 };
