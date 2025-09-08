@@ -1,6 +1,8 @@
 // contract-config.js
 import { loadContractConfig } from './utils/loadContractConfig';
 
+export { loadContractConfig };
+
 // Utility function to get all configs dynamically
 export async function getContractConfigs(networkName) {
   if (!networkName) {

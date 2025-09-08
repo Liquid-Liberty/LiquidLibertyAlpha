@@ -7,13 +7,10 @@ import {
 } from "wagmi";
 import { useContractConfig } from "../hooks/useContractConfig";
 
-const ListingRow = ({ listing, onRefetch }) => {
+const ListingRow = ({ listing, onRefetch, listingManagerConfig }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-
-  const { contracts, loading: configLoading } = useContractConfig();
-  const listingManagerConfig = contracts?.listingManagerConfig;
 
   const { data: closeHash, writeContract: handleCloseAction } = useWriteContract();
   const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
@@ -160,13 +157,7 @@ const ListingRow = ({ listing, onRefetch }) => {
     }
   };
 
-  if (configLoading || !listingManagerConfig) {
-    return (
-      <div className="bg-stone-100 rounded-lg p-4 text-sm text-zinc-500">
-        Loading contract config...
-      </div>
-    );
-  }
+  if (!listingManagerConfig?.address) return null;
 
   return (
     <div className="bg-stone-100 rounded-lg">
@@ -242,6 +233,7 @@ const ListingRow = ({ listing, onRefetch }) => {
 const MyListings = () => {
   const { loading, error, getUserListings, refreshListings } = useListings();
   const { address, isConnected } = useAccount();
+  const { loading: cfgLoading, listingManagerConfig } = useContractConfig();
 
   if (!isConnected) {
     return (
@@ -251,7 +243,7 @@ const MyListings = () => {
     );
   }
 
-  if (loading) {
+  if (loading || cfgLoading || !listingManagerConfig?.address) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-800 mx-auto"></div>
@@ -288,6 +280,7 @@ const MyListings = () => {
           key={listing.id}
           listing={listing}
           onRefetch={refreshListings}
+          listingManagerConfig={listingManagerConfig}
         />
       ))}
     </div>

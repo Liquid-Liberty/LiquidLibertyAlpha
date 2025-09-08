@@ -8,7 +8,7 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import { forSaleCategories, serviceCategories } from "../data/categories";
-import {useContractConfig} from "../hooks/useContractConfig"; // ✅ NEW
+import { useContractConfig } from "../hooks/useContractConfig";
 
 const CreateListingPage = ({ listings }) => {
   const navigate = useNavigate();
@@ -89,31 +89,41 @@ const CreateListingPage = ({ listings }) => {
   };
 
   const moderateImage = async (file) => {
-    const reader = new FileReader();
-    return new Promise((resolve, reject) => {
-      reader.onloadend = async () => {
-        try {
-          const res = await fetch("/.netlify/functions/moderate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              image: { data: reader.result, name: file.name, type: file.type },
-            }),
-          });
-          resolve(await res.json());
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+    const dataUrl = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onloadend = () => res(String(r.result));
+      r.onerror = rej;
+      r.readAsDataURL(file);
     });
+    const res = await fetch("/.netlify/functions/moderate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: { data: dataUrl, name: file.name, type: file.type },
+      }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || `Moderate failed HTTP ${res.status}`);
+    return text ? JSON.parse(text) : {};
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isConnected || !address) return alert("Please connect your wallet.");
     if (isEditing) return alert("Editing logic not yet implemented.");
+
+    // Guard here before you touch .address
+    if (!listingManagerConfig?.address || !mockDaiConfig?.address) {
+      console.error("Missing contract config", {
+        chainId,
+        listingManagerConfig,
+        mockDaiConfig,
+      });
+      alert(
+        "Missing contract addresses for this network. Check your loadContractConfig mapping."
+      );
+      return; // stop execution
+    }
 
     setIsLoading(true);
     try {
@@ -244,6 +254,10 @@ const CreateListingPage = ({ listings }) => {
 
   useEffect(() => {
     if (isApproved && signatureDataRef.current) {
+      if (!listingManagerConfig?.address) {
+        console.error("Missing ListingManager address", listingManagerConfig);
+        return;
+      }
       const { signature, nonce, deadline, dataIdentifier } =
         signatureDataRef.current;
       const listingTypeEnum = listingType === "item" ? 0 : 1;
