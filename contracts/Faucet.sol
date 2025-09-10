@@ -10,7 +10,8 @@ interface IMintable {
 
 contract Faucet is Ownable {
     address public mockDaiToken;
-    mapping(address => bool) public hasClaimed;
+    // --- CHANGE: Replaced the bool mapping with a timestamp mapping ---
+    mapping(address => uint256) public lastClaimedTimestamp;
     uint256 public constant DAI_AMOUNT = 250 * 1e18;
     event TokensClaimed(address indexed user);
 
@@ -19,8 +20,13 @@ contract Faucet is Ownable {
     }
 
     function requestTokens() external {
-        require(!hasClaimed[msg.sender], "Faucet: Tokens already claimed");
-        hasClaimed[msg.sender] = true;
+        // --- CHANGE: Check if 24 hours have passed since the last claim ---
+        require(
+            block.timestamp >= lastClaimedTimestamp[msg.sender] + 24 hours,
+            "Faucet: You can only claim once every 24 hours"
+        );
+        // --- CHANGE: Update the user's last claim timestamp to the current time ---
+        lastClaimedTimestamp[msg.sender] = block.timestamp;
 
         if (mockDaiToken != address(0)) {
             IMintable(mockDaiToken).mint(msg.sender, DAI_AMOUNT);
@@ -34,8 +40,9 @@ contract Faucet is Ownable {
         mockDaiToken = _daiAddr;
     }
 
-    function resetClaim(address _user) external onlyOwner {
-        hasClaimed[_user] = false;
+    // --- CHANGE: Renamed function and updated logic for the new timestamp system ---
+    function resetTimestamp(address _user) external onlyOwner {
+        lastClaimedTimestamp[_user] = 0;
     }
 
     function withdrawTokens(address tokenAddress, uint256 amount) external onlyOwner {

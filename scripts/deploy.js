@@ -8,7 +8,7 @@ import process from "process";
 async function saveFrontendFiles(contracts) {
   console.log("\n--- Saving configuration and ABIs to frontend ---");
 
-    // Get the current network name (e.g., 'sepolia', 'pulse', 'localhost')
+  // Get the current network name (e.g., 'sepolia', 'pulse', 'localhost')
   const network = await ethers.provider.getNetwork();
   const networkName = network.name || `chain-${network.chainId}`;
 
@@ -144,7 +144,7 @@ async function main() {
   console.log("\n--- Configuring all contracts ---");
 
   // a. Configure Oracle
-  const daiQueryId = ethers.keccak256(ethers.toUtf8Bytes("mDAI/USD"));
+  const daiQueryId = ethers.keccak26(ethers.toUtf8Bytes("mDAI/USD"));
   await mockOracle.setPrice(daiQueryId, ethers.parseUnits("1", 8)); // $1.00 with 8 decimals
   console.log("Oracle configured: Mock DAI price set to $1.00");
 
@@ -181,8 +181,8 @@ async function main() {
 
   // --- 4. SEED TREASURY WITH INITIAL COLLATERAL ---
   console.log("\n--- Seeding Treasury with initial collateral ---");
-  await mockDai.mint(treasury.target, ethers.parseEther("1000000")); // Seed with $1M
-  console.log("Treasury seeded with $1,000,000 of MockDai.");
+  await mockDai.mint(treasury.target, ethers.parseEther("1000")); // Seed with $1k
+  console.log("Treasury seeded with $1,000 of MockDai.");
 
   // c. Configure LMKT Token
   const initialLmktSupply = await lmkt.totalSupply();
