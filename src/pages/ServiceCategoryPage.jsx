@@ -17,7 +17,7 @@ const ServiceCategoryPage = ({ listings }) => {
                 {serviceListings.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {serviceListings.map(listing => (
-                            <ServiceListingCard key={listing.id} listing={listing} />
+                            <ServiceListingCard key={listing.uniqueId} listing={listing} />
                         ))}
                     </div>
                 ) : (
