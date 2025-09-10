@@ -93,7 +93,7 @@ const ListingsSection = ({ listings, loading, error }) => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {forSaleListings.map(listing => (
-                    <ItemListingCard key={listing.id} listing={listing} />
+                    <ItemListingCard key={listing.uniqueId} listing={listing} />
                 ))}
             </div>
         </div>

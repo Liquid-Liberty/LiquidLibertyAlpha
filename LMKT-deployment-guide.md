@@ -71,15 +71,11 @@ SEPOLIA_API_KEY=your-etherscan-api-key
 # Compile contracts
 npx hardhat compile
 
-# Deploy to Sepolia
+# Deploy to Sepolia or Pulsechain
 npx hardhat run scripts/deploy.js --network sepolia
+npx hardhat run scripts/deploy.js --network pulse
 
-# output contracts example:
-
-LMKT deployed to: 0x6b2f139D016E3A6693453E487be7DdE97faC63Eb
-Treasury deployed to: 0xe758e36476376ccddf574144ab3e9a560d550de3
-PaymentProcessor deployed to: 0xa329594071cF56EE0c5DBf7956E556Ef71cA9fEC
-```
+# output contracts will deploy to the respective network sub-folder under config:
 
 Save these in `src/config/contract-addresses.json` and `.env`
 

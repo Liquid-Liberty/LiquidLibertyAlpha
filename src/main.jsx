@@ -27,10 +27,26 @@ const hardhatLocalNode = defineChain({
     },
     testnet: true,
 });
+//Pulse testnet chain
+const pulse = defineChain({
+  id: 943,
+  name: 'PulseChain Testnet',
+  nativeCurrency: { name: 'tPLS', symbol: 'tPLS', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://rpc.v4.testnet.pulsechain.com'] },
+  },
+  blockExplorers: {
+    default: {
+      name: 'PulseScan',
+      url: 'https://scan.v4.testnet.pulsechain.com',
+    },
+  },
+  testnet: true,
+});
 
 // --- 2. Select chains based on ENV ---
 const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV ?? 'sepolia';
-const chains = DEPLOY_ENV === 'sepolia' ? [sepolia] : [hardhatLocalNode];
+const chains = DEPLOY_ENV === 'sepolia' ? [sepolia, pulse] : [hardhatLocalNode, pulse];
 
 // --- 2. Web3Modal & Wagmi v2 Configuration ---
 const projectId = '71a4eca65a4a5eeed8ea2de7b9d2ab44';
@@ -50,7 +66,6 @@ const wagmiConfig = defaultWagmiConfig({
   chains,
   projectId,
   metadata,
-  // Optional: Enable wallet reconnect
   enableWalletConnect: true,
   enableInjected: true,
   enableEIP6963: true,

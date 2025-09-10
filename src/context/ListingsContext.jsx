@@ -83,6 +83,12 @@ export const ListingsProvider = ({ children }) => {
 
   const readTotalListings = async () => {
     const fns = ["listingCounter", "listingCount", "totalListings"];
+    console.log("DEBUG contract config:", listingManagerConfig);
+
+    if (!listingManagerConfig?.address || !listingManagerConfig?.abi) {
+    console.log("Skipping readTotalListings, config not ready yet");
+    return 0; //prevents error flash
+  }
     for (const fn of fns) {
       try {
         const n = await publicClient.readContract({
@@ -95,9 +101,10 @@ export const ListingsProvider = ({ children }) => {
         /* try next */
       }
     }
-    throw new Error(
+    console.warn(
       "No listing count function found (tried listingCounter / listingCount / totalListings)"
     );
+    return 0;
   };
 
   const readListingById = async (id) => {
@@ -181,6 +188,7 @@ export const ListingsProvider = ({ children }) => {
 
           return {
             id: ids[idx],
+            uniqueId: `${listingManagerConfig.address}-${ids[idx]}`,
             owner,
             priceInUsd: Number(priceBig) / 1e8,
             listingType: listingTypeMap[Number(type)] ?? "Unknown",
