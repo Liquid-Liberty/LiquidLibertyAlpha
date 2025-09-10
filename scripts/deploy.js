@@ -37,42 +37,42 @@ async function saveFrontendFiles(contracts) {
     )
   );
 
-  // Save the contract ABIs
-  const ListingManagerArtifact = await hardhat.artifacts.readArtifact(
-    "ListingManager"
-  );
-  fs.writeFileSync(
-    contractsDir + "/ListingManager.json",
-    JSON.stringify(ListingManagerArtifact, null, 2)
-  );
+  // Disabling the saving of the ABI files on deploy so only the contract-addresses file is added to the Network sub-folders
+  // const ListingManagerArtifact = await hardhat.artifacts.readArtifact(
+  //   "ListingManager"
+  // );
+  // fs.writeFileSync(
+  //   contractsDir + "/ListingManager.json",
+  //   JSON.stringify(ListingManagerArtifact, null, 2)
+  // );
 
-  const PaymentProcessorArtifact = await hardhat.artifacts.readArtifact(
-    "PaymentProcessor"
-  );
-  fs.writeFileSync(
-    contractsDir + "/PaymentProcessor.json",
-    JSON.stringify(PaymentProcessorArtifact, null, 2)
-  );
+  // const PaymentProcessorArtifact = await hardhat.artifacts.readArtifact(
+  //   "PaymentProcessor"
+  // );
+  // fs.writeFileSync(
+  //   contractsDir + "/PaymentProcessor.json",
+  //   JSON.stringify(PaymentProcessorArtifact, null, 2)
+  // );
 
-  const TreasuryArtifact = await hardhat.artifacts.readArtifact("Treasury");
-  fs.writeFileSync(
-    contractsDir + "/Treasury.json",
-    JSON.stringify(TreasuryArtifact, null, 2)
-  );
+  // const TreasuryArtifact = await hardhat.artifacts.readArtifact("Treasury");
+  // fs.writeFileSync(
+  //   contractsDir + "/Treasury.json",
+  //   JSON.stringify(TreasuryArtifact, null, 2)
+  // );
 
-  const LmktArtifact = await hardhat.artifacts.readArtifact("LMKT");
-  fs.writeFileSync(
-    contractsDir + "/LMKT.json",
-    JSON.stringify(LmktArtifact, null, 2)
-  );
+  // const LmktArtifact = await hardhat.artifacts.readArtifact("LMKT");
+  // fs.writeFileSync(
+  //   contractsDir + "/LMKT.json",
+  //   JSON.stringify(LmktArtifact, null, 2)
+  // );
 
-  const GenericERC20Artifact = await hardhat.artifacts.readArtifact(
-    "GenericERC20"
-  );
-  fs.writeFileSync(
-    contractsDir + "/GenericERC20.json",
-    JSON.stringify(GenericERC20Artifact, null, 2)
-  );
+  // const GenericERC20Artifact = await hardhat.artifacts.readArtifact(
+  //   "GenericERC20"
+  // );
+  // fs.writeFileSync(
+  //   contractsDir + "/GenericERC20.json",
+  //   JSON.stringify(GenericERC20Artifact, null, 2)
+  // );
 
   console.log("✅ Frontend files saved successfully to /src/config");
 }

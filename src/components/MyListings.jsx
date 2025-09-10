@@ -277,7 +277,7 @@ const MyListings = () => {
     <div className="space-y-3">
       {userListings.map((listing) => (
         <ListingRow
-          key={listing.id}
+          key={listing.uniqueId}
           listing={listing}
           onRefetch={refreshListings}
           listingManagerConfig={listingManagerConfig}
