@@ -144,7 +144,7 @@ async function main() {
   console.log("\n--- Configuring all contracts ---");
 
   // a. Configure Oracle
-  const daiQueryId = ethers.keccak26(ethers.toUtf8Bytes("mDAI/USD"));
+  const daiQueryId = ethers.keccak256(ethers.toUtf8Bytes("mDAI/USD"));
   await mockOracle.setPrice(daiQueryId, ethers.parseUnits("1", 8)); // $1.00 with 8 decimals
   console.log("Oracle configured: Mock DAI price set to $1.00");
 
