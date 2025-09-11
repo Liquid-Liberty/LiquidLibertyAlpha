@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
@@ -18,6 +18,13 @@ const Header = ({ onFaucetClick }) => {
   const { chains, switchChain } = useSwitchChain();
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isConnected) {
+      // Wallet disconnected → reset disclaimer session
+      sessionStorage.removeItem("disclaimerAccepted");
+    }
+  }, [isConnected]);
 
   function trimAddress(address, front = 4, back = 4) {
     if (!address || typeof address !== "string") return "";
