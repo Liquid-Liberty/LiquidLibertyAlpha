@@ -258,6 +258,30 @@ const DashboardPage = ({ listings, userAddress }) => {
     });
   };
 
+    const { data: treasuryValue, refetch: refetchTreasuryValue } =
+    useReadContract({
+      address: treasuryConfig?.address,
+      abi: treasuryConfig?.abi,
+      functionName: "getTotalCollateralValue",
+      query: { enabled: !!treasuryConfig?.address && !!treasuryConfig?.abi },
+    });
+
+  const [treasuryBalance, setTreasuryBalance] = useState("0");
+
+  useEffect(() => {
+    if (treasuryValue !== undefined && treasuryValue !== null) {
+      setTreasuryBalance(formatEther(treasuryValue));
+    }
+  }, [treasuryValue]);
+
+  useEffect(() => {
+    if (!treasuryConfig?.address) return;
+    const intervalId = setInterval(() => {
+      refetchTreasuryValue();
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [treasuryConfig?.address, refetchTreasuryValue]);
+
   const handleSellSubmit = async (e) => {
     e.preventDefault();
     if (!lmktConfig?.address || !treasuryConfig?.address) return;
@@ -303,8 +327,9 @@ const DashboardPage = ({ listings, userAddress }) => {
       setChartRefreshKey((k) => k + 1);
       refetchDaiBalance();
       refetchLmktBalance();
+      refetchTreasuryValue();
     }
-  }, [isBought, refetchDaiBalance, refetchLmktBalance]);
+  }, [isBought, refetchDaiBalance, refetchLmktBalance, refetchTreasuryValue]);
 
   useEffect(() => {
     if (isSold) {
@@ -315,8 +340,9 @@ const DashboardPage = ({ listings, userAddress }) => {
       setChartRefreshKey((k) => k + 1);
       refetchDaiBalance();
       refetchLmktBalance();
+      refetchTreasuryValue();
     }
-  }, [isSold, refetchDaiBalance, refetchLmktBalance]);
+  }, [isSold, refetchDaiBalance, refetchLmktBalance, refetchTreasuryValue]);
 
   if (!isConnected) {
     return (
@@ -369,6 +395,17 @@ const DashboardPage = ({ listings, userAddress }) => {
               >
                 Sell LMKT
               </button>
+            </div>
+
+            <div className="bg-stone-100 p-4 rounded-lg mb-6">
+              <h3 className="text-sm font-bold text-zinc-700 mb-2">
+                Treasury Balance
+              </h3>
+              <p className="font-mono font-bold text-lg text-teal-700">
+                {treasuryBalance
+                  ? `${parseFloat(treasuryBalance).toFixed(2)} USD`
+                  : "Loading..."}
+              </p>
             </div>
 
             {treasuryTab === "buy" && (
