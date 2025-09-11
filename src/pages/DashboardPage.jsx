@@ -258,7 +258,24 @@ const DashboardPage = ({ listings, userAddress }) => {
     });
   };
 
-    const { data: treasuryValue, refetch: refetchTreasuryValue } =
+  const { data: treasuryLmktRaw, refetch: refetchTreasuryLmkt } =
+    useReadContract({
+      address: lmktConfig?.address, // LMKT token contract
+      abi: GenericERC20ABI,
+      functionName: "balanceOf",
+      args: [treasuryConfig?.address], // Treasury contract address
+      query: { enabled: !!lmktConfig?.address && !!treasuryConfig?.address },
+    });
+
+  const [treasuryLmkt, setTreasuryLmkt] = useState("0");
+
+  useEffect(() => {
+    if (treasuryLmktRaw !== undefined && treasuryLmktRaw !== null) {
+      setTreasuryLmkt(formatEther(treasuryLmktRaw));
+    }
+  }, [treasuryLmktRaw]);
+
+  const { data: treasuryValue, refetch: refetchTreasuryValue } =
     useReadContract({
       address: treasuryConfig?.address,
       abi: treasuryConfig?.abi,
@@ -328,8 +345,15 @@ const DashboardPage = ({ listings, userAddress }) => {
       refetchDaiBalance();
       refetchLmktBalance();
       refetchTreasuryValue();
+      refetchTreasuryLmkt();
     }
-  }, [isBought, refetchDaiBalance, refetchLmktBalance, refetchTreasuryValue]);
+  }, [
+    isBought,
+    refetchDaiBalance,
+    refetchLmktBalance,
+    refetchTreasuryValue,
+    refetchTreasuryLmkt,
+  ]);
 
   useEffect(() => {
     if (isSold) {
@@ -341,8 +365,15 @@ const DashboardPage = ({ listings, userAddress }) => {
       refetchDaiBalance();
       refetchLmktBalance();
       refetchTreasuryValue();
+      refetchTreasuryLmkt();
     }
-  }, [isSold, refetchDaiBalance, refetchLmktBalance, refetchTreasuryValue]);
+  }, [
+    isSold,
+    refetchDaiBalance,
+    refetchLmktBalance,
+    refetchTreasuryValue,
+    refetchTreasuryLmkt,
+  ]);
 
   if (!isConnected) {
     return (
@@ -398,14 +429,32 @@ const DashboardPage = ({ listings, userAddress }) => {
             </div>
 
             <div className="bg-stone-100 p-4 rounded-lg mb-6">
-              <h3 className="text-sm font-bold text-zinc-700 mb-2">
-                Treasury Balance
-              </h3>
-              <p className="font-mono font-bold text-lg text-teal-700">
-                {treasuryBalance
-                  ? `${parseFloat(treasuryBalance).toFixed(2)} USD`
-                  : "Loading..."}
-              </p>
+              <div className="flex justify-between items-center">
+                {/* Treasury Balance (USD) */}
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-700 mb-1">
+                    Treasury Balance
+                  </h3>
+                  <p className="font-mono font-bold text-lg text-teal-700">
+                    {treasuryBalance
+                      ? `${Number(parseFloat(treasuryBalance).toFixed(2)).toLocaleString()} USD`
+                      : "Loading..."}
+                  </p>
+                </div>
+
+                {/* Treasury LMKT Balance */}
+                <div className="text-right">
+                  <h3 className="text-sm font-bold text-zinc-700 mb-1">
+                    Treasury LMKT Balance
+                  </h3>
+                  <p className="font-mono font-bold text-lg text-indigo-700">
+                    {treasuryLmkt
+                      ? Number(parseFloat(treasuryLmkt).toFixed(2)).toLocaleString()
+                      : "0.00"}{" "}
+                    LMKT
+                  </p>
+                </div>
+              </div>
             </div>
 
             {treasuryTab === "buy" && (
@@ -418,13 +467,13 @@ const DashboardPage = ({ listings, userAddress }) => {
                     <div className="flex justify-between">
                       <span className="text-zinc-600">DAI:</span>
                       <span className="font-mono font-bold">
-                        {parseFloat(tokenBalances.dai).toFixed(2)}
+                        {Number(parseFloat(tokenBalances.dai).toFixed(2)).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-600">LMKT:</span>
                       <span className="font-mono font-bold">
-                        {parseFloat(tokenBalances.lmkt).toFixed(2)}
+                        {Number(parseFloat(tokenBalances.lmkt).toFixed(2)).toLocaleString()}
                       </span>
                     </div>
                   </div>
