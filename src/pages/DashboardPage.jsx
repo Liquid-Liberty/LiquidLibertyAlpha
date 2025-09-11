@@ -4,7 +4,6 @@ import { useContractConfig } from "../hooks/useContractConfig";
 import GenericERC20ABI from "../config/GenericERC20.json";
 import {
   useAccount,
-  useChainId,
   useWriteContract,
   useWaitForTransactionReceipt,
   useReadContract,
@@ -84,7 +83,6 @@ const DashboardPage = ({ listings, userAddress }) => {
   });
 
   const [interval, setInterval] = useState("5");
-  const [symbol, setSymbol] = useState("LMKT/USD");
   const [widget, setWidget] = useState(undefined);
 
   // Mock pool data for demo
@@ -542,13 +540,13 @@ const DashboardPage = ({ listings, userAddress }) => {
                     <div className="flex justify-between">
                       <span className="text-zinc-600">DAI:</span>
                       <span className="font-mono font-bold">
-                        {parseFloat(tokenBalances.dai).toFixed(2)}
+                        {Number(parseFloat(tokenBalances.dai).toFixed(2)).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-600">LMKT:</span>
                       <span className="font-mono font-bold">
-                        {parseFloat(tokenBalances.lmkt).toFixed(2)}
+                        {Number(parseFloat(tokenBalances.lmkt).toFixed(2)).toLocaleString()}
                       </span>
                     </div>
                   </div>
