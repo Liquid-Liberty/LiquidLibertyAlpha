@@ -26,7 +26,7 @@ const defaultProps = {
 const TradingViewChart = ({ symbol }) => {
     const containerRef = useRef(null);
     const scriptLoadedRef = useRef(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isFullscreen] = useState(false);
 
     // Create a stable, unique ID by replacing invalid characters. This fixes the querySelector bug.
     const chartContainerId = `tradingview_${symbol.replace(/[:/]/g, '_')}`;

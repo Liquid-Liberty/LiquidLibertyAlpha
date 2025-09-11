@@ -12,7 +12,12 @@ import { parseEther, formatEther } from "viem";
 import TradingViewChart from "../components/TradingViewChart";
 import { TVChart } from "../components/TVChart";
 
-const AccordionSection = ({ title, children, defaultOpen = false }) => {
+const AccordionSection = ({
+  title,
+  children,
+  defaultOpen = false,
+  keepMounted = false,
+}) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
     <div className="bg-white p-4 rounded-lg shadow-inner mb-6">
@@ -37,12 +42,25 @@ const AccordionSection = ({ title, children, defaultOpen = false }) => {
           ></path>
         </svg>
       </button>
-      {isOpen && <div className="mt-4">{children}</div>}
+
+      {keepMounted ? (
+        <div
+          className={`mt-4 transition-all duration-300 ${
+            isOpen
+              ? "max-h-[2000px] opacity-100"
+              : "max-h-0 opacity-0 overflow-hidden"
+          }`}
+        >
+          {children}
+        </div>
+      ) : (
+        isOpen && <div className="mt-4">{children}</div>
+      )}
     </div>
   );
 };
 
-const DashboardPage = ({ listings, userAddress }) => {
+const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, mockPoolData }) => {
   const { isConnected, address } = useAccount();
 
   const {
@@ -81,39 +99,6 @@ const DashboardPage = ({ listings, userAddress }) => {
     weth: "0",
     lmkt: "0",
   });
-
-  const [interval, setInterval] = useState("5");
-  const [widget, setWidget] = useState(undefined);
-
-  // Mock pool data for demo
-  const mockPoolData = {
-    poolAddress: "0x1234567890123456789012345678901234567890",
-    baseMint: "0x1234567890123456789012345678901234567890",
-    quoteMint: "0x0987654321098765432109876543210987654321",
-    price: 0.00012345,
-    liquidity: 1000000,
-    mcap: 50000,
-    baseSymbol: "LMKT",
-    baseName: "Liberty Market Token",
-    quoteSymbol: "USD",
-    quoteName: "USD",
-    dex: "Uniswap",
-    dexImage: "/uniswap.png",
-    v24hUSD: 25000,
-  };
-
-  const intervals = [
-    { value: "1S", label: "1s" },
-    { value: "1", label: "1m" },
-    { value: "5", label: "5m" },
-    { value: "30", label: "30m" },
-    { value: "60", label: "1h" },
-    { value: "120", label: "2h" },
-    { value: "360", label: "6h" },
-    { value: "1D", label: "1D" },
-    { value: "1W", label: "1W" },
-    { value: "1M", label: "1M" },
-  ];
 
   // ⛑️ tokenAddress depends on configs being loaded
   const [tokenAddress, setTokenAddress] = useState(undefined);
@@ -540,13 +525,17 @@ const DashboardPage = ({ listings, userAddress }) => {
                     <div className="flex justify-between">
                       <span className="text-zinc-600">DAI:</span>
                       <span className="font-mono font-bold">
-                        {Number(parseFloat(tokenBalances.dai).toFixed(2)).toLocaleString()}
+                        {Number(
+                          parseFloat(tokenBalances.dai).toFixed(2)
+                        ).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-600">LMKT:</span>
                       <span className="font-mono font-bold">
-                        {Number(parseFloat(tokenBalances.lmkt).toFixed(2)).toLocaleString()}
+                        {Number(
+                          parseFloat(tokenBalances.lmkt).toFixed(2)
+                        ).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -604,7 +593,7 @@ const DashboardPage = ({ listings, userAddress }) => {
           </div>
         </AccordionSection>
 
-        <AccordionSection title="Portfolio & System Health">
+        <AccordionSection title="Portfolio & System Health" keepMounted>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <div>
               <div className="h-[500px] rounded-lg overflow-hidden relative">

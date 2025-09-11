@@ -62,10 +62,8 @@ const getIntervalMs = (resolution) => {
 const COMPRESS_TIMELINE = false;
 
 const subscriberState = {};
-// Normalize timestamp to seconds (TradingView expects seconds)
-const normalizeTs = (t) => (t > 1e12 ? Math.floor(t / 1000) : t);
 
-export function GetDatafeedProvider(data, ws_pool) {
+export function GetDatafeedProvider(data) {
   return {
     onReady: (callback) => {
       setTimeout(() => callback(data_vars));
@@ -78,8 +76,6 @@ export function GetDatafeedProvider(data, ws_pool) {
     resolveSymbol: async (
       symbolName,
       onSymbolResolvedCallback,
-      onResolveErrorCallback,
-      extension
     ) => {
       const PRICE_DECIMALS = 6; // 6 decimals -> tick = 0.000001
       const PRICE_SCALE = 10 ** PRICE_DECIMALS;
@@ -135,12 +131,6 @@ export function GetDatafeedProvider(data, ws_pool) {
           ? Math.floor(Number(periodParams.from)) - 2 * 24 * 60 * 60
           : 0;
         const toSec = periodParams.to ? Math.floor(Number(periodParams.to)) : 0;
-        const timeFilter =
-          fromSec && toSec
-            ? `, bucketStart_gte: ${fromSec}, bucketStart_lte: ${toSec}`
-            : "";
-        // 1m often returns empty with tight windows; bypass server-side window for 1m
-        const includeFilterInServer = resolution !== "1";
         const query = `{
           candles(
             first: 1000,
@@ -162,13 +152,7 @@ export function GetDatafeedProvider(data, ws_pool) {
           }
         }`;
 
-        console.log("Fetching candles with query:", query);
-
         const doFetch = async (q) => {
-          console.log(
-            "Outgoing GraphQL request body:",
-            JSON.stringify({ query: q })
-          );
           const res = await fetch("/.netlify/functions/subquery-proxy", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -180,9 +164,6 @@ export function GetDatafeedProvider(data, ws_pool) {
 
         // First try with time filter
         let candles = await doFetch(query);
-        console.log(
-          `Fetched ${candles.length} candles for ${pairAddress} interval ${intervalParam}`
-        );
         // Fallback: if no data returned (common for 1m small windows), refetch without time filter
         if ((!candles || candles.length === 0) && fromSec && toSec) {
           const fallbackQuery = `{
@@ -231,16 +212,6 @@ export function GetDatafeedProvider(data, ws_pool) {
                 (b) => b.time >= fromSec * 1000 && b.time <= toSec * 1000
               )
             : nonEmptyBars;
-        console.log(
-          "sample bars",
-          (candles || []).slice(0, 5).map((c) => ({
-            t: c.bucketStart,
-            o: c.open,
-            h: c.high,
-            l: c.low,
-            c: c.close,
-          }))
-        );
 
         onHistoryCallback(barsInWindow, { noData: barsInWindow.length === 0 });
       } catch (error) {
@@ -254,7 +225,6 @@ export function GetDatafeedProvider(data, ws_pool) {
       resolution,
       onRealtimeCallback,
       subscriberUID,
-      onResetCacheNeededCallback
     ) => {
       const pairAddress =
         SUBQUERY_CONFIG.PAIR_ADDRESS ||
