@@ -135,7 +135,7 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   const pair = await getOrCreatePair(
     log.address,
     collateralToken,
-    "0x7a54fb014c8A0Ad9DF0F1F8E0A024bdac8343021", // LMKT token address
+    "0x7bFA165c4e5a7E449378e18ec1259631E1080277", // LMKT token address
     blockTs
   );
 

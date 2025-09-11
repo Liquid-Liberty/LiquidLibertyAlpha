@@ -1,3 +1,4 @@
+// src/contract-config.js
 import ListingManagerABIJson from "../config/ListingManager.json";
 import TreasuryABIJson from "../config/Treasury.json";
 import LMKTABIJson from "../config/LMKT.json";
@@ -69,10 +70,14 @@ export function loadContractConfig(networkName) {
   );
   const mockDai = need(
     networkName,
-    "MockDAI",
-    pick(a, "MockDAI", "MockDai", "DAI", "MockERC20")
+    "MockDai",
+    pick(a, "MockDai", "MockDAI", "DAI", "MockERC20")
   );
-  const faucet = need(networkName, "Faucet", pick(a, "Faucet", "faucet"));
+  const faucet = need(
+    networkName,
+    "Faucet",
+    pick(a, "Faucet", "faucet")
+  );
   const priceOracle = pick(a, "PriceOracleConsumer", "MockPriceOracle");
 
   return {
