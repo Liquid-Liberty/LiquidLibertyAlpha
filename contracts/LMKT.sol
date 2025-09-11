@@ -7,8 +7,8 @@ import "./interfaces/ILMKT.sol";
 
 contract LMKT is ERC20, Ownable, ILMKT {
     constructor() ERC20("Liberty Market Token", "LMKT") Ownable(msg.sender) {
-        // Mint the full 2.5 million initial supply to establish a sane starting price.
-        _mint(msg.sender, 2_500_000 * (10**18));
+        // Mint the initial 100,000 supply to establish the starting price.
+        _mint(msg.sender, 100_000 * (10**18));
     }
 
     function burn(uint256 amount) public override onlyOwner {
