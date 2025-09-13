@@ -72,6 +72,9 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
 
   const [amountIn, setAmountIn] = useState(0);
   const [treasuryTab, setTreasuryTab] = useState("buy");
+  const [slippage, setSlippage] = useState(0.5); // Default slippage 0.5%
+  const [isSlippageOpen, setIsSlippageOpen] = useState(false);
+
   const { data: approveHash, writeContract: approve } = useWriteContract();
   const { data: buyHash, writeContract: handleBuy } = useWriteContract();
   const { data: sellHash, writeContract: handleSell } = useWriteContract();
@@ -168,18 +171,20 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
   });
 
   // --- Sell calculation (collateral amount for given LMKT) ---
-  const { data: collateralAmount, isError: isSellCalcError } = useReadContract({
-    address: treasuryConfig?.address,
-    abi: treasuryConfig?.abi,
-    functionName: "getCollateralAmountForLmkt",
-    args: [parsedAmount, tokenAddress],
-    enabled:
-      !!treasuryConfig?.address &&
-      !!treasuryConfig?.abi &&
-      amountIn > 0 &&
-      treasuryTab === "sell" &&
-      !!tokenAddress,
-  });
+  const { data: collateralAmount, isError: isSellCalcError } = useReadContract(
+    {
+      address: treasuryConfig?.address,
+      abi: treasuryConfig?.abi,
+      functionName: "getCollateralAmountForLmkt",
+      args: [parsedAmount, tokenAddress],
+      enabled:
+        !!treasuryConfig?.address &&
+        !!treasuryConfig?.abi &&
+        amountIn > 0 &&
+        treasuryTab === "sell" &&
+        !!tokenAddress,
+    }
+  );
 
   // --- Effect: update formatted results when reads succeed ---
   useEffect(() => {
@@ -297,21 +302,27 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
   useEffect(() => {
     if (isApproved && treasuryConfig?.address && treasuryConfig?.abi) {
       setStatusMessage("Approved! Please confirm the final transaction...");
-      if (treasuryTab === "buy") {
-        if (!tokenAddress) return;
+
+      // Calculate minimum amount out based on slippage
+      const slippageFactor = 100 - slippage;
+      let minAmountOut = 0n;
+
+      if (treasuryTab === "buy" && lmktAmount) {
+        minAmountOut = (lmktAmount * BigInt(slippageFactor * 100)) / 10000n;
         handleBuy({
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
           functionName: "buyMkt",
-          args: [parseEther(amountIn.toString()), tokenAddress, 0n],
+          args: [parseEther(amountIn.toString()), tokenAddress, minAmountOut],
         });
-      } else {
-        if (!tokenAddress) return;
+      } else if (treasuryTab === "sell" && collateralAmount) {
+        minAmountOut =
+          (collateralAmount * BigInt(slippageFactor * 100)) / 10000n;
         handleSell({
           address: treasuryConfig.address,
           abi: treasuryConfig.abi,
           functionName: "sellMkt",
-          args: [parseEther(amountIn.toString()), tokenAddress, 0n],
+          args: [parseEther(amountIn.toString()), tokenAddress, minAmountOut],
         });
       }
     }
@@ -356,6 +367,57 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
     refetchTreasuryValue,
     refetchCirculatingSupply,
   ]);
+
+  const SlippageSelector = () => (
+    <div className="relative flex justify-end items-center mb-4">
+      <span className="text-sm text-zinc-600 mr-2">
+        Slippage: {slippage}%
+      </span>
+      <button onClick={() => setIsSlippageOpen(!isSlippageOpen)}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5 text-zinc-600 hover:text-zinc-800"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L8 7.48a1 1 0 01-1.34.85l-4.43-.89c-1.56-.38-2.6 1.04-1.74 2.43l2.58 4.12a1 1 0 010 1.28l-2.58 4.12c-.86 1.39.18 2.81 1.74 2.43l4.43-.89a1 1 0 011.34.85l.51 4.31c.38 1.56 2.6 1.56 2.98 0l.51-4.31a1 1 0 011.34-.85l4.43.89c1.56.38 2.6-1.04 1.74-2.43l-2.58-4.12a1 1 0 010-1.28l2.58-4.12c.86-1.39-.18-2.81-1.74-2.43l-4.43.89a1 1 0 01-1.34-.85L11.49 3.17zM10 13a3 3 0 100-6 3 3 0 000 6z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+      {isSlippageOpen && (
+        <div className="absolute top-8 right-0 bg-white border border-zinc-200 rounded-lg shadow-lg p-3 z-10 w-48">
+          <p className="text-sm font-bold text-zinc-700 mb-2">
+            Slippage Tolerance
+          </p>
+          <div className="flex space-x-2 mb-2">
+            <button
+              onClick={() => setSlippage(0.5)}
+              className="flex-1 text-sm bg-stone-200 hover:bg-stone-300 rounded px-2 py-1"
+            >
+              0.5%
+            </button>
+            <button
+              onClick={() => setSlippage(1)}
+              className="flex-1 text-sm bg-stone-200 hover:bg-stone-300 rounded px-2 py-1"
+            >
+              1%
+            </button>
+          </div>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="Custom"
+            value={slippage}
+            onChange={(e) => setSlippage(parseFloat(e.target.value) || 0)}
+            className="w-full text-sm px-2 py-1 bg-white border border-zinc-300 rounded-md"
+          />
+        </div>
+      )}
+    </div>
+  );
 
   if (!isConnected) {
     return (
@@ -501,7 +563,7 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
                     LMKT
                   </span>
                 </div>
-
+                <SlippageSelector />
                 <button
                   onClick={handleBuySubmit}
                   disabled={isLoading}
@@ -578,6 +640,7 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
                     </select>
                   </div>
                 </div>
+                <SlippageSelector />
                 <button
                   onClick={handleSellSubmit}
                   disabled={isLoading}

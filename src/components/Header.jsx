@@ -67,6 +67,21 @@ const Header = ({ onFaucetClick }) => {
     }
   };
 
+  const getTestTokens = () => {
+    let faucetUrl = "";
+    if (chainId === 11155111) {
+      // Sepolia
+      faucetUrl = "https://cloud.google.com/application/web3/faucet/ethereum/sepolia";
+    } else if (chainId === 943) {
+      // PulseChain Testnet
+      faucetUrl = "https://faucet.v4.testnet.pulsechain.com/";
+    }
+
+    if (faucetUrl) {
+      window.open(faucetUrl, "_blank");
+    }
+  };
+
   return (
     <header className="bg-stone-50 shadow-md sticky top-0 z-30">
       <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -192,7 +207,7 @@ const Header = ({ onFaucetClick }) => {
                   }}
                   className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
                 >
-                  Request Test Tokens
+                  Request Mock Tokens
                 </a>
                 <a
                   onClick={() => {
@@ -202,6 +217,15 @@ const Header = ({ onFaucetClick }) => {
                   className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
                 >
                   Import Mock Tokens to Wallet
+                </a>
+                <a
+                  onClick={() => {
+                    getTestTokens();
+                    setIsFaucetMenuOpen(false);
+                  }}
+                  className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
+                >
+                  Get Test Tokens
                 </a>
               </div>
             )}
