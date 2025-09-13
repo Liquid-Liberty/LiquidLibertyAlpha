@@ -24,13 +24,15 @@ SubQuery supports various layer-1 blockchain networks and provides [dedicated qu
 
 ## Run your project
 
-_If you get stuck, find out how to get help below._
+In the project folder director lmkt-subquery run the following to update the chart.
 
-The simplest way to run your project is by running `yarn dev` or `npm run-script dev`. This does all of the following:
+- npm run codegen
+- npm run build
+- subql publish
 
-1.  `yarn codegen` - Generates types from the GraphQL schema definition and contract ABIs and saves them in the `/src/types` directory. This must be done after each change to the `schema.graphql` file or the contract ABIs
-2.  `yarn build` - Builds and packages the SubQuery project into the `/dist` directory
-3.  `docker-compose pull && docker-compose up` - Runs a Docker container with an indexer, PostgeSQL DB, and a query service. This requires [Docker to be installed](https://docs.docker.com/engine/install) and running locally. The configuration for this container is set from your `docker-compose.yml`
+You will need to go to the OnFinality dashboard to redeploy. Copy the new CID under the deployments -> Update deploy button.
+
+
 
 You can observe the three services start, and once all are running (it may take a few minutes on your first start), please open your browser and head to [http://localhost:3000](http://localhost:3000) - you should see a GraphQL playground showing with the schemas ready to query. [Read the docs for more information](https://academy.subquery.network/run_publish/run.html) or [explore the possible service configuration for running SubQuery](https://academy.subquery.network/run_publish/references.html).
 

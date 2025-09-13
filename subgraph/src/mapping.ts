@@ -6,7 +6,7 @@ import { bucketStart, bigDecimalMax, bigDecimalMin, toDecimal, ZERO_BD } from ".
 
 // Extended intervals
 const INTERVALS: i32[] = [60, 300, 900, 3600, 14400, 86400]; // 1m, 5m, 15m, 1h, 4h, 1d
-const LMKT_ADDRESS = Address.fromString("0x7a54fb014c8a0ad9df0f1f8e0a024bdac8343021");
+const LMKT_ADDRESS = Address.fromString("0x7bFA165c4e5a7E449378e18ec1259631E1080277");
 
 function getOrCreateToken(addr: Address): Token {
   let id = addr.toHexString();

@@ -26,8 +26,8 @@ function App() {
     const { data: faucetHash, writeContract: requestTokens } = useWriteContract();
     const { isSuccess: isFaucetSuccess } = useWaitForTransactionReceipt({ hash: faucetHash });
 
-    const { contracts, loading: contractsLoading } = useContractConfig();
-    const faucetConfig = contracts?.faucetConfig;
+    const { faucetConfig, loading: contractsLoading } = useContractConfig();
+    console.log("faucetConfig in App.jsx:", faucetConfig);
 
     useEffect(() => {
         if (isFaucetSuccess) {
@@ -60,6 +60,7 @@ function App() {
             setTimeout(() => setNotification(''), 4000);
             return;
         }
+        console.log("🔎 trigger faucet in App.jsx:", faucetConfig);
         try {
             requestTokens({
                 ...faucetConfig,

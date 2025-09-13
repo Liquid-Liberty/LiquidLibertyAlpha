@@ -131,7 +131,7 @@ const DashboardPage = ({ listings, userAddress }) => {
   // Balances
   const { data: daiBalance, refetch: refetchDaiBalance } = useReadContract({
     address: mockDaiConfig?.address,
-    abi: GenericERC20ABI.abi,
+    abi: GenericERC20ABI,
     functionName: "balanceOf",
     args: [address],
     // ✅ only run when address AND config are ready
@@ -140,7 +140,7 @@ const DashboardPage = ({ listings, userAddress }) => {
 
   const { data: lmktBalance, refetch: refetchLmktBalance } = useReadContract({
     address: lmktConfig?.address,
-    abi: GenericERC20ABI.abi,
+    abi: GenericERC20ABI,
     functionName: "balanceOf",
     args: [address],
     query: { enabled: !!address && !!lmktConfig?.address },
@@ -256,7 +256,7 @@ const DashboardPage = ({ listings, userAddress }) => {
     setStatusMessage("Waiting Approval ...");
     approve({
       address: tokenAddress,
-      abi: GenericERC20ABI.abi,
+      abi: GenericERC20ABI,
       functionName: "approve",
       args: [treasuryConfig.address, parseEther(amountIn.toString())],
     });
@@ -269,7 +269,7 @@ const DashboardPage = ({ listings, userAddress }) => {
     setStatusMessage("Waiting Approval ...");
     approve({
       address: lmktConfig.address,
-      abi: GenericERC20ABI.abi,
+      abi: GenericERC20ABI,
       functionName: "approve",
       args: [treasuryConfig.address, parseEther(amountIn.toString())],
     });
