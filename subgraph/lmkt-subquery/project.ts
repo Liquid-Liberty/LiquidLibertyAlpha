@@ -1,5 +1,3 @@
-// Auto-generated , please modify to ensure correctness
-
 import {
   EthereumProject,
   EthereumDatasourceKind,
@@ -8,56 +6,72 @@ import {
 import * as dotenv from "dotenv";
 dotenv.config();
 
+console.log("Deploying SubQuery with ENV:", process.env.VITE_DEPLOY_ENV);
 const deployEnv = process.env.VITE_DEPLOY_ENV || "sepolia";
 
 const isLocal = deployEnv === "local";
 const isSepolia = deployEnv === "sepolia";
 const isPulse = deployEnv === "pulse";
 
-// RPC URL selection
+// RPC URL
 const rpcUrl = isLocal
   ? process.env.LOCAL_RPC_URL!
   : isSepolia
   ? process.env.SEPOLIA_RPC_URL!
-  : process.env.PULSECHAIN_RPC_URL!;
+  : isPulse
+  ? process.env.PULSE_RPC_URL!
+  : (() => { throw new Error(`Unknown deployEnv: ${deployEnv}`) })();
 
-// Treasury Address selection
 const treasuryAddress = isLocal
   ? process.env.LOCAL_TREASURY_ADDRESS!
   : isSepolia
-  ? process.env.VITE_TREASURY_ADDRESS!
-  : process.env.PULSECHAIN_TREASURY_ADDRESS!;
+  ? process.env.SEPOLIA_TREASURY_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_TREASURY_ADDRESS!
+  : (() => { throw new Error(`Unknown deployEnv: ${deployEnv}`) })();
+
+const lmktAddress = isLocal
+  ? process.env.LOCAL_LMKT_ADDRESS!
+  : isSepolia
+  ? process.env.SEPOLIA_LMKT_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_LMKT_ADDRESS!
+  : (() => { throw new Error(`Unknown deployEnv: ${deployEnv}`) })();
+
+const chainId = isLocal
+  ? "31337"
+  : isSepolia
+  ? "11155111"
+  : isPulse
+  ? "943"
+  : (() => { throw new Error(`Unknown deployEnv: ${deployEnv}`) })();
+
+const startBlock = isLocal
+  ? 0
+  : isSepolia
+  ? 9176744
+  : isPulse
+  ? 22602590
+  : (() => { throw new Error(`Unknown deployEnv: ${deployEnv}`) })();
 
 const project: EthereumProject = {
   specVersion: "1.0.0",
   version: "0.0.5",
-  name: "liquid-liberty-subquery",
+  name: `liquid-liberty-subquery-${deployEnv}`,
   description: "Subgraph for fetching OHLCV data for TradingView price charts",
   runner: {
-    node: {
-      name: "@subql/node-ethereum",
-      version: "6.2.1",
-    },
-    query: {
-      name: "@subql/query",
-      version: "2.23.5",
-    },
+    node: { name: "@subql/node-ethereum", version: "6.2.1" },
+    query: { name: "@subql/query", version: "2.23.5" },
   },
-  schema: {
-    file: "./schema.graphql",
-  },
+  schema: { file: "./schema.graphql" },
   network: {
-    chainId: isLocal
-      ? "31337"
-      : isSepolia
-      ? "11155111" // Sepolia
-      : "943", // Pulse testnet (replace with mainnet if needed)
+    chainId,
     endpoint: rpcUrl,
   },
   dataSources: [
     {
       kind: EthereumDatasourceKind.Runtime,
-      startBlock: isLocal ? 0 : isSepolia ? 9176744 : 22602590, // adjust Pulse start block
+      startBlock,
       options: {
         abi: "Treasury",
         address: treasuryAddress,
@@ -85,5 +99,5 @@ const project: EthereumProject = {
   repository: "",
 };
 
-// Must set default to the project instance
+
 export default project;

@@ -4,18 +4,43 @@ import { Candle, Pair, Token } from "../types";
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
-// Utility: round timestamp to bucket start
+function getAddresses() {
+  const deployEnv = process.env.VITE_DEPLOY_ENV?.toUpperCase();
+  if (!deployEnv) {
+    throw new Error("❌ VITE_DEPLOY_ENV is not set (expected 'pulse' | 'sepolia' | 'local')");
+  }
+
+  const lmktRaw =
+    process.env[`${deployEnv}_LMKT_ADDRESS`] || process.env.VITE_LMKT_ADDRESS;
+  const treRaw =
+    process.env[`${deployEnv}_TREASURY_ADDRESS`] || process.env.VITE_TREASURY_ADDRESS;
+
+  if (!lmktRaw || !treRaw) {
+    throw new Error(`❌ Missing LMKT or Treasury address for env ${deployEnv}`);
+  }
+
+  console.log(`📦 Deploy env: ${deployEnv}`);
+  console.log(`LMKT address: ${lmktRaw}`);
+  console.log(`Treasury address: ${treRaw}`);
+
+  return {
+    LMKT_ADDRESS: lmktRaw.toLowerCase(),
+    TREASURY_ADDRESS: treRaw.toLowerCase(),
+  };
+}
+
+const { LMKT_ADDRESS, TREASURY_ADDRESS } = getAddresses();
+
+// --- Utilities ---
 function bucketStart(ts: number, interval: number): number {
   return Math.floor(ts / interval) * interval;
 }
 
-// Utility: decimal conversion (from bigint)
 function toDecimal(value: bigint, decimals: number): number {
   if (decimals === 0) return Number(value);
   return Number(value) / 10 ** decimals;
 }
 
-// Utility: safe max/min
 function max(a: number, b: number): number {
   return a > b ? a : b;
 }
@@ -23,7 +48,7 @@ function min(a: number, b: number): number {
   return a < b ? a : b;
 }
 
-// Get or create Token entity
+// --- Entity helpers ---
 async function getOrCreateToken(addr: string, decimals = 18): Promise<Token> {
   const id = addr.toLowerCase();
   let token = await Token.get(id);
@@ -40,14 +65,12 @@ async function getOrCreateToken(addr: string, decimals = 18): Promise<Token> {
   return token;
 }
 
-// Get or create Pair entity
 async function getOrCreatePair(
-  addr: string,
   token0Addr: string,
   token1Addr: string,
   blockTs: number
 ): Promise<Pair> {
-  const id = addr.toLowerCase();
+  const id = TREASURY_ADDRESS; // 👈 Always use Treasury env var
   let pair = await Pair.get(id);
 
   if (!pair) {
@@ -56,8 +79,8 @@ async function getOrCreatePair(
 
     pair = Pair.create({
       id,
-      token0Id: token0.id, // 🔑 must use token0Id instead of token0
-      token1Id: token1.id, // 🔑 must use token1Id instead of token1
+      token0Id: token0.id,
+      token1Id: token1.id,
       createdAt: BigInt(blockTs),
     });
     await pair.save();
@@ -65,7 +88,6 @@ async function getOrCreatePair(
   return pair;
 }
 
-// Update or create a Candle
 async function updateCandle(
   pair: Pair,
   interval: number,
@@ -80,7 +102,7 @@ async function updateCandle(
   if (!c) {
     c = Candle.create({
       id,
-      pairId: pair.id, // 🔑 must use pairId instead of pair
+      pairId: pair.id,
       interval: interval.toString(),
       bucketStart: bucketTs,
       open: price,
@@ -103,25 +125,21 @@ async function updateCandle(
   await c.save();
 }
 
-// Handler for MKTSwap
+// --- Handler for MKTSwap ---
 export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   const blockTs = Number(log.block.timestamp);
 
-  // Extract args safely
   const args = log.args;
   if (!args) return;
 
   const {
-    sender,
     collateralToken,
     collateralAmount,
     lmktAmount,
     totalCollateral,
     circulatingSupply,
-    isBuy,
   } = args;
 
-  // Example: derive price as collateral per LMKT
   let price = 0;
   if (circulatingSupply.gt(0)) {
     price =
@@ -132,14 +150,13 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   const collateralAmountDec = toDecimal(collateralAmount.toBigInt(), 18);
   const lmktAmountDec = toDecimal(lmktAmount.toBigInt(), 18);
 
+  // Always group candles by Treasury
   const pair = await getOrCreatePair(
-    log.address,
     collateralToken,
-    "0x7bFA165c4e5a7E449378e18ec1259631E1080277", // LMKT token address
+    LMKT_ADDRESS,
     blockTs
   );
 
-  // Loop through all intervals and update candles
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);
     await updateCandle(

@@ -1,6 +1,7 @@
 // Simplified chartingDatafeed for demo purposes
 // Based on the main project's chartingDatafeed.ts
 import { SUBQUERY_CONFIG } from "../config/subgraph-config";
+import { getStaticSubqueryConfig } from "../config/subgraph-config";
 
 // Resolutions user can pick in TradingView and how we convert to subgraph seconds
 export const SUPPORTED_RESOLUTIONS = ["1", "5", "15", "60", "240", "1D"];
@@ -63,7 +64,10 @@ const COMPRESS_TIMELINE = false;
 
 const subscriberState = {};
 
-export function GetDatafeedProvider(data) {
+export function GetDatafeedProvider(data, chainId) {
+  console.log(`[Datafeed Init] chainId=${chainId}, pool=${data.poolAddress}`);
+  const { PAIR_ADDRESS, URL } = getStaticSubqueryConfig(chainId);
+  console.log(`[Config] chainId=${chainId}, resolvedPair=${PAIR_ADDRESS}, url=${URL}`);
   return {
     onReady: (callback) => {
       setTimeout(() => callback(data_vars));
@@ -120,10 +124,10 @@ export function GetDatafeedProvider(data) {
     ) => {
       try {
         const pairAddress =
-          SUBQUERY_CONFIG.PAIR_ADDRESS ||
-          symbolInfo?.pairAddress ||
-          symbolInfo?.address ||
-          data.poolAddress;
+        PAIR_ADDRESS ||
+        symbolInfo?.pairAddress ||
+        symbolInfo?.address ||
+        data.poolAddress;
         const intervalParam = mapResolutionToSeconds(resolution);
 
         // TradingView Charting Library passes from/to in milliseconds
@@ -153,10 +157,11 @@ export function GetDatafeedProvider(data) {
         }`;
 
         const doFetch = async (q) => {
-          const res = await fetch("/.netlify/functions/subquery-proxy", {
+          console.log(`[getBars] chainId=${chainId}, using pairId=${pairAddress}`);
+          const res = await fetch(URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: q }),
+            body: JSON.stringify({ chainId, query: q }),
           });
           const json = await res.json();
           return json?.data?.candles?.nodes ?? [];
@@ -227,7 +232,7 @@ export function GetDatafeedProvider(data) {
       subscriberUID,
     ) => {
       const pairAddress =
-        SUBQUERY_CONFIG.PAIR_ADDRESS ||
+        PAIR_ADDRESS ||
         symbolInfo?.pairAddress ||
         symbolInfo?.address ||
         data.poolAddress;
@@ -256,10 +261,10 @@ export function GetDatafeedProvider(data) {
             }
           }`;
 
-          const response = await fetch(SUBQUERY_CONFIG.URL, {
+          const response = await fetch(URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query }),
+            body: JSON.stringify({ chainId, query }),
           });
           const { data: gql } = await response.json();
           const latest = gql?.candles?.nodes?.[0];

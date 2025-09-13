@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { GetDatafeedProvider } from "../helpers/chartingDatafeed.js";
+import { useChainId } from "wagmi";
 
 class MockWebsocketClient {
   close() {}
@@ -29,6 +30,7 @@ function ensureParkingLot() {
 
 export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
   const containerRef = useRef(null);
+  const chainId = useChainId();
 
   useEffect(() => {
     const lot = ensureParkingLot();
@@ -63,7 +65,7 @@ export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
       containerRef.current.appendChild(container);
       window.__tvContainer = container;
 
-      const df = GetDatafeedProvider(data, new MockWebsocketClient());
+      const df = GetDatafeedProvider(data, chainId);
 
       const tv = new window.TradingView.widget({
         symbol: "CUSTOM:LMKTUSD",
