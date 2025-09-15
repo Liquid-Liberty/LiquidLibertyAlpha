@@ -26,9 +26,25 @@ SubQuery supports various layer-1 blockchain networks and provides [dedicated qu
 
 In the project folder director lmkt-subquery run the following to update the chart.
 
-- npm run codegen
-- npm run build
-- subql publish
+For re-deployments make sure to update LMKT and Treasury address references. LMKT addresses need to be updated within the project.ts
+
+##Build the subQuery project for the network you want to update
+# For Sepolia
+npm run build:sepolia
+
+# For PulseChain Testnet
+npm run build:pulse
+
+# For Local development (Hardhat/Ganache)
+npm run build:local
+
+##Publish to OnFinality (Generates a CID you need to copy for the project)
+
+# Publish Sepolia build
+npm run publish:sepolia
+
+# Publish Pulse build
+npm run publish:pulse
 
 You will need to go to the OnFinality dashboard to redeploy. Copy the new CID under the deployments -> Update deploy button.
 
