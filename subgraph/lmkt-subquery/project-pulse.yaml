@@ -1,0 +1,35 @@
+# // Auto-generated , DO NOT EDIT
+specVersion: 1.0.0
+version: 0.0.5
+name: liquid-liberty-subquery-pulse
+description: Subgraph for fetching OHLCV data for TradingView price charts
+runner:
+  node:
+    name: '@subql/node-ethereum'
+    version: 6.2.1
+  query:
+    name: '@subql/query'
+    version: 2.23.5
+schema:
+  file: ./schema.graphql
+network:
+  chainId: '943'
+dataSources:
+  - kind: ethereum/Runtime
+    startBlock: 22602590
+    options:
+      abi: Treasury
+    assets:
+      Treasury:
+        file: ./abis/Treasury.json
+      ERC20:
+        file: ./abis/ERC20.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleMKTSwap
+          filter:
+            topics:
+              - MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)
+repository: ''
