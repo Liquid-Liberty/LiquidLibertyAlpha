@@ -26,6 +26,8 @@ SubQuery supports various layer-1 blockchain networks and provides [dedicated qu
 
 In the project folder director lmkt-subquery run the following to update the chart.
 
+For re-deployments make sure to update LMKT and Treasury address references. LMKT addresses need to be updated within the project.ts
+
 ##Build the subQuery project for the network you want to update
 # For Sepolia
 npm run build:sepolia
