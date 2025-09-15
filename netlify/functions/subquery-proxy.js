@@ -8,7 +8,7 @@ export async function handler(event) {
     // Map chainId → SubQuery URL
     const subqueryUrls = {
       11155111: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
-      943: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt_chart_pulse",
+      943: "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart",
     };
 
     const targetUrl = subqueryUrls[chainId];

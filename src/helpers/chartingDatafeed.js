@@ -64,6 +64,11 @@ const COMPRESS_TIMELINE = false;
 
 const subscriberState = {};
 
+const cleanPairAddress = (addr) => {
+  if (!addr) return addr;
+  return addr.includes("-") ? addr.split("-").pop() : addr;
+};
+
 export function GetDatafeedProvider(data, chainId) {
   console.log(`[Datafeed Init] chainId=${chainId}, pool=${data.poolAddress}`);
   const { PAIR_ADDRESS, URL } = getStaticSubqueryConfig(chainId);
@@ -123,11 +128,12 @@ export function GetDatafeedProvider(data, chainId) {
       onErrorCallback
     ) => {
       try {
-        const pairAddress =
+        const pairAddress = cleanPairAddress(
         PAIR_ADDRESS ||
         symbolInfo?.pairAddress ||
         symbolInfo?.address ||
-        data.poolAddress;
+        data.poolAddress
+        );
         const intervalParam = mapResolutionToSeconds(resolution);
 
         // TradingView Charting Library passes from/to in milliseconds
@@ -157,13 +163,16 @@ export function GetDatafeedProvider(data, chainId) {
         }`;
 
         const doFetch = async (q) => {
-          console.log(`[getBars] chainId=${chainId}, using pairId=${pairAddress}`);
+          console.log(`[getBars] chainId=${chainId}, using pairId=${pairAddress}, interval=${intervalParam}`);
           const res = await fetch(URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ chainId, query: q }),
           });
           const json = await res.json();
+
+          console.log("[SubQuery candles]", JSON.stringify(json?.data?.candles?.nodes, null, 2));
+
           return json?.data?.candles?.nodes ?? [];
         };
 
@@ -205,6 +214,8 @@ export function GetDatafeedProvider(data, chainId) {
             volume: parseFloat(c.volumeToken0),
           }));
 
+          console.log("[Processed bars]", allBars);
+
         // Drop empty candles (no traded volume)
         const nonEmptyBars = allBars.filter(
           (b) => Number.isFinite(b.volume) && b.volume > 0
@@ -231,11 +242,12 @@ export function GetDatafeedProvider(data, chainId) {
       onRealtimeCallback,
       subscriberUID,
     ) => {
-      const pairAddress =
+      const pairAddress = cleanPairAddress(
         PAIR_ADDRESS ||
         symbolInfo?.pairAddress ||
         symbolInfo?.address ||
-        data.poolAddress;
+        data.poolAddress
+      );
       const intervalParam = mapResolutionToSeconds(resolution);
 
       const poll = async () => {
