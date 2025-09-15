@@ -8,7 +8,10 @@ import {
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const deployEnv = process.env.VITE_DEPLOY_ENV || "sepolia";
+const deployEnv =
+  process.env.VITE_DEPLOY_ENV || process.env.DEPLOY_ENV || "sepolia";
+
+console.log("Deploying SubQuery with ENV:", deployEnv);
 
 const isLocal = deployEnv === "local";
 const isSepolia = deployEnv === "sepolia";
@@ -19,14 +22,63 @@ const rpcUrl = isLocal
   ? process.env.LOCAL_RPC_URL!
   : isSepolia
   ? process.env.SEPOLIA_RPC_URL!
-  : process.env.PULSECHAIN_RPC_URL!;
+  : isPulse
+  ? process.env.PULSE_RPC_URL!
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
 
 // Treasury Address selection
 const treasuryAddress = isLocal
   ? process.env.LOCAL_TREASURY_ADDRESS!
   : isSepolia
-  ? process.env.VITE_TREASURY_ADDRESS!
-  : process.env.PULSECHAIN_TREASURY_ADDRESS!;
+  ? process.env.SEPOLIA_TREASURY_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_TREASURY_ADDRESS!
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
+
+const lmktAddress = isLocal
+  ? process.env.LOCAL_LMKT_ADDRESS!
+  : isSepolia
+  ? process.env.SEPOLIA_LMKT_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_LMKT_ADDRESS!
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
+
+    const collateralAddress = isLocal
+  ? process.env.LOCAL_MDAI_ADDRESS!
+  : isSepolia
+  ? process.env.SEPOLIA_MDAI_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_MDAI_ADDRESS!
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
+
+const chainId = isLocal
+  ? "31337"
+  : isSepolia
+  ? "11155111"
+  : isPulse
+  ? "943"
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
+
+// Make sure these Start block values are updated with each deploy
+const startBlock = isLocal
+  ? 0
+  : isSepolia
+  ? 9176744
+  : isPulse
+  ? 22602590
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
 
 const project: EthereumProject = {
   specVersion: "1.0.0",
@@ -55,35 +107,65 @@ const project: EthereumProject = {
     endpoint: rpcUrl,
   },
   dataSources: [
-    {
-      kind: EthereumDatasourceKind.Runtime,
-      startBlock: isLocal ? 0 : isSepolia ? 9176744 : 22602590, // adjust Pulse start block
-      options: {
-        abi: "Treasury",
-        address: treasuryAddress,
-      },
-      assets: new Map([
-        ["Treasury", { file: "./abis/Treasury.json" }],
-        ["ERC20", { file: "./abis/ERC20.json" }],
-      ]),
-      mapping: {
-        file: "./dist/index.js",
-        handlers: [
-          {
-            kind: EthereumHandlerKind.Event,
-            handler: "handleMKTSwap",
-            filter: {
-              topics: [
-                "MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)",
-              ],
-            },
-          },
-        ],
-      },
+  {
+    kind: EthereumDatasourceKind.Runtime,
+    startBlock,
+    options: {
+      abi: "Treasury",
+      address: treasuryAddress,
     },
-  ],
+    assets: new Map([
+      ["Treasury", { file: "./abis/Treasury.json" }],
+      ["ERC20", { file: "./abis/ERC20.json" }],
+    ]),
+    mapping: {
+      file: "./dist/index.js",
+      handlers: [
+        {
+          kind: EthereumHandlerKind.Event,
+          handler: "handleMKTSwap",
+          filter: {
+            topics: [
+              "MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)",
+            ],
+          },
+        },
+        {
+          kind: EthereumHandlerKind.Event,
+          handler: "handleCommerceFeeReceived",
+          filter: {
+            topics: ["CommerceFeeReceived(address,uint256)"],
+          },
+        },
+      ],
+    },
+  },
+  // 👇 New ERC20 dataSource
+  {
+    kind: EthereumDatasourceKind.Runtime,
+    startBlock,
+    options: {
+      abi: "ERC20",
+      address: collateralAddress,
+    },
+    assets: new Map([
+      ["ERC20", { file: "./abis/ERC20.json" }],
+    ]),
+    mapping: {
+      file: "./dist/index.js",
+      handlers: [
+        {
+          kind: EthereumHandlerKind.Event,
+          handler: "handleTreasuryTransfer",
+          filter: {
+            topics: ["Transfer(address,address,uint256)"],
+          },
+        },
+      ],
+    },
+  },
+],
   repository: "",
 };
 
-// Must set default to the project instance
 export default project;

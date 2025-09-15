@@ -1,4 +1,6 @@
-import { MKTSwapLog } from "../types/abi-interfaces/Treasury";
+import { ERC20 } from './../types/contracts/ERC20';
+import { MKTSwapLog, CommerceFeeReceivedLog } from "../types/abi-interfaces/Treasury";
+import { TransferLog } from "../types/abi-interfaces/ERC20"
 import { Candle, Pair, Token } from "../types";
 
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
@@ -131,7 +133,6 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
 
   const collateralAmountDec = toDecimal(collateralAmount.toBigInt(), 18);
   const lmktAmountDec = toDecimal(lmktAmount.toBigInt(), 18);
-
   const pair = await getOrCreatePair(
     log.address,
     collateralToken,
@@ -152,3 +153,75 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
     );
   }
 }
+
+// --- Handler for CommerceFeeReceived ---
+export async function handleCommerceFeeReceived(
+  log: CommerceFeeReceivedLog
+): Promise<void> {
+  const blockTs = Number(log.block.timestamp);
+  const args = log.args;
+  if (!args) return;
+
+  const { token, amount } = args;
+
+  const pair = await getOrCreatePair(token, LMKT_ADDRESS, blockTs);
+
+  // Default price = 0
+  let price = 0;
+
+    const prevBucket = bucketStart(blockTs - 60, 60);
+  const prevId = `${pair.id}-60-${prevBucket}`;
+  const prevCandle = await Candle.get(prevId);
+
+    if (prevCandle) {
+    price = prevCandle.close;
+  }
+const collateralAmountDec = toDecimal(amount.toBigInt(), 18);
+
+  for (const interval of INTERVALS) {
+    const bucket = bucketStart(blockTs, interval);
+    await updateCandle(
+      pair,
+      interval,
+      bucket,
+      price,
+      collateralAmountDec,
+      0 // no lmkt minted/burned for deposits
+    );
+  }
+}
+
+export async function handleTreasuryTransfer(log: TransferLog): Promise<void> {
+  const blockTs = Number(log.block.timestamp);
+  const args = log.args;
+  if (!args) return;
+
+  const { from, to, value } = args;
+
+  if (!to || to.toLowerCase() !== TREASURY_ADDRESS) return;
+
+  const pair = await getOrCreatePair(log.address, LMKT_ADDRESS, blockTs);
+
+  const amountDec = toDecimal(value.toBigInt(), 18);
+
+  let price = 0;
+  const prevBucket = bucketStart(blockTs - 60, 60);
+  const prevId = `${pair.id}-60-${prevBucket}`;
+  const prevCandle = await Candle.get(prevId);
+  if (prevCandle) {
+    price = prevCandle.close;
+  }
+
+  for (const interval of INTERVALS) {
+    const bucket = bucketStart(blockTs, interval);
+    await updateCandle(
+      pair,
+      interval,
+      bucket,
+      price,
+      amountDec,
+      0
+    );
+  }
+}
+
