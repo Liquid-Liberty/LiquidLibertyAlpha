@@ -1,31 +1,25 @@
 {
   "name": "liquid-liberty-subquery",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "description": "Subgraph for fetching OHLCV data for TradingView price charts",
   "main": "dist/index.js",
   "scripts": {
-    "codegen": "subql codegen",
-    "build": "subql build",
-    "build:pulse": "cross-env DEPLOY_ENV=pulse npm run codegen && cross-env DEPLOY_ENV=pulse subql build && mv project.yaml project-pulse.yaml",
-    "build:sepolia": "cross-env DEPLOY_ENV=sepolia npm run codegen && cross-env DEPLOY_ENV=sepolia subql build && mv project.yaml project-sepolia.yaml",
-    "build:local": "cross-env DEPLOY_ENV=local npm run codegen && cross-env DEPLOY_ENV=local subql build && mv project.yaml project-local.yaml",
-    "build:multichain": "npm run build:sepolia && npm run build:pulse && (echo specVersion: 1.0.0> subquery-multichain.yaml && echo version: 0.0.5>> subquery-multichain.yaml && echo query:>> subquery-multichain.yaml && echo   name: '@subql/query'>> subquery-multichain.yaml && echo   version: '*'>> subquery-multichain.yaml && echo.>> subquery-multichain.yaml && echo projects:>> subquery-multichain.yaml && echo   - project-sepolia.yaml>> subquery-multichain.yaml && echo   - project-pulse.yaml>> subquery-multichain.yaml)",
-    "publish:pulse": "subql publish project-pulse.yaml",
-    "publish:sepolia": "subql publish project-sepolia.yaml",
-    "publish:multichain": "subql publish subquery-multichain.yaml",
+    "build": "npx subql build",
+    "codegen": "npx subql codegen",
+    "build:sepolia": "cross-env VITE_DEPLOY_ENV=sepolia npm run codegen && cross-env VITE_DEPLOY_ENV=sepolia npm run build",
+    "build:pulse": "cross-env VITE_DEPLOY_ENV=pulse npm run codegen && cross-env VITE_DEPLOY_ENV=pulse npm run build",
+    "build:local": "cross-env VITE_DEPLOY_ENV=local npm run codegen && cross-env VITE_DEPLOY_ENV=local npm run build",
     "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
-    "dev:docker": "npm run build && docker-compose pull && docker-compose up --remove-orphans",
-    "dev:local": "subql-node-ethereum -f . --watch",
     "prepack": "rm -rf dist && npm run build",
-    "test": "npm run build && subql-node-ethereum test",
-    "build:develop": "cross-env NODE_ENV=develop npm run codegen && subql build"
+    "test": "npm run build && npx subql-node-ethereum test"
   },
-  "homepage": "https://github.com/YOUR_REPO/liquid-liberty-subquery",
-  "repository": "github:YOUR_REPO/liquid-liberty-subquery",
+  "homepage": "",
+  "repository": "",
   "files": [
     "dist",
     "schema.graphql",
-    "project.ts"
+    "project.ts",
+    "src/"
   ],
   "author": "",
   "license": "MIT",
@@ -35,14 +29,13 @@
     "ethers": "^5.7.2"
   },
   "devDependencies": {
-    "@subql/cli": "^6.2.2",
+    "@subql/cli": "^6.2.1",
     "@subql/node-ethereum": "^6.2.1",
     "@subql/testing": "latest",
-    "@subql/types": "^3.14.1",
-    "@subql/types-core": "^2.1.1",
-    "@subql/types-ethereum": "^4.2.2",
-    "cross-env": "^10.0.0",
-    "dotenv": "latest",
-    "typescript": "latest"
+    "@subql/types": "^6.2.1",
+    "@subql/types-ethereum": "^6.2.1",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "typescript": "~5.2.2"
   }
 }
