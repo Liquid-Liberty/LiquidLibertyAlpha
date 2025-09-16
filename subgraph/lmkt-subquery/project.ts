@@ -104,6 +104,13 @@ const project: EthereumProject = {
               ],
             },
           },
+          {
+            kind: EthereumHandlerKind.Event,
+            handler: "handleFeeTransfer",
+            filter: {
+              topics: ["Transfer(address,address,uint256)"], // standard ERC20 Transfer
+            },
+          },
         ],
       },
     },

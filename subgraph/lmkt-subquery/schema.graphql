@@ -25,3 +25,15 @@ type Candle @entity {
   volumeToken1: Float!
   trades: Int!
 }
+
+type FeePayment @entity {
+  id: ID!
+  payer: String!
+  treasury: String!
+  token: String!
+  amount: BigDecimal!
+  txHash: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
