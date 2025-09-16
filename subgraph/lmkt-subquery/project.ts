@@ -5,39 +5,84 @@ import {
   EthereumDatasourceKind,
   EthereumHandlerKind,
 } from "@subql/types-ethereum";
-import * as dotenv from "dotenv";
-dotenv.config();
 
-const deployEnv =
-  process.env.VITE_DEPLOY_ENV || process.env.DEPLOY_ENV || "sepolia";
+// Default to sepolia if nothing is set
+const deployEnv = (process.env.VITE_DEPLOY_ENV || "sepolia").toLowerCase();
 
 console.log("Deploying SubQuery with ENV:", deployEnv);
 
-const isLocal = deployEnv === "local";
-const isSepolia = deployEnv === "sepolia";
-const isPulse = deployEnv === "pulse";
+const config = {
+  local: {
+    rpcUrl: "http://localhost:8545",
+    treasury: "0x0000000000000000000000000000000000000000",
+    lmkt: "0x0000000000000000000000000000000000000000",
+    paymentProcessor: "0x0000000000000000000000000000000000000000",
+    listingManager: "0x0000000000000000000000000000000000000000",
+    mDAI: "0x0000000000000000000000000000000000000000",
+    chainId: "31337",
+    startBlock: 0,
+  },
+  sepolia: {
+    rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY",
+    treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
+    lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
+    paymentProcessor: "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4",
+    listingManager: "0xc2FD2028e7a156744985f80f001366423A11dE67",
+    mDAI: "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c",
+    chainId: "11155111",
+    startBlock: 9176744,
+  },
+  pulse: {
+    rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
+    treasury: "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a",
+    lmkt: "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F",
+    paymentProcessor: "0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7",
+    listingManager: "0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3",
+    mDAI: "0x3473b7D2f41E332Eb87d607ABe948d1EBDeCfC87",
+    chainId: "943",
+    startBlock: 22602590,
+  },
+} as const;
 
-// Helper to throw error for missing env vars
-const getEnv = (name: string): string => {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-  return value;
-};
+if (!(deployEnv in config)) {
+  throw new Error(
+    `❌ Unknown deployEnv: ${deployEnv} (expected 'local' | 'sepolia' | 'pulse')`
+  );
+}
 
-// --- Contract Addresses ---
-const rpcUrl = getEnv(`${deployEnv.toUpperCase()}_RPC_URL`);
-const treasuryAddress = getEnv(`${deployEnv.toUpperCase()}_TREASURY_ADDRESS`);
-const paymentProcessorAddress = getEnv(`${deployEnv.toUpperCase()}_PAYMENT_PROCESSOR_ADDRESS`);
-const listingManagerAddress = getEnv(`${deployEnv.toUpperCase()}_LISTING_MANAGER_ADDRESS`);
-const lmktAddress = getEnv(`${deployEnv.toUpperCase()}_LMKT_ADDRESS`);
+const { rpcUrl, treasury, lmkt, paymentProcessor, listingManager, mDAI, chainId, startBlock } = config[
+  deployEnv as keyof typeof config
+];
 
+console.log("  → RPC URL:", rpcUrl);
+console.log("  → Treasury Address:", treasury);
+console.log("  → LMKT Address:", lmkt);
+console.log("  → paymentProcessor Address:", paymentProcessor);
+console.log("  → listingManager Address:", listingManager);
+console.log("  → mDAI Address:", mDAI);
+console.log("  → Chain ID:", chainId);
+console.log("  → Start Block:", startBlock);
 
-// --- Network Config ---
-const chainId = isLocal ? "31337" : isSepolia ? "11155111" : "943";
-const startBlock = isLocal ? 0 : isSepolia ? 9176744 : 22602590;
-
+if (
+  !rpcUrl ||
+  !treasury ||
+  !lmkt ||
+  !paymentProcessor ||
+  !listingManager ||
+  !mDAI ||
+  !chainId ||
+  startBlock === undefined
+) {
+  throw new Error(`❌ Missing env vars for ${deployEnv}:
+    rpcUrl=${rpcUrl}
+    treasuryAddress=${treasury}
+    lmktAddress=${lmkt}
+    paymentProcessor=${paymentProcessor}
+    listingManager=${listingManager}
+    mockDAI=${mDAI}
+    chainId=${chainId}
+    startBlock=${startBlock}`);
+}
 
 const project: EthereumProject = {
   specVersion: "1.0.0",
@@ -60,7 +105,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "Treasury",
-        address: treasuryAddress,
+        address: treasury,
       },
       assets: new Map([
         ["Treasury", { file: "./abis/Treasury.json" }],
@@ -71,9 +116,6 @@ const project: EthereumProject = {
           {
             kind: EthereumHandlerKind.Event,
             handler: "handleMKTSwap",
-            filter: {
-              topics: ["MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)"],
-            },
           },
         ],
       },
@@ -85,7 +127,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "PaymentProcessor",
-        address: paymentProcessorAddress,
+        address: paymentProcessor,
       },
       assets: new Map([
         ["PaymentProcessor", { file: "./abis/PaymentProcessor.json" }],
@@ -110,7 +152,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "ListingManager",
-        address: listingManagerAddress,
+        address: listingManager,
       },
       assets: new Map([
         ["ListingManager", { file: "./abis/ListingManager.json" }],
@@ -131,5 +173,11 @@ const project: EthereumProject = {
   ],
   repository: "",
 };
+
+export const TREASURY_ADDRESS = treasury.toLowerCase();
+export const LMKT_ADDRESS = lmkt.toLowerCase();
+export const PAYMENT_PROCESSOR = paymentProcessor.toLowerCase();
+export const LISTING_MANAGER = listingManager.toLowerCase();
+export const MDAI_ADDRESS = mDAI.toLowerCase();
 
 export default project;

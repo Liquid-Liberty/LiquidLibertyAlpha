@@ -5,33 +5,12 @@ import { PurchaseMadeLog } from "../types/abi-interfaces/PaymentProcessor";
 import { ListingCreatedLog } from "../types/abi-interfaces/ListingManager";
 import { Treasury__factory } from "../types/contracts";
 import { Candle, Pair, Token } from "../types";
+import { TREASURY_ADDRESS, LMKT_ADDRESS, MDAI_ADDRESS } from "../../project";
 import { BigNumber } from "ethers";
 
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
-// --- Environment Variable Loading ---
-function getAddresses() {
-  const deployEnv = process.env.VITE_DEPLOY_ENV?.toUpperCase();
-  if (!deployEnv) {
-    throw new Error("❌ VITE_DEPLOY_ENV is not set (expected 'pulse' | 'sepolia' | 'local')");
-  }
-  
-  const getEnv = (name: string): string => {
-    const key = `${deployEnv}_${name}`;
-    const value = process.env[key];
-    if (!value) throw new Error(`❌ Missing env var for ${key}`);
-    return value.toLowerCase();
-  };
-
-  return {
-    LMKT_ADDRESS: getEnv("LMKT_ADDRESS"),
-    TREASURY_ADDRESS: getEnv("TREASURY_ADDRESS"),
-    PRIMARY_COLLATERAL_ADDRESS: getEnv("PRIMARY_COLLATERAL_ADDRESS"), // For marketplace trades
-  };
-}
-
-const { LMKT_ADDRESS, TREASURY_ADDRESS, PRIMARY_COLLATERAL_ADDRESS } = getAddresses();
 
 // --- Utilities ---
 function bucketStart(ts: number, interval: number): number {
@@ -132,12 +111,18 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   if (!args) return;
 
   const {
+    sender,
     collateralToken,
     collateralAmount,
     lmktAmount,
     totalCollateral,
     circulatingSupply,
+    isBuy,
   } = args;
+
+  logger.info(
+    `[MKTSwap] block=${log.block.number}, tx=${log.transaction.hash}, sender=${sender}, token=${collateralToken}, lmkt=${lmktAmount.toString()}, collateral=${collateralAmount.toString()}, isBuy=${isBuy}`
+  );
 
   let price = 0;
   // Calculate price directly from event data for Treasury swaps
@@ -176,7 +161,7 @@ export async function handlePurchaseMade(log: PurchaseMadeLog): Promise<void> {
   const collateralAmountDec = lmktAmountDec * price;
 
   // Since the event doesn't specify collateral, we use the primary one for charting
-  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
   
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);
@@ -197,7 +182,7 @@ export async function handleListingCreated(log: ListingCreatedLog): Promise<void
   const price = toDecimal(priceBigInt.toBigInt(), 8);
 
   // The pair is still the primary collateral vs LMKT
-  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
 
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);
