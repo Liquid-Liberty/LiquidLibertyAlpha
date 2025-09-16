@@ -23,7 +23,7 @@ const config = {
     startBlock: 0,
   },
   sepolia: {
-    rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY",
+    rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
     treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
     lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
     paymentProcessor: "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4",
