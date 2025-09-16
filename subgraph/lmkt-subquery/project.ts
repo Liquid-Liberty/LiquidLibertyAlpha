@@ -3,11 +3,16 @@ import {
   EthereumDatasourceKind,
   EthereumHandlerKind,
 } from "@subql/types-ethereum";
+import * as path from "path";
 import * as dotenv from "dotenv";
-dotenv.config();
 
-const deployEnv =
-  process.env.VITE_DEPLOY_ENV || process.env.DEPLOY_ENV || "sepolia";
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
+const deployEnv = (
+  process.env.VITE_DEPLOY_ENV ||
+  process.env.DEPLOY_ENV ||
+  "sepolia"
+).toLowerCase();
 
 console.log("Deploying SubQuery with ENV:", deployEnv);
 
@@ -66,6 +71,27 @@ const startBlock = isLocal
       throw new Error(`Unknown deployEnv: ${deployEnv}`);
     })();
 
+console.log("  → RPC URL:", rpcUrl);
+console.log("  → Treasury Address:", treasuryAddress);
+console.log("  → LMKT Address:", lmktAddress);
+console.log("  → Chain ID:", chainId);
+console.log("  → Start Block:", startBlock);
+
+if (
+  !rpcUrl ||
+  !treasuryAddress ||
+  !lmktAddress ||
+  !chainId ||
+  startBlock === undefined
+) {
+  throw new Error(`❌ Missing env vars for ${deployEnv}:
+    rpcUrl=${rpcUrl}
+    treasuryAddress=${treasuryAddress}
+    lmktAddress=${lmktAddress}
+    chainId=${chainId}
+    startBlock=${startBlock}`);
+}
+
 const project: EthereumProject = {
   specVersion: "1.0.0",
   version: "0.0.5",
@@ -110,5 +136,13 @@ const project: EthereumProject = {
   ],
   repository: "",
 };
+
+if (!treasuryAddress || !lmktAddress) {
+  throw new Error(`❌ Missing env vars for ${deployEnv}: 
+    treasuryAddress=${treasuryAddress}, lmktAddress=${lmktAddress}`);
+}
+
+export const TREASURY_ADDRESS = treasuryAddress.toLowerCase();
+export const LMKT_ADDRESS = lmktAddress.toLowerCase();
 
 export default project;

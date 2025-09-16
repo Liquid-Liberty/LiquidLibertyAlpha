@@ -14,11 +14,13 @@ schema:
   file: ./schema.graphql
 network:
   chainId: '11155111'
+  endpoint: https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu
 dataSources:
   - kind: ethereum/Runtime
     startBlock: 9176744
     options:
       abi: Treasury
+      address: '0x11498c38bf3237b632F9dEfC8Cbf2e75FF890695'
     assets:
       Treasury:
         file: ./abis/Treasury.json

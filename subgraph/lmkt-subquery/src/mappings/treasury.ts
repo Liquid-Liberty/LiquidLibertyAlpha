@@ -1,35 +1,10 @@
 import { MKTSwapLog } from "../types/abi-interfaces/Treasury";
 import { Candle, Pair, Token } from "../types";
+import { TREASURY_ADDRESS, LMKT_ADDRESS } from "../../project";
 
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
-function getAddresses() {
-  const deployEnv = process.env.VITE_DEPLOY_ENV?.toUpperCase();
-  if (!deployEnv) {
-    throw new Error("❌ VITE_DEPLOY_ENV is not set (expected 'pulse' | 'sepolia' | 'local')");
-  }
-
-  const lmktRaw =
-    process.env[`${deployEnv}_LMKT_ADDRESS`] || process.env.VITE_LMKT_ADDRESS;
-  const treRaw =
-    process.env[`${deployEnv}_TREASURY_ADDRESS`] || process.env.VITE_TREASURY_ADDRESS;
-
-  if (!lmktRaw || !treRaw) {
-    throw new Error(`❌ Missing LMKT or Treasury address for env ${deployEnv}`);
-  }
-
-  console.log(`📦 Deploy env: ${deployEnv}`);
-  console.log(`LMKT address: ${lmktRaw}`);
-  console.log(`Treasury address: ${treRaw}`);
-
-  return {
-    LMKT_ADDRESS: lmktRaw.toLowerCase(),
-    TREASURY_ADDRESS: treRaw.toLowerCase(),
-  };
-}
-
-const { LMKT_ADDRESS, TREASURY_ADDRESS } = getAddresses();
 
 // --- Utilities ---
 function bucketStart(ts: number, interval: number): number {

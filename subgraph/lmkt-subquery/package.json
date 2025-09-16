@@ -6,9 +6,9 @@
   "scripts": {
     "codegen": "subql codegen",
     "build": "subql build",
-    "build:pulse": "cross-env DEPLOY_ENV=pulse npm run codegen && cross-env DEPLOY_ENV=pulse subql build && mv project.yaml project-pulse.yaml",
-    "build:sepolia": "cross-env DEPLOY_ENV=sepolia npm run codegen && cross-env DEPLOY_ENV=sepolia subql build && mv project.yaml project-sepolia.yaml",
-    "build:local": "cross-env DEPLOY_ENV=local npm run codegen && cross-env DEPLOY_ENV=local subql build && mv project.yaml project-local.yaml",
+    "build:sepolia": "cross-env VITE_DEPLOY_ENV=sepolia npm run codegen && cross-env VITE_DEPLOY_ENV=sepolia subql build && mv project.yaml project-sepolia.yaml",
+    "build:pulse": "cross-env VITE_DEPLOY_ENV=pulse npm run codegen && cross-env VITE_DEPLOY_ENV=pulse subql build && mv project.yaml project-pulse.yaml",
+    "build:local": "cross-env VITE_DEPLOY_ENV=local npm run codegen && cross-env VITE_DEPLOY_ENV=local subql build && mv project.yaml project-local.yaml",
     "build:multichain": "npm run build:sepolia && npm run build:pulse && (echo specVersion: 1.0.0> subquery-multichain.yaml && echo version: 0.0.5>> subquery-multichain.yaml && echo query:>> subquery-multichain.yaml && echo   name: '@subql/query'>> subquery-multichain.yaml && echo   version: '*'>> subquery-multichain.yaml && echo.>> subquery-multichain.yaml && echo projects:>> subquery-multichain.yaml && echo   - project-sepolia.yaml>> subquery-multichain.yaml && echo   - project-pulse.yaml>> subquery-multichain.yaml)",
     "publish:pulse": "subql publish project-pulse.yaml",
     "publish:sepolia": "subql publish project-sepolia.yaml",
