@@ -18,6 +18,7 @@ import CreateListingPage from "./pages/CreateListingPage";
 import DashboardPage from "./pages/DashboardPage";
 import VendorsPage from "./pages/VendorsPage";
 import LocateVendorPage from "./pages/LocateVendorPage";
+import RewardsPage from "./pages/RewardsPage"; // --- IMPORT ADDED ---
 import NotFoundPage from "./pages/NotFoundPage";
 import { useContractConfig } from "./hooks/useContractConfig";
 
@@ -149,6 +150,9 @@ function App() {
               />
             }
           />
+          {/* --- ROUTE ADDED --- */}
+          <Route path="/rewards" element={<RewardsPage />} />
+          
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

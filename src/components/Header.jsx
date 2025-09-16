@@ -170,12 +170,21 @@ const Header = ({ onFaucetClick }) => {
             )}
           </div>
           {isConnected && (
-            <button
-              onClick={() => handleNavigate("/dashboard")}
-              className="text-zinc-700 hover:text-teal-800 transition duration-300 font-bold"
-            >
-              Dashboard
-            </button>
+            <>
+              <button
+                onClick={() => handleNavigate("/dashboard")}
+                className="text-zinc-700 hover:text-teal-800 transition duration-300 font-bold"
+              >
+                Dashboard
+              </button>
+              {/* --- ADDED REWARDS LINK (DESKTOP) --- */}
+              <button
+                onClick={() => handleNavigate("/rewards")}
+                className="text-zinc-700 hover:text-teal-800 transition duration-300 font-bold"
+              >
+                Rewards
+              </button>
+            </>
           )}
           <div className="relative">
             <button
@@ -312,12 +321,21 @@ const Header = ({ onFaucetClick }) => {
                 Home
               </a>
               {isConnected && (
-                <a
-                  onClick={() => handleNavigate("/dashboard")}
-                  className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
-                >
-                  Dashboard
-                </a>
+                <>
+                  <a
+                    onClick={() => handleNavigate("/dashboard")}
+                    className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
+                  >
+                    Dashboard
+                  </a>
+                  {/* --- ADDED REWARDS LINK (MOBILE) --- */}
+                  <a
+                    onClick={() => handleNavigate("/rewards")}
+                    className="block px-4 py-2 text-zinc-800 hover:bg-teal-800 hover:text-white cursor-pointer"
+                  >
+                    Rewards
+                  </a>
+                </>
               )}
               <a
                 onClick={() => handleNavigate("/for-sale")}

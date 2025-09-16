@@ -1,3 +1,5 @@
+// project.ts
+
 import {
   EthereumProject,
   EthereumDatasourceKind,
@@ -66,7 +68,7 @@ if (
 
 const project: EthereumProject = {
   specVersion: "1.0.0",
-  version: "0.0.5",
+  version: "0.0.6", // Incremented version
   name: `liquid-liberty-subquery-${deployEnv}`,
   description: "Subgraph for fetching OHLCV data for TradingView price charts",
   runner: {
@@ -79,6 +81,7 @@ const project: EthereumProject = {
     endpoint: rpcUrl,
   },
   dataSources: [
+    // ✅ Datasource 1: Treasury (for direct swaps)
     {
       kind: EthereumDatasourceKind.Runtime,
       startBlock,
@@ -88,7 +91,6 @@ const project: EthereumProject = {
       },
       assets: new Map([
         ["Treasury", { file: "./abis/Treasury.json" }],
-        ["ERC20", { file: "./abis/ERC20.json" }],
       ]),
       mapping: {
         file: "./dist/index.js",
@@ -96,6 +98,59 @@ const project: EthereumProject = {
           {
             kind: EthereumHandlerKind.Event,
             handler: "handleMKTSwap",
+            filter: {
+              topics: ["MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)"],
+            },
+          },
+        ],
+      },
+    },
+
+    // ✅ Datasource 2: Payment Processor (for marketplace sales)
+    {
+      kind: EthereumDatasourceKind.Runtime,
+      startBlock,
+      options: {
+        abi: "PaymentProcessor",
+        address: paymentProcessorAddress,
+      },
+      assets: new Map([
+        ["PaymentProcessor", { file: "./abis/PaymentProcessor.json" }],
+      ]),
+      mapping: {
+        file: "./dist/index.js",
+        handlers: [
+          {
+            kind: EthereumHandlerKind.Event,
+            handler: "handlePurchaseMade",
+            filter: {
+              topics: ["PurchaseMade(uint256,address,address,uint256)"],
+            },
+          },
+        ],
+      },
+    },
+
+    // ✅ Datasource 3: Listing Manager (for listing fees)
+    {
+      kind: EthereumDatasourceKind.Runtime,
+      startBlock,
+      options: {
+        abi: "ListingManager",
+        address: listingManagerAddress,
+      },
+      assets: new Map([
+        ["ListingManager", { file: "./abis/ListingManager.json" }],
+      ]),
+      mapping: {
+        file: "./dist/index.js",
+        handlers: [
+          {
+            kind: EthereumHandlerKind.Event,
+            handler: "handleListingCreated",
+            filter: {
+              topics: ["ListingCreated(uint256,address,uint8,uint256)"],
+            },
           },
         ],
       },
