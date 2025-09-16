@@ -32,4 +32,19 @@ dataSources:
           filter:
             topics:
               - MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)
+  - kind: ethereum/Runtime
+    startBlock: 22602590
+    options:
+      abi: ERC20
+    assets:
+      ERC20:
+        file: ./abis/ERC20.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleFeeTransfer
+          filter:
+            topics:
+              - Transfer(address,address,uint256)
 repository: ''

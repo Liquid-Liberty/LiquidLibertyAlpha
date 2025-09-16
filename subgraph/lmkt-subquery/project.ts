@@ -6,14 +6,17 @@ import {
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const deployEnv =
-  process.env.VITE_DEPLOY_ENV || process.env.DEPLOY_ENV || "sepolia";
+const env =
+    process.env.VITE_DEPLOY_ENV ||
+    process.env.DEPLOY_ENV ||
+    "SEPOLIA"; // fallback
+  const deployEnv = env.toUpperCase();
 
 console.log("Deploying SubQuery with ENV:", deployEnv);
 
-const isLocal = deployEnv === "local";
-const isSepolia = deployEnv === "sepolia";
-const isPulse = deployEnv === "pulse";
+const isLocal = deployEnv === "LOCAL";
+const isSepolia = deployEnv === "SEPOLIA";
+const isPulse = deployEnv === "PULSE";
 
 // RPC URL
 const rpcUrl = isLocal
@@ -32,6 +35,16 @@ const treasuryAddress = isLocal
   ? process.env.SEPOLIA_TREASURY_ADDRESS!
   : isPulse
   ? process.env.PULSE_TREASURY_ADDRESS!
+  : (() => {
+      throw new Error(`Unknown deployEnv: ${deployEnv}`);
+    })();
+
+const mDaiAddress = isLocal
+  ? process.env.LOCAL_MDAI_ADDRESS!
+  : isSepolia
+  ? process.env.SEPOLIA_MDAI_ADDRESS!
+  : isPulse
+  ? process.env.PULSE_MDAI_ADDRESS!
   : (() => {
       throw new Error(`Unknown deployEnv: ${deployEnv}`);
     })();
@@ -104,11 +117,25 @@ const project: EthereumProject = {
               ],
             },
           },
+        ],
+      },
+    },
+    {
+      kind: EthereumDatasourceKind.Runtime,
+      startBlock,
+      options: {
+        abi: "ERC20",
+        // address: mDaiAddress,
+      },
+      assets: new Map([["ERC20", { file: "./abis/ERC20.json" }]]),
+      mapping: {
+        file: "./dist/index.js",
+        handlers: [
           {
             kind: EthereumHandlerKind.Event,
             handler: "handleFeeTransfer",
             filter: {
-              topics: ["Transfer(address,address,uint256)"], // standard ERC20 Transfer
+              topics: ["Transfer(address,address,uint256)"], // ERC20 Transfer
             },
           },
         ],

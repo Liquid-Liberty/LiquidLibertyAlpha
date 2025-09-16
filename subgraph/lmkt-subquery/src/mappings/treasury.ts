@@ -5,21 +5,30 @@ import { Candle, Pair, Token } from "../types";
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
 function getAddresses() {
-  const deployEnv = process.env.VITE_DEPLOY_ENV?.toUpperCase();
-  if (!deployEnv) {
-    throw new Error("❌ VITE_DEPLOY_ENV is not set (expected 'pulse' | 'sepolia' | 'local')");
-  }
+  const env = process.env.VITE_DEPLOY_ENV || process.env.DEPLOY_ENV || "SEPOLIA";
+  const deployEnvUpper = env.toUpperCase();
 
   const lmktRaw =
-    process.env[`${deployEnv}_LMKT_ADDRESS`] || process.env.VITE_LMKT_ADDRESS;
+    process.env[`${deployEnvUpper}_LMKT_ADDRESS`] ||
+    process.env.VITE_LMKT_ADDRESS ||
+    "";
   const treRaw =
-    process.env[`${deployEnv}_TREASURY_ADDRESS`] || process.env.VITE_TREASURY_ADDRESS;
+    process.env[`${deployEnvUpper}_TREASURY_ADDRESS`] ||
+    process.env.VITE_TREASURY_ADDRESS ||
+    "";
 
   if (!lmktRaw || !treRaw) {
-    throw new Error(`❌ Missing LMKT or Treasury address for env ${deployEnv}`);
+    logger.error(
+      `❌ Missing LMKT or Treasury address for env ${deployEnvUpper}`
+    );
+    // Return safe dummy values instead of throwing
+    return {
+      LMKT_ADDRESS: "0x0000000000000000000000000000000000000000",
+      TREASURY_ADDRESS: "0x0000000000000000000000000000000000000000",
+    };
   }
 
-  console.log(`📦 Deploy env: ${deployEnv}`);
+  console.log(`📦 Deploy env: ${deployEnvUpper}`);
   console.log(`LMKT address: ${lmktRaw}`);
   console.log(`Treasury address: ${treRaw}`);
 

@@ -31,7 +31,7 @@ type FeePayment @entity {
   payer: String!
   treasury: String!
   token: String!
-  amount: BigDecimal!
+  amount: Float!
   txHash: String!
   blockNumber: BigInt!
   timestamp: BigInt!
