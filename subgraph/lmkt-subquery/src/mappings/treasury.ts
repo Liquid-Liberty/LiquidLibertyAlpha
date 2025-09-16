@@ -1,35 +1,37 @@
+// src/mappings/treasury.ts
+
 import { MKTSwapLog } from "../types/abi-interfaces/Treasury";
+import { PurchaseMadeLog } from "../types/abi-interfaces/PaymentProcessor";
+import { ListingCreatedLog } from "../types/abi-interfaces/ListingManager";
+import { Treasury__factory } from "../types/contracts";
 import { Candle, Pair, Token } from "../types";
+import { BigNumber } from "ethers";
 
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
+// --- Environment Variable Loading ---
 function getAddresses() {
   const deployEnv = process.env.VITE_DEPLOY_ENV?.toUpperCase();
   if (!deployEnv) {
     throw new Error("❌ VITE_DEPLOY_ENV is not set (expected 'pulse' | 'sepolia' | 'local')");
   }
-
-  const lmktRaw =
-    process.env[`${deployEnv}_LMKT_ADDRESS`] || process.env.VITE_LMKT_ADDRESS;
-  const treRaw =
-    process.env[`${deployEnv}_TREASURY_ADDRESS`] || process.env.VITE_TREASURY_ADDRESS;
-
-  if (!lmktRaw || !treRaw) {
-    throw new Error(`❌ Missing LMKT or Treasury address for env ${deployEnv}`);
-  }
-
-  console.log(`📦 Deploy env: ${deployEnv}`);
-  console.log(`LMKT address: ${lmktRaw}`);
-  console.log(`Treasury address: ${treRaw}`);
+  
+  const getEnv = (name: string): string => {
+    const key = `${deployEnv}_${name}`;
+    const value = process.env[key];
+    if (!value) throw new Error(`❌ Missing env var for ${key}`);
+    return value.toLowerCase();
+  };
 
   return {
-    LMKT_ADDRESS: lmktRaw.toLowerCase(),
-    TREASURY_ADDRESS: treRaw.toLowerCase(),
+    LMKT_ADDRESS: getEnv("LMKT_ADDRESS"),
+    TREASURY_ADDRESS: getEnv("TREASURY_ADDRESS"),
+    PRIMARY_COLLATERAL_ADDRESS: getEnv("PRIMARY_COLLATERAL_ADDRESS"), // For marketplace trades
   };
 }
 
-const { LMKT_ADDRESS, TREASURY_ADDRESS } = getAddresses();
+const { LMKT_ADDRESS, TREASURY_ADDRESS, PRIMARY_COLLATERAL_ADDRESS } = getAddresses();
 
 // --- Utilities ---
 function bucketStart(ts: number, interval: number): number {
@@ -38,28 +40,24 @@ function bucketStart(ts: number, interval: number): number {
 
 function toDecimal(value: bigint, decimals: number): number {
   if (decimals === 0) return Number(value);
-  return Number(value) / 10 ** decimals;
+  // Using BigNumber for precision before converting to float
+  return parseFloat(BigNumber.from(value).toString()) / (10 ** decimals);
 }
 
 function max(a: number, b: number): number {
   return a > b ? a : b;
 }
+
 function min(a: number, b: number): number {
   return a < b ? a : b;
 }
 
-// --- Entity helpers ---
+// --- Entity Helpers ---
 async function getOrCreateToken(addr: string, decimals = 18): Promise<Token> {
   const id = addr.toLowerCase();
   let token = await Token.get(id);
-
   if (!token) {
-    token = Token.create({
-      id,
-      decimals,
-      symbol: "UNKNOWN",
-      name: "Unknown Token",
-    });
+    token = Token.create({ id, decimals });
     await token.save();
   }
   return token;
@@ -70,7 +68,7 @@ async function getOrCreatePair(
   token1Addr: string,
   blockTs: number
 ): Promise<Pair> {
-  const id = TREASURY_ADDRESS; // 👈 Always use Treasury env var
+  const id = TREASURY_ADDRESS; // Always use Treasury address as the single pair ID for the chart
   let pair = await Pair.get(id);
 
   if (!pair) {
@@ -93,8 +91,8 @@ async function updateCandle(
   interval: number,
   bucketTs: number,
   price: number,
-  vol0: number,
-  vol1: number
+  vol0: number, // Collateral volume
+  vol1: number  // LMKT volume
 ): Promise<void> {
   const id = `${pair.id}-${interval}-${bucketTs}`;
   let c = await Candle.get(id);
@@ -111,7 +109,7 @@ async function updateCandle(
       close: price,
       volumeToken0: vol0,
       volumeToken1: vol1,
-      trades: 1,
+      trades: vol0 > 0 || vol1 > 0 ? 1 : 0, // Only count as trade if there is volume
     });
   } else {
     c.close = price;
@@ -119,16 +117,17 @@ async function updateCandle(
     c.low = min(c.low, price);
     c.volumeToken0 += vol0;
     c.volumeToken1 += vol1;
-    c.trades += 1;
+    if (vol0 > 0 || vol1 > 0) {
+      c.trades += 1;
+    }
   }
 
   await c.save();
 }
 
-// --- Handler for MKTSwap ---
+// --- Handler 1: MKTSwap (Treasury) ---
 export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   const blockTs = Number(log.block.timestamp);
-
   const args = log.args;
   if (!args) return;
 
@@ -141,31 +140,68 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   } = args;
 
   let price = 0;
-  if (circulatingSupply.gt(0)) {
-    price =
-      parseFloat(totalCollateral.toString()) /
-      parseFloat(circulatingSupply.toString());
+  // Calculate price directly from event data for Treasury swaps
+  if (circulatingSupply.gt(0) && totalCollateral.gt(0)) {
+    // We assume both totalCollateral and circulatingSupply have 18 decimals for this ratio
+    price = toDecimal(totalCollateral.toBigInt(), 18) / toDecimal(circulatingSupply.toBigInt(), 18);
   }
 
   const collateralAmountDec = toDecimal(collateralAmount.toBigInt(), 18);
   const lmktAmountDec = toDecimal(lmktAmount.toBigInt(), 18);
 
-  // Always group candles by Treasury
-  const pair = await getOrCreatePair(
-    collateralToken,
-    LMKT_ADDRESS,
-    blockTs
-  );
+  const pair = await getOrCreatePair(collateralToken, LMKT_ADDRESS, blockTs);
 
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);
-    await updateCandle(
-      pair,
-      interval,
-      bucket,
-      price,
-      collateralAmountDec,
-      lmktAmountDec
-    );
+    await updateCandle(pair, interval, bucket, price, collateralAmountDec, lmktAmountDec);
+  }
+}
+
+// --- Handler 2: PurchaseMade (PaymentProcessor) ---
+export async function handlePurchaseMade(log: PurchaseMadeLog): Promise<void> {
+  const blockTs = Number(log.block.timestamp);
+  const args = log.args;
+  if (!args) return;
+
+  // For marketplace purchases, we get the price from the Treasury at this block
+  const treasury = Treasury__factory.connect(TREASURY_ADDRESS, api);
+  const priceBigInt = await treasury.getLmktPriceInUsd({ blockTag: log.block.hash });
+  
+  // Treasury's getLmktPriceInUsd returns with 8 decimals
+  const price = toDecimal(priceBigInt.toBigInt(), 8);
+
+  // LMKT is volumeToken1, assuming 18 decimals
+  const lmktAmountDec = toDecimal(args.lmktAmount.toBigInt(), 18);
+  // Collateral is volumeToken0. We derive its value from the price.
+  const collateralAmountDec = lmktAmountDec * price;
+
+  // Since the event doesn't specify collateral, we use the primary one for charting
+  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+  
+  for (const interval of INTERVALS) {
+    const bucket = bucketStart(blockTs, interval);
+    await updateCandle(pair, interval, bucket, price, collateralAmountDec, lmktAmountDec);
+  }
+}
+
+// --- Handler 3: ListingCreated (ListingManager) ---
+export async function handleListingCreated(log: ListingCreatedLog): Promise<void> {
+  const blockTs = Number(log.block.timestamp);
+  
+  // Listing fees are deposited to the Treasury, changing the LMKT price.
+  // We fetch the new price but record ZERO volume for this event.
+  const treasury = Treasury__factory.connect(TREASURY_ADDRESS, api);
+  const priceBigInt = await treasury.getLmktPriceInUsd({ blockTag: log.block.hash });
+
+  // Treasury's getLmktPriceInUsd returns with 8 decimals
+  const price = toDecimal(priceBigInt.toBigInt(), 8);
+
+  // The pair is still the primary collateral vs LMKT
+  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+
+  for (const interval of INTERVALS) {
+    const bucket = bucketStart(blockTs, interval);
+    // Update candle with new price, but 0 for both volume arguments
+    await updateCandle(pair, interval, bucket, price, 0, 0);
   }
 }
