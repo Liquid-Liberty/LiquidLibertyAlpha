@@ -1,6 +1,6 @@
 # // Auto-generated , DO NOT EDIT
 specVersion: 1.0.0
-version: 0.0.5
+version: 0.0.6
 name: liquid-liberty-subquery-sepolia
 description: Subgraph for fetching OHLCV data for TradingView price charts
 runner:
@@ -24,11 +24,41 @@ dataSources:
     assets:
       Treasury:
         file: ./abis/Treasury.json
-      ERC20:
-        file: ./abis/ERC20.json
     mapping:
       file: ./dist/index.js
       handlers:
         - kind: ethereum/LogHandler
           handler: handleMKTSwap
+  - kind: ethereum/Runtime
+    startBlock: 9176744
+    options:
+      abi: PaymentProcessor
+      address: '0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4'
+    assets:
+      PaymentProcessor:
+        file: ./abis/PaymentProcessor.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handlePurchaseMade
+          filter:
+            topics:
+              - PurchaseMade(uint256,address,address,uint256)
+  - kind: ethereum/Runtime
+    startBlock: 9176744
+    options:
+      abi: ListingManager
+      address: '0xc2FD2028e7a156744985f80f001366423A11dE67'
+    assets:
+      ListingManager:
+        file: ./abis/ListingManager.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleListingCreated
+          filter:
+            topics:
+              - ListingCreated(uint256,address,uint8,uint256)
 repository: ''

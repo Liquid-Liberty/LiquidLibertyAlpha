@@ -5,7 +5,7 @@ import { PurchaseMadeLog } from "../types/abi-interfaces/PaymentProcessor";
 import { ListingCreatedLog } from "../types/abi-interfaces/ListingManager";
 import { Treasury__factory } from "../types/contracts";
 import { Candle, Pair, Token } from "../types";
-import { TREASURY_ADDRESS, LMKT_ADDRESS } from "../../project";
+import { TREASURY_ADDRESS, LMKT_ADDRESS, MDAI_ADDRESS } from "../../project";
 import { BigNumber } from "ethers";
 
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
@@ -161,7 +161,7 @@ export async function handlePurchaseMade(log: PurchaseMadeLog): Promise<void> {
   const collateralAmountDec = lmktAmountDec * price;
 
   // Since the event doesn't specify collateral, we use the primary one for charting
-  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
   
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);
@@ -182,7 +182,7 @@ export async function handleListingCreated(log: ListingCreatedLog): Promise<void
   const price = toDecimal(priceBigInt.toBigInt(), 8);
 
   // The pair is still the primary collateral vs LMKT
-  const pair = await getOrCreatePair(PRIMARY_COLLATERAL_ADDRESS, LMKT_ADDRESS, blockTs);
+  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
 
   for (const interval of INTERVALS) {
     const bucket = bucketStart(blockTs, interval);

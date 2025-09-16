@@ -16,6 +16,9 @@ const config = {
     rpcUrl: "http://localhost:8545",
     treasury: "0x0000000000000000000000000000000000000000",
     lmkt: "0x0000000000000000000000000000000000000000",
+    paymentProcessor: "0x0000000000000000000000000000000000000000",
+    listingManager: "0x0000000000000000000000000000000000000000",
+    mDAI: "0x0000000000000000000000000000000000000000",
     chainId: "31337",
     startBlock: 0,
   },
@@ -23,6 +26,9 @@ const config = {
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY",
     treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
     lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
+    paymentProcessor: "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4",
+    listingManager: "0xc2FD2028e7a156744985f80f001366423A11dE67",
+    mDAI: "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c",
     chainId: "11155111",
     startBlock: 9176744,
   },
@@ -30,6 +36,9 @@ const config = {
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
     treasury: "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a",
     lmkt: "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F",
+    paymentProcessor: "0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7",
+    listingManager: "0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3",
+    mDAI: "0x3473b7D2f41E332Eb87d607ABe948d1EBDeCfC87",
     chainId: "943",
     startBlock: 22602590,
   },
@@ -41,13 +50,16 @@ if (!(deployEnv in config)) {
   );
 }
 
-const { rpcUrl, treasury, lmkt, chainId, startBlock } = config[
+const { rpcUrl, treasury, lmkt, paymentProcessor, listingManager, mDAI, chainId, startBlock } = config[
   deployEnv as keyof typeof config
 ];
 
 console.log("  → RPC URL:", rpcUrl);
 console.log("  → Treasury Address:", treasury);
 console.log("  → LMKT Address:", lmkt);
+console.log("  → paymentProcessor Address:", paymentProcessor);
+console.log("  → listingManager Address:", listingManager);
+console.log("  → mDAI Address:", mDAI);
 console.log("  → Chain ID:", chainId);
 console.log("  → Start Block:", startBlock);
 
@@ -55,6 +67,9 @@ if (
   !rpcUrl ||
   !treasury ||
   !lmkt ||
+  !paymentProcessor ||
+  !listingManager ||
+  !mDAI ||
   !chainId ||
   startBlock === undefined
 ) {
@@ -62,6 +77,9 @@ if (
     rpcUrl=${rpcUrl}
     treasuryAddress=${treasury}
     lmktAddress=${lmkt}
+    paymentProcessor=${paymentProcessor}
+    listingManager=${listingManager}
+    mockDAI=${mDAI}
     chainId=${chainId}
     startBlock=${startBlock}`);
 }
@@ -98,9 +116,6 @@ const project: EthereumProject = {
           {
             kind: EthereumHandlerKind.Event,
             handler: "handleMKTSwap",
-            filter: {
-              topics: ["MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)"],
-            },
           },
         ],
       },
@@ -112,7 +127,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "PaymentProcessor",
-        address: paymentProcessorAddress,
+        address: paymentProcessor,
       },
       assets: new Map([
         ["PaymentProcessor", { file: "./abis/PaymentProcessor.json" }],
@@ -137,7 +152,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "ListingManager",
-        address: listingManagerAddress,
+        address: listingManager,
       },
       assets: new Map([
         ["ListingManager", { file: "./abis/ListingManager.json" }],
@@ -161,5 +176,8 @@ const project: EthereumProject = {
 
 export const TREASURY_ADDRESS = treasury.toLowerCase();
 export const LMKT_ADDRESS = lmkt.toLowerCase();
+export const PAYMENT_PROCESSOR = paymentProcessor.toLowerCase();
+export const LISTING_MANAGER = listingManager.toLowerCase();
+export const MDAI_ADDRESS = mDAI.toLowerCase();
 
 export default project;
