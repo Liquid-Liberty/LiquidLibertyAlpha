@@ -1,205 +1,122 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { GetDatafeedProvider } from '../helpers/chartingDatafeed.js';
+import React, { useEffect, useRef } from "react";
+import { GetDatafeedProvider } from "../helpers/chartingDatafeed.js";
+import { useChainId } from "wagmi";
 
-// Mock websocket client for demo purposes
 class MockWebsocketClient {
-  constructor() {}
-  close() {}
+  close() {}
 }
 
-const defaultProps = {
-  symbol: 'LiquidLiberty',
-  libraryPath: '/tradingview/charting_library/',
-  chartsStorageUrl: 'https://saveload.tradingview.com',
-  chartsStorageApiVersion: '1.1',
-  fullscreen: false,
-  autosize: false,
-};
+const LIB_PATH = "/tradingview/charting_library/";
 
-const formatNumber = (price) => {
-  // if (price < 0.000001) return price.toFixed(12);
-  // if (price < 0.00001) return price.toFixed(10);
-  // if (price < 0.0001) return price.toFixed(8);
-  // if (price < 0.001) return price.toFixed(6);
-  if (price < 0.01) return price.toFixed(4);
-  if (price < 1) return price.toFixed(3);
-  if (price < 10) return price.toFixed(2);
-  if (price < 100) return price.toFixed(2);
-  return price.toFixed(2);
-};
+// ensure hidden "parking lot" div exists in DOM
+function ensureParkingLot() {
+  let lot = document.getElementById("tv-parking-lot");
+  if (!lot) {
+    lot = document.createElement("div");
+    lot.id = "tv-parking-lot";
+    Object.assign(lot.style, {
+      position: "fixed",
+      left: "-99999px",
+      top: "-99999px",
+      width: "1px",
+      height: "1px",
+      overflow: "hidden",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(lot);
+  }
+  return lot;
+}
 
-export const TVChart = ({ 
-  widget, 
-  setWidget, 
-  data, 
-  interval = '5', 
-  onLoaded = undefined 
-}) => {
-  const chartContainerRef = useRef(null);
-  const [chartReady, setChartReady] = useState(false);
-  const [lastChartValues, setLastChartValues] = useState({ time: null, res: null });
-  const [lastClick, setLastClick] = useState(null);
-  const [tvReady, setTvReady] = useState(false);
-  
-  // Mock websocket for demo
-  const ws_pool = new MockWebsocketClient();
+export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
+  const containerRef = useRef(null);
+  const chainId = useChainId();
 
-  const handleClick = () => {
-    setLastClick(Date.now());
-  };
+  useEffect(() => {
+    const lot = ensureParkingLot();
 
-  const handleResize = () => {
-    if (chartContainerRef.current) {
-      chartContainerRef.current.style.width = '100%';
-    }
-  };
+    // If widget exists, just move its container into place
+    const attachExisting = () => {
+      if (window.__tvContainer && containerRef.current) {
+        containerRef.current.appendChild(window.__tvContainer);
+        requestAnimationFrame(() => window.__tvWidget?.resize?.());
+        return true;
+      }
+      return false;
+    };
 
-  // Wait for TradingView script to be available
-  useEffect(() => {
-    if (window.TradingView?.widget) {
-      setTvReady(true);
-      return;
-    }
-    const checkInterval = window.setInterval(() => {
-      if (window.TradingView?.widget) {
-        setTvReady(true);
-        window.clearInterval(checkInterval);
-      }
-    }, 100);
-    return () => window.clearInterval(checkInterval);
-  }, []);
+    // Init if needed
+    const initWidget = () => {
+      if (attachExisting()) return;
 
-  // Create widget, this code is only used once
-  useEffect(() => {
-    if (chartContainerRef && chartContainerRef.current && !widget && ws_pool && tvReady) {
-      const widgetOptions = {
-        enabled_features: ["custom_resolutions"],
-        overrides: {
-          'mainSeriesProperties.statusViewStyle.showExchange': false,
-          'scalesProperties.showRightScale': true,
-          // --- FIX: Add scale margins to prevent extreme zoom ---
-          "priceScale.autoScale": true,
-          "priceScale.scaleMargins": {
-            top: 0.1, // 10% margin above the price
-            bottom: 0.25, // 25% margin below the price
-          },
-          // --------------------------------------------------------
-          volumePaneSize: 'small',
-          keep_object_tree_widget_in_right_toolbar: true,
-          'mainSeriesProperties.priceScale.precision': 6,
-          'mainSeriesProperties.priceScale.minTick': 0.000001,
-        },
-        studies_overrides: {
-          'volume.volume.ma.visible': false,
-        },
-        loading_screen: {
-          backgroundColor: '#000000',
-        },
-        theme: 'dark',
-        symbol: defaultProps.symbol,
-        datafeed: GetDatafeedProvider(data, ws_pool),
-        container: chartContainerRef.current,
-        library_path: defaultProps.libraryPath,
-        interval: (interval || '5'),
-        locale: 'en',
-        custom_css_url: '/tradingview/styles/custom.css',
-        disabled_features: ['header_symbol_search', 'header_compare', 'display_market_status', 'header_saveload', 'timeframes_toolbar','chart_template_storage','header_fullscreen_button','header_settings'],
-        charts_storage_url: defaultProps.chartsStorageUrl,
-        charts_storage_api_version: '1.1',
-        fullscreen: defaultProps.fullscreen,
-        autosize: defaultProps.autosize,
-        custom_formatters: {
-          timeFormatter: {
-            format: (date) => {
-              const _format_str = '%h:%m';
-              return _format_str
-                .replace('%h', date.getHours().toString().padStart(2, '0'))
-                .replace('%m', date.getMinutes().toString().padStart(2, '0'))
-                .replace('%s', date.getSeconds().toString().padStart(2, '0'));
-            },
-            formatLocal: (date) => {
-              const _format_str = '%h:%m';
-              return _format_str
-                .replace('%h', date.getHours().toString().padStart(2, '0'))
-                .replace('%m', date.getMinutes().toString().padStart(2, '0'))
-                .replace('%s', date.getSeconds().toString().padStart(2, '0'));
-            },
-          },
-          dateFormatter: {
-            format: (date) => {
-              return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
-            },
-            formatLocal: (date) => {
-              return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
-            },
-          },
-        },
-      };
+      if (!window.TradingView?.widget) {
+        const t = setInterval(() => {
+          if (window.TradingView?.widget) {
+            clearInterval(t);
+            initWidget();
+          }
+        }, 50);
+        return;
+      }
 
-      if (window.TradingView?.widget) {
-        setWidget(new window.TradingView.widget(widgetOptions));
-      }
-    }
-  }, [widget, chartContainerRef, data, interval, ws_pool, setWidget, tvReady]);
+      const container = document.createElement("div");
+      container.style.width = "100%";
+      container.style.height = "100%";
+      containerRef.current.appendChild(container);
+      window.__tvContainer = container;
 
-  useEffect(() => {
-    if (widget) {
-      widget.onChartReady(() => {
-        widget.applyOverrides({
+      const df = GetDatafeedProvider(data, chainId);
 
-          'mainSeriesProperties.visible': true,
-          // 'mainSeriesProperties.style': 1,
-          'paneProperties.backgroundType': 'solid',
-          'paneProperties.background': '#0f0f0f', // Chart background color
-          'paneProperties.vertGridProperties.color': '#1A1A1A', // Vertical grid lines color
-          'paneProperties.horzGridProperties.color': '#1A1A1A', // Horizontal grid lines color
+      const tv = new window.TradingView.widget({
+        symbol: "CUSTOM:LMKTUSD",
+        datafeed: df,
+        container,
+        library_path: LIB_PATH,
+        interval,
+        locale: "en",
+        theme: "dark",
+        disabled_features: [
+          "header_symbol_search",
+          "header_compare",
+          "display_market_status",
+          "header_saveload",
+          "timeframes_toolbar",
+          "chart_template_storage",
+          "header_fullscreen_button",
+          "header_settings",
+        ],
+      });
 
-          'mainSeriesProperties.priceScale.precision': 6,
-          'mainSeriesProperties.priceScale.minTick': 0.000001,
-        });
+      tv.onChartReady(() => {
+        try {
+          tv.applyOverrides({
+            "paneProperties.background": "#0f0f0f",
+            "paneProperties.vertGridProperties.color": "#1A1A1A",
+            "paneProperties.horzGridProperties.color": "#1A1A1A",
+            "mainSeriesProperties.priceScale.precision": 6,
+            "mainSeriesProperties.priceScale.minTick": 0.000001,
+          });
+        } catch (_) {'error'}
+        window.__tvWidget = tv;
+        setWidget?.(tv);
+        onLoaded?.();
+      });
+    };
 
-        const savedChartState = localStorage.getItem('tradingViewDrawingState');
-        if (savedChartState) {
-          try {
-            widget.load(JSON.parse(savedChartState));
-          } catch (e) {
-            console.error('Failed to load saved chart state:', e);
-          }
-        }
+    initWidget();
 
-        widget.chart().getSeries().setChartStyleProperties(1, {
-          upColor: '#089981',
-          downColor: '#d4404a',
-          borderUpColor: '#089981',
-          borderDownColor: '#d4404a'
-        });
+    // When unmounting (routing away), park the container instead of destroying it
+    return () => {
+      if (window.__tvContainer && lot && window.__tvContainer.parentNode !== lot) {
+        lot.appendChild(window.__tvContainer);
+      }
+    };
+  }, [data, interval, setWidget, onLoaded]);
 
-        widget.subscribe('drawing_event', () => {
-          widget.save((state) => {
-            localStorage.setItem('tradingViewDrawingState', JSON.stringify(state));
-          });
-        });
-        setChartReady(true);
-      });
-      console.log(widget);
-    }
-  }, [widget]);
-
-  useEffect(() => {
-    if (widget && chartReady) {
-      if (onLoaded) onLoaded();
-      widget.subscribe('mouse_up', handleClick);
-    }
-  }, [widget, chartReady, onLoaded]);
-
-  return (
-      <div
-        key='chart'
-        ref={chartContainerRef}
-        className={`min-h-[500px] h-full w-full overflow-hidden rounded-md object-cover ${
-          chartReady ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
-  );
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full min-h-[500px] overflow-hidden rounded-md"
+    />
+  );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useListings } from '../context/ListingsContext';
 import ItemListingCard from '../components/ItemListingCard';
 
@@ -119,20 +119,36 @@ const ListingsSection = ({ listings, loading, error }) => {
 
 // --- FINAL HOMEPAGE (UPDATED WITH NEW LOGIC) ---
 const HomePage = () => {
-    const { listings, loading, error } = useListings();
-    // --- State for both modals ---
-    const [showDisclaimer, setShowDisclaimer] = useState(true);
-    const [showEula, setShowEula] = useState(false);
+    const { listings, loading, error } = useListings();
+    const [showDisclaimer, setShowDisclaimer] = useState(true);
 
-    // --- Handler for the first modal ---
-    const handleAcceptDisclaimer = () => {
-        setShowDisclaimer(false); // Hide the disclaimer
-        setShowEula(true);        // Show the EULA
-    };
+    useEffect(() => {
+        // 👇 Log all sessionStorage items when HomePage mounts
+        console.log("📦 HomePage loaded. Current sessionStorage:");
+        if (sessionStorage.length === 0) {
+            console.log("⚠️ sessionStorage is empty");
+        } else {
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                console.log(`${key}: ${sessionStorage.getItem(key)}`);
+            }
+        }
 
-    // --- Handler for the second modal ---
-    const handleAcceptEula = () => {
-        setShowEula(false); // Hide the EULA
+        // Check if disclaimer already accepted for this session
+        const accepted = sessionStorage.getItem("disclaimerAccepted");
+        if (accepted === "true") {
+            setShowDisclaimer(false);
+        } else {
+            setShowDisclaimer(true);
+        }
+    }, []);
+
+    const handleAcceptDisclaimer = () => {
+        sessionStorage.setItem("disclaimerAccepted", "true");
+        for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        console.log(`${key}: ${sessionStorage.getItem(key)}`)}
+        setShowDisclaimer(false);
     };
 
     return (
