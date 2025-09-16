@@ -108,12 +108,18 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
   if (!args) return;
 
   const {
+    sender,
     collateralToken,
     collateralAmount,
     lmktAmount,
     totalCollateral,
     circulatingSupply,
+    isBuy,
   } = args;
+
+  logger.info(
+    `[MKTSwap] block=${log.block.number}, tx=${log.transaction.hash}, sender=${sender}, token=${collateralToken}, lmkt=${lmktAmount.toString()}, collateral=${collateralAmount.toString()}, isBuy=${isBuy}`
+  );
 
   let price = 0;
   if (circulatingSupply.gt(0)) {

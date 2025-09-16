@@ -14,13 +14,13 @@ schema:
   file: ./schema.graphql
 network:
   chainId: '11155111'
-  endpoint: https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu
+  endpoint: https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
 dataSources:
   - kind: ethereum/Runtime
     startBlock: 9176744
     options:
       abi: Treasury
-      address: '0x11498c38bf3237b632F9dEfC8Cbf2e75FF890695'
+      address: '0xC78b685192DD8164062705Cd8148df2CB2d1CB9E'
     assets:
       Treasury:
         file: ./abis/Treasury.json
@@ -31,7 +31,4 @@ dataSources:
       handlers:
         - kind: ethereum/LogHandler
           handler: handleMKTSwap
-          filter:
-            topics:
-              - MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)
 repository: ''

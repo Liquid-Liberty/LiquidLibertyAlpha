@@ -3,91 +3,63 @@ import {
   EthereumDatasourceKind,
   EthereumHandlerKind,
 } from "@subql/types-ethereum";
-import * as path from "path";
-import * as dotenv from "dotenv";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
-const deployEnv = (
-  process.env.VITE_DEPLOY_ENV ||
-  process.env.DEPLOY_ENV ||
-  "sepolia"
-).toLowerCase();
+// Default to sepolia if nothing is set
+const deployEnv = (process.env.VITE_DEPLOY_ENV || "sepolia").toLowerCase();
 
 console.log("Deploying SubQuery with ENV:", deployEnv);
 
-const isLocal = deployEnv === "local";
-const isSepolia = deployEnv === "sepolia";
-const isPulse = deployEnv === "pulse";
+const config = {
+  local: {
+    rpcUrl: "http://localhost:8545",
+    treasury: "0x0000000000000000000000000000000000000000",
+    lmkt: "0x0000000000000000000000000000000000000000",
+    chainId: "31337",
+    startBlock: 0,
+  },
+  sepolia: {
+    rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY",
+    treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
+    lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
+    chainId: "11155111",
+    startBlock: 9176744,
+  },
+  pulse: {
+    rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
+    treasury: "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a",
+    lmkt: "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F",
+    chainId: "943",
+    startBlock: 22602590,
+  },
+} as const;
 
-// RPC URL
-const rpcUrl = isLocal
-  ? process.env.LOCAL_RPC_URL!
-  : isSepolia
-  ? process.env.SEPOLIA_RPC_URL!
-  : isPulse
-  ? process.env.PULSE_RPC_URL!
-  : (() => {
-      throw new Error(`Unknown deployEnv: ${deployEnv}`);
-    })();
+if (!(deployEnv in config)) {
+  throw new Error(
+    `❌ Unknown deployEnv: ${deployEnv} (expected 'local' | 'sepolia' | 'pulse')`
+  );
+}
 
-const treasuryAddress = isLocal
-  ? process.env.LOCAL_TREASURY_ADDRESS!
-  : isSepolia
-  ? process.env.SEPOLIA_TREASURY_ADDRESS!
-  : isPulse
-  ? process.env.PULSE_TREASURY_ADDRESS!
-  : (() => {
-      throw new Error(`Unknown deployEnv: ${deployEnv}`);
-    })();
-
-const lmktAddress = isLocal
-  ? process.env.LOCAL_LMKT_ADDRESS!
-  : isSepolia
-  ? process.env.SEPOLIA_LMKT_ADDRESS!
-  : isPulse
-  ? process.env.PULSE_LMKT_ADDRESS!
-  : (() => {
-      throw new Error(`Unknown deployEnv: ${deployEnv}`);
-    })();
-
-const chainId = isLocal
-  ? "31337"
-  : isSepolia
-  ? "11155111"
-  : isPulse
-  ? "943"
-  : (() => {
-      throw new Error(`Unknown deployEnv: ${deployEnv}`);
-    })();
-
-const startBlock = isLocal
-  ? 0
-  : isSepolia
-  ? 9176744
-  : isPulse
-  ? 22602590
-  : (() => {
-      throw new Error(`Unknown deployEnv: ${deployEnv}`);
-    })();
+const { rpcUrl, treasury, lmkt, chainId, startBlock } = config[
+  deployEnv as keyof typeof config
+];
 
 console.log("  → RPC URL:", rpcUrl);
-console.log("  → Treasury Address:", treasuryAddress);
-console.log("  → LMKT Address:", lmktAddress);
+console.log("  → Treasury Address:", treasury);
+console.log("  → LMKT Address:", lmkt);
 console.log("  → Chain ID:", chainId);
 console.log("  → Start Block:", startBlock);
 
 if (
   !rpcUrl ||
-  !treasuryAddress ||
-  !lmktAddress ||
+  !treasury ||
+  !lmkt ||
   !chainId ||
   startBlock === undefined
 ) {
   throw new Error(`❌ Missing env vars for ${deployEnv}:
     rpcUrl=${rpcUrl}
-    treasuryAddress=${treasuryAddress}
-    lmktAddress=${lmktAddress}
+    treasuryAddress=${treasury}
+    lmktAddress=${lmkt}
     chainId=${chainId}
     startBlock=${startBlock}`);
 }
@@ -112,7 +84,7 @@ const project: EthereumProject = {
       startBlock,
       options: {
         abi: "Treasury",
-        address: treasuryAddress,
+        address: treasury,
       },
       assets: new Map([
         ["Treasury", { file: "./abis/Treasury.json" }],
@@ -124,11 +96,6 @@ const project: EthereumProject = {
           {
             kind: EthereumHandlerKind.Event,
             handler: "handleMKTSwap",
-            filter: {
-              topics: [
-                "MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)",
-              ],
-            },
           },
         ],
       },
@@ -137,12 +104,7 @@ const project: EthereumProject = {
   repository: "",
 };
 
-if (!treasuryAddress || !lmktAddress) {
-  throw new Error(`❌ Missing env vars for ${deployEnv}: 
-    treasuryAddress=${treasuryAddress}, lmktAddress=${lmktAddress}`);
-}
-
-export const TREASURY_ADDRESS = treasuryAddress.toLowerCase();
-export const LMKT_ADDRESS = lmktAddress.toLowerCase();
+export const TREASURY_ADDRESS = treasury.toLowerCase();
+export const LMKT_ADDRESS = lmkt.toLowerCase();
 
 export default project;
