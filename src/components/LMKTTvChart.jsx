@@ -1,15 +1,28 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createChart } from "lightweight-charts";
 import { LMKT_CONFIG } from "../config/lmkt-config";
-import { SUBQUERY_CONFIG } from "../config/subgraph-config";
+// MIGRATED TO SECURE SYSTEM
+import { useSubqueryConfig } from "../config/subgraph-config"; // Now secure
 
 const LMKTTvChart = ({
-  pairAddress = LMKT_CONFIG.PAIR_ADDRESS,
+  pairAddress = null, // Will be determined securely by network
   defaultInterval = LMKT_CONFIG.DEFAULT_INTERVAL,
   intervals = LMKT_CONFIG.INTERVALS,
   height = 500,
   refreshKey = 0,
 }) => {
+  // SECURE: Get configuration based on current network
+  const secureConfig = useSubqueryConfig();
+
+  // Use secure pair address, fallback to prop for backward compatibility
+  const activePairAddress = secureConfig.PAIR_ADDRESS || pairAddress;
+
+  console.log("🔒 LMKTTvChart using secure pair address:", {
+    network: secureConfig.NETWORK_NAME,
+    chainId: secureConfig.CHAIN_ID,
+    pairAddress: activePairAddress
+  });
+
   const priceContainerRef = useRef(null);
   const volumeContainerRef = useRef(null);
   const priceChartRef = useRef(null);
@@ -152,7 +165,7 @@ const LMKTTvChart = ({
     };
     window.addEventListener("resize", handleResize);
 
-    if (pairAddress) fetchCandles();
+    if (activePairAddress) fetchCandles();
 
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -161,17 +174,17 @@ const LMKTTvChart = ({
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [pairAddress, height]);
+  }, [activePairAddress, height]);
 
   useEffect(() => {
-    if (!pairAddress || !priceChartRef.current || !volumeChartRef.current)
+    if (!activePairAddress || !priceChartRef.current || !volumeChartRef.current)
       return;
     fetchCandles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pairAddress, interval]);
+  }, [activePairAddress, interval]);
 
   useEffect(() => {
-    if (!pairAddress) return;
+    if (!activePairAddress) return;
     fetchCandles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
@@ -179,7 +192,7 @@ const LMKTTvChart = ({
   const fetchCandles = async () => {
     if (
       isFetchingRef.current ||
-      !pairAddress ||
+      !activePairAddress ||
       !candleSeriesRef.current ||
       !volumeSeriesRef.current
     )
@@ -193,7 +206,7 @@ const LMKTTvChart = ({
           orderBy: bucketStart,
           orderDirection: asc,
           where: {
-            pair: "${pairAddress.toLowerCase()}",
+            pair: "${activePairAddress.toLowerCase()}",
             interval: "${interval}"
           }
         ) {

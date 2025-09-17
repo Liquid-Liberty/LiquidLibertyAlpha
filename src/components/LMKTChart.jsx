@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { fetchLMKTData, fetchLMKTCurrentStats } from '../utils/subgraph';
 import { LMKT_CONFIG } from '../config/lmkt-config';
+import { useChainId } from 'wagmi';
 
 const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
     const [chartData, setChartData] = useState([]);
@@ -9,6 +10,7 @@ const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [interval, setInterval] = useState(LMKT_CONFIG.DEFAULT_INTERVAL);
+    const chainId = useChainId();
 
     // Mock data structure - replace with actual subgraph query
     const mockData = [
@@ -22,11 +24,11 @@ const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
     ];
 
     useEffect(() => {
-        if (pairAddress !== "0x0000000000000000000000000000000000000000") {
+        if (pairAddress !== "0x0000000000000000000000000000000000000000" && chainId) {
             fetchSubgraphData();
             fetchCurrentStats();
         }
-    }, [pairAddress, interval]);
+    }, [pairAddress, interval, chainId]);
 
     const fetchCurrentStats = async () => {
         try {

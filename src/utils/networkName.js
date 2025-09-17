@@ -8,6 +8,6 @@ export function getNetworkNameFromChainId(chainId) {
     case 31337: // Hardhat
       return "local";
     default:
-      return "sepolia"; // fallback
+      return "pulse"; // fallback
   }
 }

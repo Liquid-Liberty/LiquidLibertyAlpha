@@ -1,8 +1,8 @@
-// LMKT Configuration
-import { useSubqueryConfig } from "@/config/subquery-config";
+// LMKT Configuration - MIGRATED TO SECURE SYSTEM
+import { useSubqueryConfig } from "@/config/subquery-config"; // Now secure
 
 export function useLmktConfig() {
-  const { PAIR_ADDRESS } = useSubqueryConfig();
+  const { PAIR_ADDRESS } = useSubqueryConfig(); // Now using secure configuration
   // Update this with your actual LMKT pair address from the subgraph
   return {
     PAIR_ADDRESS,
