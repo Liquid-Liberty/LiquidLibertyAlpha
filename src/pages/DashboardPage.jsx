@@ -95,7 +95,6 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
   const [statusMessage, setStatusMessage] = useState("");
   const [calculatedLmkt, setCalculatedLmkt] = useState("0");
   const [calculatedCollateral, setCalculatedCollateral] = useState("0");
-  const [chartRefreshKey, setChartRefreshKey] = useState(0);
   const [tokenBalances, setTokenBalances] = useState({
     wbtc: "0",
     dai: "0",
@@ -140,13 +139,13 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
     }
   }, [daiBalance, lmktBalance]);
 
-  // ✅ Auto-refresh balances every 30s
+  // ✅ Auto-refresh balances every 2 minutes
   useEffect(() => {
     if (!address) return;
     const intervalId = setInterval(() => {
       refetchDaiBalance();
       refetchLmktBalance();
-    }, 30000);
+    }, 2 * 60 * 1000); // 2 minutes - reduced balance refresh frequency
     return () => clearInterval(intervalId);
   }, [address, refetchDaiBalance, refetchLmktBalance]);
 
@@ -278,7 +277,7 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
     if (!treasuryConfig?.address) return;
     const intervalId = setInterval(() => {
       refetchTreasuryValue();
-    }, 30000);
+    }, 2 * 60 * 1000); // 2 minutes - reduced balance refresh frequency
     return () => clearInterval(intervalId);
   }, [treasuryConfig?.address, refetchTreasuryValue]);
 
@@ -330,7 +329,6 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
       setStatusMessage("");
       setAmountIn(0);
       alert("Purchase successful!");
-      setChartRefreshKey((k) => k + 1);
       refetchDaiBalance();
       refetchLmktBalance();
       refetchTreasuryValue();
@@ -350,7 +348,6 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
       setStatusMessage("");
       setAmountIn(0);
       alert("Sale successful!");
-      setChartRefreshKey((k) => k + 1);
       refetchDaiBalance();
       refetchLmktBalance();
       refetchTreasuryValue();
@@ -666,7 +663,6 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
                   setWidget={setWidget}
                   data={mockPoolData}
                   interval={interval}
-                  onLoaded={() => {}}
                 />
               </div>
             </div>

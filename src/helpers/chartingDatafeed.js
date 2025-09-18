@@ -430,7 +430,7 @@ export function GetDatafeedProvider(data, chainId) {
 
       // start polling
       poll();
-      const everyMs = 30 * 1000; // 30 seconds
+      const everyMs = 2 * 60 * 1000; // 2 minutes - reduced chart refresh frequency
       subscriberIntervals[subscriberUID] = window.setInterval(poll, everyMs);
     },
 
