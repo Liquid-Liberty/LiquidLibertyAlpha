@@ -9,6 +9,7 @@ import {
 } from "wagmi";
 import { forSaleCategories, serviceCategories } from "../data/categories";
 import { useContractConfig } from "../hooks/useContractConfig";
+import { useListings } from "../context/ListingsContext";
 
 const CreateListingPage = ({ listings }) => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const CreateListingPage = ({ listings }) => {
   const chainId = useChainId();
   const { address, isConnected } = useAccount();
   const { listingManagerConfig, mockDaiConfig } = useContractConfig(); // ✅ dynamic configs
+  const { refreshListings } = useListings();
 
   const [listingType, setListingType] = useState(
     existingListing?.type || "item"
@@ -284,10 +286,14 @@ const CreateListingPage = ({ listings }) => {
     if (isCreated) {
       setIsLoading(false);
       setStatusMessage("");
+
+      // Immediately refresh listings to show the new listing
+      refreshListings();
+
       alert("✅ Listing created!");
       navigate("/dashboard");
     }
-  }, [isCreated, navigate]);
+  }, [isCreated, navigate, refreshListings]);
 
   // --- JSX Layout (unchanged) ---
   return (

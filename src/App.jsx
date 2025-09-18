@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import {
   useAccount,
   useWriteContract,
@@ -27,7 +27,15 @@ function App() {
   const { listings, refreshListings } = useListings();
   const [notification, setNotification] = useState("");
   const location = useLocation();
+  const navigate = useNavigate();
   const { address, isConnected } = useAccount();
+
+  // Track previous connection state to detect reconnections
+  const prevIsConnected = useRef(null); // Start with null to detect initial state
+  const prevAddress = useRef(null);
+  const hasInitialized = useRef(false);
+  const wasRecentlyDisconnected = useRef(false); // Track if user just disconnected
+  const [connectionHistory, setConnectionHistory] = useState([]); // Debug: track connection changes
 
   // 🔑 Global chart state (persists across navigation)
   const [widget, setWidget] = useState(undefined);
@@ -70,6 +78,99 @@ function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Handle wallet reconnection - redirect to homepage
+  useEffect(() => {
+    // Add to connection history for debugging
+    const historyEntry = {
+      timestamp: Date.now(),
+      isConnected,
+      address: address || 'undefined',
+      path: location.pathname
+    };
+    setConnectionHistory(prev => [...prev.slice(-5), historyEntry]); // Keep last 6 entries
+
+    // Check if user was recently disconnected (persisted in localStorage)
+    const wasDisconnectedPersisted = localStorage.getItem('wallet_was_disconnected') === 'true';
+
+    // Skip initial render to avoid redirecting on page load
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      prevIsConnected.current = isConnected;
+      prevAddress.current = address;
+
+      // If user was disconnected and is now connected, trigger redirect
+      if (wasDisconnectedPersisted && isConnected && address) {
+        console.log("🔄 Detected reconnection after component re-mount, redirecting to homepage");
+        localStorage.removeItem('wallet_was_disconnected'); // Clear the flag
+        navigate("/");
+        return;
+      }
+
+      console.log("🔧 Initialized wallet tracking:", { isConnected, address, wasDisconnectedPersisted });
+      return;
+    }
+
+    const wasConnected = prevIsConnected.current === true;
+    const isNowConnected = isConnected === true;
+    const wasDisconnected = prevIsConnected.current === false;
+    const isNowDisconnected = isConnected === false;
+
+    // Track disconnection
+    if (wasConnected && isNowDisconnected) {
+      console.log("📱 Wallet disconnected, marking as recently disconnected");
+      wasRecentlyDisconnected.current = true;
+      localStorage.setItem('wallet_was_disconnected', 'true'); // Persist across re-mounts
+    }
+
+    // Detect reconnection (was recently disconnected, now connected)
+    const isReconnecting = wasRecentlyDisconnected.current && isNowConnected;
+
+    // Address changed while connected (account switch)
+    const addressChanged = wasConnected && isConnected && prevAddress.current !== address && address;
+
+    // Alternative simple check: if we have an address now but didn't before, it's likely a reconnection
+    const simpleReconnection = !prevAddress.current && address && isConnected;
+
+    console.log("Wallet state:", {
+      // Current states
+      isConnected,
+      address,
+
+      // Previous states
+      'prevIsConnected.current': prevIsConnected.current,
+      'prevAddress.current': prevAddress.current,
+
+      // Calculated states
+      wasConnected,
+      isNowConnected,
+      wasDisconnected,
+      isNowDisconnected,
+      isReconnecting,
+      addressChanged,
+      simpleReconnection,
+      'wasRecentlyDisconnected.current': wasRecentlyDisconnected.current,
+
+      // Context
+      currentPath: location.pathname,
+      connectionHistory: connectionHistory.slice(-3) // Show last 3 entries
+    });
+
+    // Redirect to homepage if:
+    // 1. User is reconnecting after disconnection
+    // 2. Address changed while connected (account switch)
+    // 3. Simple reconnection detected (address appeared)
+    if (isReconnecting || addressChanged || simpleReconnection) {
+      console.log("🔄 Wallet reconnected or account switched, redirecting to homepage");
+      wasRecentlyDisconnected.current = false; // Reset the flag
+      localStorage.removeItem('wallet_was_disconnected'); // Clear persisted flag
+      navigate("/");
+    }
+
+    // Update refs for next comparison
+    prevIsConnected.current = isConnected;
+    prevAddress.current = address;
+  }, [isConnected, address, navigate, location.pathname]);
 
   const addListing = () => {
     refreshListings();
