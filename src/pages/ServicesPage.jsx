@@ -5,7 +5,7 @@ import { useListings } from '../context/ListingsContext';
 
 const ServicesPage = () => {
     const { listings, loading, error } = useListings();
-    const serviceListings = listings.filter(listing => listing.listingType === 'service');
+    const serviceListings = listings.filter(listing => listing.listingType === 'ServiceOffered');
 
     return (
         <div className="container mx-auto px-6 py-12">

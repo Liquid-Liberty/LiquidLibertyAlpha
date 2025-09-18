@@ -25,12 +25,6 @@ export function useSecureSubqueryConfig() {
       // Additional network context validation
       validateNetworkContext(chainId);
 
-      console.log(`🔒 Secure config for ${networkConfig.name}:`, {
-        chainId: networkConfig.chainId,
-        treasury: networkConfig.treasury,
-        pairAddress: pairAddress,
-        url: subqueryUrl
-      });
 
       return Object.freeze({
         URL: "/.netlify/functions/subquery-proxy", // Always use proxy

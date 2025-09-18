@@ -185,13 +185,24 @@ async function main() {
 
   await saveAbisAtConfigRoot();
 
+  // --- 6. SYNC ADDRESSES TO ALL CONFIGURATIONS ---
+  console.log("\n--- Syncing addresses to all configuration files ---");
+  try {
+    const { syncNetwork } = await import("./sync-addresses.js");
+    await syncNetwork(networkName);
+    console.log("✅ Addresses synced to subgraph and frontend configurations");
+  } catch (error) {
+    console.warn("⚠️  Address sync failed (you may need to run manually):", error.message);
+    console.log(`   Run: node scripts/sync-addresses.js --network ${networkName}`);
+  }
+
   const priceFeed = await treasury.tokenPriceFeeds(mockDai.target);
   console.log("Treasury reports price feed for MockDAI:", priceFeed);
 
   const queryId = await treasury.tokenQueryIds(mockDai.target);
   console.log("Treasury reports queryId for MockDAI:", queryId);
 
-  console.log("\n✅ Deployment and configuration complete!");
+  console.log("\n✅ Deployment, configuration, and address sync complete!");
 }
 
 main().catch((error) => {

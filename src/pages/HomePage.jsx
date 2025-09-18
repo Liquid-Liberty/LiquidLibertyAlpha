@@ -211,17 +211,6 @@ const HomePage = () => {
   const [showEula, setShowEula] = useState(false);
 
   useEffect(() => {
-        // 👇 Log all sessionStorage items when HomePage mounts
-        console.log("📦 HomePage loaded. Current sessionStorage:");
-        if (sessionStorage.length === 0) {
-            console.log("⚠️ sessionStorage is empty");
-        } else {
-            for (let i = 0; i < sessionStorage.length; i++) {
-                const key = sessionStorage.key(i);
-                console.log(`${key}: ${sessionStorage.getItem(key)}`);
-            }
-        }
-
         // Check if disclaimer already accepted for this session
         const accepted = sessionStorage.getItem("disclaimerAccepted");
         if (accepted === "true") {
@@ -234,9 +223,6 @@ const HomePage = () => {
   // --- Handler for the first modal ---
   const handleAcceptDisclaimer = () => {
     sessionStorage.setItem("disclaimerAccepted", "true");
-        for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        console.log(`${key}: ${sessionStorage.getItem(key)}`)}
     setShowDisclaimer(false); // Hide the disclaimer
     setShowEula(true); // Show the EULA
   };

@@ -1,17 +1,19 @@
-// This file contains the deployed contract addresses and their ABIs.
-// This is the central point of configuration for the frontend to interact with the blockchain.
+// 🚨 DEPRECATED: This file is no longer used for address management
+//
+// Contract addresses are now managed dynamically through:
+// - Network-specific JSON files: src/config/{network}/contract-addresses.json
+// - Secure network config: src/utils/secureNetworkConfig.js
+// - Address sync utility: scripts/sync-addresses.js
+//
+// To get current contract addresses, use the appropriate hooks or utilities
+// that read from the network-specific configuration files.
+//
+// This file is kept for reference but should not be imported or used.
 
-// --- Deployed Contract Addresses from the v4 deploy script ---
-export const lbrtyAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
-export const mockDaiAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-export const mockWethAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-export const mockWbtcAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-export const mockPlsAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-
-export const lmktAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
-export const treasuryAddress = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
-export const paymentProcessorAddress = "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853";
-export const faucetAddress = "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d";
+// 💀 REMOVED: Hardcoded addresses (now managed dynamically per network)
+// These addresses were local development addresses and are no longer valid:
+// - lbrtyAddress, mockDaiAddress, mockWethAddress, mockWbtcAddress, mockPlsAddress
+// - lmktAddress, treasuryAddress, paymentProcessorAddress, faucetAddress
 
 // --- Contract ABIs (Application Binary Interfaces) ---
 

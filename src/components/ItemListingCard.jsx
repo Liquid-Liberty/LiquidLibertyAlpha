@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { formatCategoryTitle } from '../utils/formatters';
 
 const ItemListingCard = ({ listing }) => (
   <Link
@@ -18,6 +19,12 @@ const ItemListingCard = ({ listing }) => (
       <h3 className="font-display text-xl font-bold text-zinc-800 truncate">
         {listing.title}
       </h3>
+
+      {listing.category && (
+        <p className="text-sm text-teal-600 font-medium mt-1">
+          {formatCategoryTitle(listing.category)}
+        </p>
+      )}
 
       <p className="font-body text-2xl text-teal-800 mt-2">
         ${listing.priceInUsd.toFixed(2)}

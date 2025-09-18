@@ -9,18 +9,8 @@ import {
 
 // SECURE Hook version for React components
 export function useSubqueryConfig() {
-  console.log("🔒 Using SECURE subquery configuration");
-
   try {
     const secureConfig = useSecureConfig();
-
-    // Log secure configuration for debugging
-    console.log("🔒 Secure config loaded:", {
-      network: secureConfig.NETWORK_NAME,
-      chainId: secureConfig.CHAIN_ID,
-      pairAddress: secureConfig.PAIR_ADDRESS,
-      treasury: secureConfig.TREASURY_ADDRESS
-    });
 
     // Return in the same format as before for backward compatibility
     return {
@@ -44,16 +34,8 @@ export function useSubqueryConfig() {
 
 // SECURE Non-hook version: resolves based on chainId with validation
 export function getStaticSubqueryConfig(chainId) {
-  console.log(`🔒 Getting SECURE static config for chain ${chainId}`);
-
   try {
     const secureConfig = getSecureConfig(chainId);
-
-    console.log("🔒 Secure static config loaded:", {
-      network: secureConfig.NETWORK_NAME,
-      chainId: secureConfig.CHAIN_ID,
-      pairAddress: secureConfig.PAIR_ADDRESS
-    });
 
     // Return in the same format as before for backward compatibility
     return {
@@ -78,8 +60,6 @@ export function getStaticSubqueryConfig(chainId) {
 // Backward compatibility exports
 export { useSecureSubqueryConfig, getSecureSubqueryConfig } from "./secureSubgraphConfig.js";
 
-// Legacy warning for deprecated patterns
-console.warn("⚠️ subgraph-config.js has been migrated to secure system. Consider using secureSubgraphConfig.js directly.");
 
 // REMOVED: Unsafe default export that could use wrong environment
 // The old default export has been removed for security - always be explicit about chainId

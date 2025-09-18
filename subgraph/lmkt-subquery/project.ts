@@ -12,29 +12,31 @@ const deployEnv = (process.env.VITE_DEPLOY_ENV || "").toLowerCase();
 // Runtime vs Build-time detection
 const isRuntime = process.env.NODE_ENV === 'production' || process.env.SUBQL_NODE === 'true';
 
-// At build-time: Require explicit environment to prevent mistakes
-// At runtime: Allow fallback since config is already compiled
-if (!deployEnv && !isRuntime) {
+// SAFETY: Always require explicit environment - no unsafe defaults allowed
+if (!deployEnv) {
   throw new Error(
-    `❌ VITE_DEPLOY_ENV must be explicitly set during build!
+    `❌ VITE_DEPLOY_ENV must be explicitly set - no unsafe network defaults allowed!
+
+    This prevents deploying to the wrong network due to fallback assumptions.
 
     Use one of:
     - VITE_DEPLOY_ENV=sepolia (for Sepolia testnet)
     - VITE_DEPLOY_ENV=pulse (for Pulse testnet)
     - VITE_DEPLOY_ENV=local (for local development)
 
-    Example: VITE_DEPLOY_ENV=pulse npm run build`
+    Example: VITE_DEPLOY_ENV=sepolia npm run build
+
+    Runtime detected: ${isRuntime}
+    Current deployEnv: "${deployEnv}"`
   );
 }
 
-// Runtime fallback: If no env set and we're at runtime, detect from context
-const finalDeployEnv = deployEnv || (isRuntime ? "pulse" : "sepolia");
+// SAFE: Use only the explicitly provided environment
+const finalDeployEnv = deployEnv;
 
 console.log("🚀 Deploying SubQuery with ENV:", finalDeployEnv);
+console.log("✅ Network explicitly set - no unsafe fallbacks used");
 console.log("⚠️  Runtime detected:", isRuntime);
-if (isRuntime && !deployEnv) {
-  console.log("⚠️  Using runtime fallback environment");
-}
 
 const config = {
   local: {
@@ -50,10 +52,10 @@ const config = {
   sepolia: {
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
     treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
-    lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
+    lmkt: "0x7bFA165c4e5a7E449378e18ec1259631E1080277",
     paymentProcessor: "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4",
     listingManager: "0xc2FD2028e7a156744985f80f001366423A11dE67",
-    mDAI: "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c",
+    mDAI: "0xB9e8957A043080aF1EF785192B5C050a50628CCB",
     chainId: "11155111",
     startBlock: 9176744,
   },

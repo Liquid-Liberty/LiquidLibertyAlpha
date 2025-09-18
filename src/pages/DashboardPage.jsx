@@ -130,10 +130,6 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
     query: { enabled: !!address && !!lmktConfig?.address },
   });
 
-  useEffect(() => {
-    console.log("🎯 DAI balance raw:", daiBalance);
-    console.log("🎯 LMKT balance raw:", lmktBalance);
-  }, [daiBalance, lmktBalance]);
 
   useEffect(() => {
     if (daiBalance !== undefined && daiBalance !== null) {
@@ -670,7 +666,7 @@ const DashboardPage = ({ listings, userAddress, widget, setWidget, interval, moc
                   setWidget={setWidget}
                   data={mockPoolData}
                   interval={interval}
-                  onLoaded={() => console.log("Chart loaded successfully!")}
+                  onLoaded={() => {}}
                 />
               </div>
             </div>

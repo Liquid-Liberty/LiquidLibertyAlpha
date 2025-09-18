@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { serviceCategories } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
+import { formatCategoryTitle } from '../utils/formatters';
 import { useListings } from '../context/ListingsContext';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { useContractConfig } from '../hooks/useContractConfig';
@@ -154,6 +155,15 @@ const ListingDetailPage = () => {
                 <div className="space-y-4 text-zinc-700">
                   <p className="whitespace-pre-wrap">{listing.description}</p>
                   <hr />
+                  <p>
+                    <span className="font-bold">Type:</span> {isService ? 'Service' : 'Item for Sale'}
+                  </p>
+                  {(listing.category || listing.serviceCategory) && (
+                    <p>
+                      <span className="font-bold">Category:</span>{" "}
+                      {formatCategoryTitle(listing.category || listing.serviceCategory)}
+                    </p>
+                  )}
                   {listing.zipCode && (
                     <p>
                       <span className="font-bold">Location:</span> Zip Code {listing.zipCode}
@@ -167,12 +177,6 @@ const ListingDetailPage = () => {
                         : `Shipping (${listing.shippingCost
                             ? "$" + parseFloat(listing.shippingCost).toFixed(2)
                             : "N/A"})`}
-                    </p>
-                  )}
-                  {isService && (
-                    <p>
-                      <span className="font-bold">Service Category:</span>{" "}
-                      {serviceCategories.find((c) => c.key === listing.serviceCategory)?.name}
                     </p>
                   )}
                 </div>

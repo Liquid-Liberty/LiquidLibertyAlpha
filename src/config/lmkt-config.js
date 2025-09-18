@@ -1,5 +1,5 @@
 // LMKT Configuration - MIGRATED TO SECURE SYSTEM
-import { useSubqueryConfig } from "@/config/subquery-config"; // Now secure
+import { useSubqueryConfig } from "./subgraph-config.js"; // Now secure
 
 export function useLmktConfig() {
   const { PAIR_ADDRESS } = useSubqueryConfig(); // Now using secure configuration
