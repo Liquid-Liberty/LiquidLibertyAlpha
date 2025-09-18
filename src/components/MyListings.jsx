@@ -8,76 +8,128 @@ import {
 } from "wagmi";
 import { useContractConfig } from "../hooks/useContractConfig";
 
-const ListingRow = ({ listing, onRefetch, listingManagerConfig }) => {
+const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingManagerConfig }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const { data: closeHash, writeContract: handleCloseAction } = useWriteContract();
-  const { data: deleteHash, writeContract: handleDeleteAction } = useWriteContract();
-  const { data: renewHash, writeContract: handleRenewAction } = useWriteContract();
+  const { data: deleteHash, writeContract: handleDeleteAction, error: deleteWriteError, reset: resetDelete } = useWriteContract();
+  const { data: renewHash, writeContract: handleRenewAction, error: renewWriteError, reset: resetRenew } = useWriteContract();
 
-  const { isSuccess: isClosed } = useWaitForTransactionReceipt({ hash: closeHash });
-  const { isSuccess: isDeleted } = useWaitForTransactionReceipt({ hash: deleteHash });
-  const { isSuccess: isRenewed } = useWaitForTransactionReceipt({ hash: renewHash });
+  const { isSuccess: isDeleted, isError: isDeleteError, error: deleteError } = useWaitForTransactionReceipt({ hash: deleteHash });
+  const { isSuccess: isRenewed, isError: isRenewError, error: renewError } = useWaitForTransactionReceipt({ hash: renewHash });
 
   const isExpired =
     listing.expirationTimestamp &&
     Number(listing.expirationTimestamp) * 1000 < Date.now();
 
   useEffect(() => {
-    if (isClosed || isDeleted || isRenewed) {
-      const msg =
-        isClosed
-          ? "Listing Closed"
-          : isDeleted
-          ? "Listing Deleted"
-          : "Listing Renewed for 30 more days";
+    if (isDeleted || isRenewed) {
+      const msg = isDeleted
+        ? "Listing Deleted"
+        : "Listing Renewed for 30 more days";
 
       alert(msg);
       setIsLoading(false);
       setStatusMessage("");
       if (onRefetch) setTimeout(onRefetch, 2000);
     }
-  }, [isClosed, isDeleted, isRenewed, onRefetch]);
+  }, [isDeleted, isRenewed, onRefetch]);
 
-  const handleClose = (e) => {
+  // Handle writeContract errors (immediate cancellations)
+  useEffect(() => {
+    if (deleteWriteError || renewWriteError) {
+      const error = deleteWriteError || renewWriteError;
+      console.error("Write contract failed:", error);
+
+      // Reset loading state immediately
+      setIsLoading(false);
+      setStatusMessage("");
+
+      // Show user-friendly error message
+      const errorMessage = error?.shortMessage || error?.message || "Transaction failed";
+      if (errorMessage.includes("rejected") || errorMessage.includes("denied") || errorMessage.includes("User rejected")) {
+        // User cancelled the transaction
+        alert("Transaction cancelled by user");
+      } else {
+        alert(`Transaction failed: ${errorMessage}`);
+      }
+    }
+  }, [deleteWriteError, renewWriteError]);
+
+  // Handle transaction errors and cancellations
+  useEffect(() => {
+    if (isDeleteError || isRenewError) {
+      const error = deleteError || renewError;
+      console.error("Transaction failed:", error);
+
+      // Reset loading state
+      setIsLoading(false);
+      setStatusMessage("");
+
+      // Show user-friendly error message
+      const errorMessage = error?.shortMessage || error?.message || "Transaction failed";
+      if (errorMessage.includes("rejected") || errorMessage.includes("denied")) {
+        // User cancelled the transaction
+        alert("Transaction cancelled by user");
+      } else {
+        alert(`Transaction failed: ${errorMessage}`);
+      }
+    }
+  }, [isDeleteError, isRenewError, deleteError, renewError]);
+
+  const handleDelete = async (e) => {
     e.preventDefault();
     if (!listingManagerConfig) return;
-    setIsLoading(true);
-    setStatusMessage("Closing listing...");
-    handleCloseAction({
-      address: listingManagerConfig.address,
-      abi: listingManagerConfig.abi,
-      functionName: "closeListing",
-      args: [listing.id],
-    });
-  };
 
-  const handleDelete = (e) => {
-    e.preventDefault();
-    if (!listingManagerConfig) return;
+    // Reset any previous errors
+    resetDelete();
+
     setIsLoading(true);
     setStatusMessage("Deleting listing...");
-    handleDeleteAction({
-      address: listingManagerConfig.address,
-      abi: listingManagerConfig.abi,
-      functionName: "deleteListing",
-      args: [listing.id],
-    });
+
+    try {
+      // Trigger background refresh for optimistic updates
+      setTimeout(() => refreshListingsBackground(), 2000);
+
+      await handleDeleteAction({
+        address: listingManagerConfig.address,
+        abi: listingManagerConfig.abi,
+        functionName: "deleteListing",
+        args: [listing.id],
+      });
+    } catch (error) {
+      console.error("Failed to initiate delete transaction:", error);
+      setIsLoading(false);
+      setStatusMessage("");
+    }
   };
 
-  const handleRenew = (e) => {
+  const handleRenew = async (e) => {
     e.preventDefault();
     if (!listingManagerConfig) return;
+
+    // Reset any previous errors
+    resetRenew();
+
     setIsLoading(true);
     setStatusMessage("Renewing listing...");
-    handleRenewAction({
-      address: listingManagerConfig.address,
-      abi: listingManagerConfig.abi,
-      functionName: "renewListing",
-      args: [listing.id],
-    });
+
+    try {
+      // Trigger background refresh for optimistic updates
+      setTimeout(() => refreshListingsBackground(), 2000);
+
+      await handleRenewAction({
+        address: listingManagerConfig.address,
+        abi: listingManagerConfig.abi,
+        functionName: "renewListing",
+        args: [listing.id],
+      });
+    } catch (error) {
+      console.error("Failed to initiate renew transaction:", error);
+      setIsLoading(false);
+      setStatusMessage("");
+    }
   };
 
   const getStatusPill = () => {
@@ -126,22 +178,13 @@ const ListingRow = ({ listing, onRefetch, listingManagerConfig }) => {
     switch (listing.status) {
       case "Active":
         return (
-          <>
-            <button
-              className="text-xs bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
-              onClick={handleClose}
-              disabled={isLoading}
-            >
-              Close
-            </button>
-            <button
-              className="text-xs bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 ml-2"
-              onClick={handleDelete}
-              disabled={isLoading}
-            >
-              Delete
-            </button>
-          </>
+          <button
+            className="text-xs bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+            onClick={handleDelete}
+            disabled={isLoading}
+          >
+            Delete
+          </button>
         );
       case "Inactive":
         return (
@@ -240,7 +283,7 @@ const ListingRow = ({ listing, onRefetch, listingManagerConfig }) => {
 };
 
 const MyListings = () => {
-  const { loading, error, getUserListings, refreshListings } = useListings();
+  const { loading, error, getUserListings, refreshListings, refreshListingsBackground } = useListings();
   const { address, isConnected } = useAccount();
   const { loading: cfgLoading, listingManagerConfig } = useContractConfig();
 
@@ -289,6 +332,7 @@ const MyListings = () => {
           key={listing.uniqueId}
           listing={listing}
           onRefetch={refreshListings}
+          refreshListingsBackground={refreshListingsBackground}
           listingManagerConfig={listingManagerConfig}
         />
       ))}

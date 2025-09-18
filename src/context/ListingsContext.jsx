@@ -11,6 +11,8 @@ export const ListingsProvider = ({ children }) => {
   const [marketplaceListings, setMarketplaceListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -123,7 +125,7 @@ export const ListingsProvider = ({ children }) => {
     }
   };
 
-  const fetchListings = async () => {
+  const fetchListings = async (showLoading = true) => {
     if (cfgLoading) return;
 
     if (
@@ -138,7 +140,7 @@ export const ListingsProvider = ({ children }) => {
     }
 
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
 
       const total = await readTotalListings();
@@ -213,6 +215,7 @@ export const ListingsProvider = ({ children }) => {
           (l) => l.status === "Active" && !isExpired(l.expirationTimestamp)
         )
       );
+      setLastRefresh(Date.now());
     } catch (e) {
       console.error("Failed to fetch listings:", e);
       setError(e?.shortMessage || e?.message || "Failed to fetch listings");
@@ -225,12 +228,29 @@ export const ListingsProvider = ({ children }) => {
     fetchListings();
   }, [address, publicClient, listingManagerConfig?.address, cfgLoading]);
 
+  // Auto-refresh listings every 15 seconds
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      if (!loading && publicClient && listingManagerConfig?.address) {
+        fetchListings(false); // Background refresh without loading indicator
+      }
+    }, 15000); // 15 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, loading, publicClient, listingManagerConfig?.address]);
+
   const value = {
     listings: marketplaceListings,
     allListings,
     loading,
     error,
-    refreshListings: fetchListings,
+    autoRefresh,
+    lastRefresh,
+    refreshListings: () => fetchListings(true), // Manual refresh with loading
+    refreshListingsBackground: () => fetchListings(false), // Background refresh
+    setAutoRefresh,
     getUserListings: (userAddress) => {
       if (!userAddress) return [];
       return allListings.filter(
