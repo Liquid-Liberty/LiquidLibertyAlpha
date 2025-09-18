@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useListings } from "../context/ListingsContext";
+import { formatCategoryTitle } from '../utils/formatters';
 import {
   useAccount,
   useWriteContract,
@@ -206,6 +207,14 @@ const ListingRow = ({ listing, onRefetch, listingManagerConfig }) => {
             <p>
               <strong>Listing ID:</strong> {listing.id}
             </p>
+            <p>
+              <strong>Type:</strong> {listing.listingType === 'ServiceOffered' ? 'Service' : 'Item for Sale'}
+            </p>
+            {(listing.category || listing.serviceCategory) && (
+              <p>
+                <strong>Category:</strong> {formatCategoryTitle(listing.category || listing.serviceCategory)}
+              </p>
+            )}
             {listing.description && (
               <p>
                 <strong>Description:</strong> {listing.description}
