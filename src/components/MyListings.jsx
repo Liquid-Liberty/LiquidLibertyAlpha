@@ -14,6 +14,7 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
   const [statusMessage, setStatusMessage] = useState("");
 
   const { data: deleteHash, writeContract: handleDeleteAction, error: deleteWriteError, reset: resetDelete } = useWriteContract();
+  const { address } = useAccount();
   const { data: renewHash, writeContract: handleRenewAction, error: renewWriteError, reset: resetRenew } = useWriteContract();
 
   const { isSuccess: isDeleted, isError: isDeleteError, error: deleteError } = useWaitForTransactionReceipt({ hash: deleteHash });
@@ -91,6 +92,7 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
     try {
       // Trigger background refresh for optimistic updates
       setTimeout(() => refreshListingsBackground(), 2000);
+console.log("🔍 Delete Debug:", {        listingId: listing.id,        listingOwner: listing.owner,        connectedAddress: address,        contractAddress: listingManagerConfig.address      });
 
       await handleDeleteAction({
         address: listingManagerConfig.address,
@@ -118,6 +120,7 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
     try {
       // Trigger background refresh for optimistic updates
       setTimeout(() => refreshListingsBackground(), 2000);
+console.log("🔍 Renew Debug:", {        listingId: listing.id,        listingOwner: listing.owner,        connectedAddress: address,        contractAddress: listingManagerConfig.address      });
 
       await handleRenewAction({
         address: listingManagerConfig.address,
@@ -148,11 +151,7 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
           </span>
         );
       case "Inactive":
-        return (
-          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-800">
-            Inactive
-          </span>
-        );
+return (          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-800">            Inactive          </span>        );
       default:
         return (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-red-200 text-red-800">
@@ -163,12 +162,15 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
   };
 
   const getActionButtons = () => {
+    // Ownership validation like ListingDetailPage
+    const isOwner = address?.toLowerCase() === listing.owner?.toLowerCase();
+
     if (isExpired) {
       return (
         <button
-          className="text-xs bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600"
-          onClick={handleRenew}
-          disabled={isLoading}
+          className="text-xs bg-gray-400 text-white px-3 py-1 rounded-md cursor-not-allowed"
+          disabled={true}
+          disabled={isLoading || !isOwner}
         >
           Renew
         </button>
@@ -187,15 +189,7 @@ const ListingRow = ({ listing, onRefetch, refreshListingsBackground, listingMana
           </button>
         );
       case "Inactive":
-        return (
-          <button
-            className="text-xs bg-blue-500 text-white px-3 py-1 rounded-md hover:bg-blue-600"
-            onClick={handleRenew}
-            disabled={isLoading}
-          >
-            Renew
-          </button>
-        );
+        return (          <div className="flex space-x-2">            <button              className="text-xs bg-gray-400 text-white px-3 py-1 rounded-md cursor-not-allowed"              disabled={true}            >              Renew            </button>            <button              className="text-xs bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"              onClick={handleDelete}              disabled={isLoading}            >              Delete            </button>          </div>        );
       default:
         return null;
     }
