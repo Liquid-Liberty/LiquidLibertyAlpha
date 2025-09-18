@@ -12,29 +12,31 @@ const deployEnv = (process.env.VITE_DEPLOY_ENV || "").toLowerCase();
 // Runtime vs Build-time detection
 const isRuntime = process.env.NODE_ENV === 'production' || process.env.SUBQL_NODE === 'true';
 
-// At build-time: Require explicit environment to prevent mistakes
-// At runtime: Allow fallback since config is already compiled
-if (!deployEnv && !isRuntime) {
+// SAFETY: Always require explicit environment - no unsafe defaults allowed
+if (!deployEnv) {
   throw new Error(
-    `❌ VITE_DEPLOY_ENV must be explicitly set during build!
+    `❌ VITE_DEPLOY_ENV must be explicitly set - no unsafe network defaults allowed!
+
+    This prevents deploying to the wrong network due to fallback assumptions.
 
     Use one of:
     - VITE_DEPLOY_ENV=sepolia (for Sepolia testnet)
     - VITE_DEPLOY_ENV=pulse (for Pulse testnet)
     - VITE_DEPLOY_ENV=local (for local development)
 
-    Example: VITE_DEPLOY_ENV=pulse npm run build`
+    Example: VITE_DEPLOY_ENV=sepolia npm run build
+
+    Runtime detected: ${isRuntime}
+    Current deployEnv: "${deployEnv}"`
   );
 }
 
-// Runtime fallback: If no env set and we're at runtime, detect from context
-const finalDeployEnv = deployEnv || (isRuntime ? "pulse" : "sepolia");
+// SAFE: Use only the explicitly provided environment
+const finalDeployEnv = deployEnv;
 
 console.log("🚀 Deploying SubQuery with ENV:", finalDeployEnv);
+console.log("✅ Network explicitly set - no unsafe fallbacks used");
 console.log("⚠️  Runtime detected:", isRuntime);
-if (isRuntime && !deployEnv) {
-  console.log("⚠️  Using runtime fallback environment");
-}
 
 const config = {
   local: {
