@@ -17,7 +17,7 @@ network:
   endpoint: https://rpc.v4.testnet.pulsechain.com
 dataSources:
   - kind: ethereum/Runtime
-    startBlock: 22610000
+    startBlock: 226624050
     options:
       abi: Treasury
       address: '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2'
@@ -30,7 +30,7 @@ dataSources:
         - kind: ethereum/LogHandler
           handler: handleMKTSwap
   - kind: ethereum/Runtime
-    startBlock: 22610000
+    startBlock: 226624050
     options:
       abi: PaymentProcessor
       address: '0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b'
@@ -46,7 +46,7 @@ dataSources:
             topics:
               - PurchaseMade(uint256,address,address,uint256)
   - kind: ethereum/Runtime
-    startBlock: 22610000
+    startBlock: 226624050
     options:
       abi: ListingManager
       address: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'

@@ -82,7 +82,7 @@ async function monitorIndexingProgress() {
     listingManager: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'
   };
 
-  const startBlock = 22610000;
+  const startBlock = 226624050;
 
   while (true) {
     try {

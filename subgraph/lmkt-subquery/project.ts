@@ -70,7 +70,7 @@ const config = {
     listingManager: "0x6c5675343f3c1D9003746f7871DCdc2E73E85A5A",
     mDAI: "0x1E3fae53e2CbE163fEbFc8Ab2aA2E8c9C43bC736",
     chainId: "11155111",
-    startBlock: 9226564,
+    startBlock: 9229814,
   },
   pulse: {
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
@@ -80,7 +80,7 @@ const config = {
     listingManager: "0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e",
     mDAI: "0x5C4C434fd6Aaa6a0afB826339d85cc067C033Dd1",
     chainId: "943",
-    startBlock: 22610000,
+    startBlock: 22662405,
   },
 } as const;
 

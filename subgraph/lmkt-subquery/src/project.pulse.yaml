@@ -16,7 +16,7 @@ network:
   chainId: '943'
 dataSources:
   - kind: ethereum/Runtime
-    startBlock: 22610000
+    startBlock: 226624050
     options:
       abi: Treasury
       address: "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2"

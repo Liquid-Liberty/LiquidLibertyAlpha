@@ -21,13 +21,13 @@ const NETWORK_CONFIG = {
   sepolia: {
     chainId: "11155111",
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
-    startBlock: 9226564,
+    startBlock: 9229814,
     subqueryDir: "sepolia"
   },
   pulse: {
     chainId: "943",
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
-    startBlock: 22610000,
+    startBlock: 226624050,
     subqueryDir: "pulse"
   },
   localhost: {
