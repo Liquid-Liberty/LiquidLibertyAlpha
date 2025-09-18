@@ -17,11 +17,6 @@ const LMKTTvChart = ({
   // Use secure pair address, fallback to prop for backward compatibility
   const activePairAddress = secureConfig.PAIR_ADDRESS || pairAddress;
 
-  console.log("🔒 LMKTTvChart using secure pair address:", {
-    network: secureConfig.NETWORK_NAME,
-    chainId: secureConfig.CHAIN_ID,
-    pairAddress: activePairAddress
-  });
 
   const priceContainerRef = useRef(null);
   const volumeContainerRef = useRef(null);

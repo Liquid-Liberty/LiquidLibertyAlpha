@@ -141,21 +141,8 @@ contract ListingManager is Ownable, EIP712, IListingManager {
         uint256 count = 0;
         uint256 i = startId;
 
-        console.log("--- Starting getActiveListings ---");
-        // --- CHANGE: Broke the multi-argument log into separate, valid calls ---
-        console.log("Cursor:", _cursor);
-        console.log("Limit:", _limit);
-        console.log("Start ID:", startId);
-
         while(i > 0 && count < _limit) {
             Listing storage item = listings[i];
-
-            console.log("Checking Listing ID:", i);
-            console.log("  - Owner:", item.owner);
-            console.log("  - Status (0=Active):", uint(item.status));
-            console.log("  - Expiration:", item.expirationTimestamp);
-            console.log("  - Current Time:", block.timestamp);
-            console.log("  - Is Active?", (item.owner != address(0) && item.status == ListingStatus.Active && item.expirationTimestamp > block.timestamp));
             
             if (
                 item.owner != address(0) &&
@@ -173,8 +160,7 @@ contract ListingManager is Ownable, EIP712, IListingManager {
         assembly {
             mstore(listingIds, count)
         }
-        
-        console.log("--- Finished getActiveListings ---");
+
         return (listingIds, nextCursor);
     }
     

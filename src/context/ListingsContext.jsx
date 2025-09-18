@@ -83,10 +83,8 @@ export const ListingsProvider = ({ children }) => {
 
   const readTotalListings = async () => {
     const fns = ["listingCounter", "listingCount", "totalListings"];
-    console.log("DEBUG contract config:", listingManagerConfig);
 
     if (!listingManagerConfig?.address || !listingManagerConfig?.abi) {
-    console.log("Skipping readTotalListings, config not ready yet");
     return 0; //prevents error flash
   }
     for (const fn of fns) {
