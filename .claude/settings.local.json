@@ -3,7 +3,12 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(node:*)",
-      "Bash(npm run sync-addresses:*)"
+      "Bash(npm run sync-addresses:*)",
+      "Bash(npx hardhat run:*)",
+      "Bash(npm run build:netlify:*)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

@@ -14,9 +14,9 @@ describe('Secure Network Configuration', () => {
 
       expect(config.name).toBe('sepolia');
       expect(config.chainId).toBe(11155111);
-      expect(config.treasury).toBe('0xC78b685192DD8164062705Cd8148df2CB2d1CB9E');
+      expect(config.treasury).toBe('0x7F77768fb73bA33606EB569966C109cD5CFe0F09');
       expect(config.isTestnet).toBe(true);
-      expect(config.pairAddress).toBe('0xc78b685192dd8164062705cd8148df2cb2d1cb9e');
+      expect(config.pairAddress).toBe('0x7F77768fb73bA33606EB569966C109cD5CFe0F09');
     });
 
     test('should return valid config for Pulse', () => {
@@ -44,7 +44,7 @@ describe('Secure Network Configuration', () => {
 
   describe('getSecureTreasuryAddress', () => {
     test('should return correct treasury addresses', () => {
-      expect(getSecureTreasuryAddress(11155111)).toBe('0xC78b685192DD8164062705Cd8148df2CB2d1CB9E');
+      expect(getSecureTreasuryAddress(11155111)).toBe('0x7F77768fb73bA33606EB569966C109cD5CFe0F09');
       expect(getSecureTreasuryAddress(943)).toBe('0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a');
     });
 
@@ -62,7 +62,7 @@ describe('Secure Network Configuration', () => {
 
   describe('getSecurePairAddress', () => {
     test('should return lowercase treasury addresses', () => {
-      expect(getSecurePairAddress(11155111)).toBe('0xc78b685192dd8164062705cd8148df2cb2d1cb9e');
+      expect(getSecurePairAddress(11155111)).toBe('0x7F77768fb73bA33606EB569966C109cD5CFe0F09');
       expect(getSecurePairAddress(943)).toBe('0x23f977b0bdc307ed98763cdb44a4b79daa8d620a');
     });
 

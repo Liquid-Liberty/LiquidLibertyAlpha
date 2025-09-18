@@ -11,7 +11,7 @@ const SECURE_NETWORK_CONFIG = Object.freeze({
   11155111: Object.freeze({
     name: "sepolia",
     chainId: 11155111,
-    treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
+    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
     expectedRpcPattern: /sepolia/i,
     subqueryUrl: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
     isTestnet: true
