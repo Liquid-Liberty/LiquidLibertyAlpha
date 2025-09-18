@@ -45,7 +45,20 @@ const pulse = defineChain({
 });
 
 // --- 2. Select chains based on ENV ---
-const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV ?? 'sepolia';
+// SAFETY: Require explicit environment - no unsafe defaults
+const DEPLOY_ENV = import.meta.env.VITE_DEPLOY_ENV;
+if (!DEPLOY_ENV) {
+  throw new Error(
+    `VITE_DEPLOY_ENV must be explicitly set - no unsafe network defaults allowed!
+
+    Set one of:
+    - VITE_DEPLOY_ENV=sepolia (for Sepolia testnet)
+    - VITE_DEPLOY_ENV=pulse (for Pulse testnet)
+    - VITE_DEPLOY_ENV=local (for local development)
+
+    This prevents accidental deployment to wrong network.`
+  );
+}
 const chains = DEPLOY_ENV === 'sepolia' ? [sepolia, pulse] : [hardhatLocalNode, pulse];
 
 // --- 2. Web3Modal & Wagmi v2 Configuration ---

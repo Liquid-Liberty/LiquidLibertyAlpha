@@ -17,10 +17,10 @@ network:
   endpoint: https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu
 dataSources:
   - kind: ethereum/Runtime
-    startBlock: 9176744
+    startBlock: 9226564
     options:
       abi: Treasury
-      address: '0xC78b685192DD8164062705Cd8148df2CB2d1CB9E'
+      address: '0x7F77768fb73bA33606EB569966C109cD5CFe0F09'
     assets:
       Treasury:
         file: ./abis/Treasury.json
@@ -30,10 +30,10 @@ dataSources:
         - kind: ethereum/LogHandler
           handler: handleMKTSwap
   - kind: ethereum/Runtime
-    startBlock: 9176744
+    startBlock: 9226564
     options:
       abi: PaymentProcessor
-      address: '0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4'
+      address: '0xE521F93061b1e8F2DefAC380525edADb7bB19bA4'
     assets:
       PaymentProcessor:
         file: ./abis/PaymentProcessor.json
@@ -46,10 +46,10 @@ dataSources:
             topics:
               - PurchaseMade(uint256,address,address,uint256)
   - kind: ethereum/Runtime
-    startBlock: 9176744
+    startBlock: 9226564
     options:
       abi: ListingManager
-      address: '0xc2FD2028e7a156744985f80f001366423A11dE67'
+      address: '0x220c186b8996CF54f3e724C188DDbF63DFf1bf5D'
     assets:
       ListingManager:
         file: ./abis/ListingManager.json

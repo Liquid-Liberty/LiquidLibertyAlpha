@@ -15,7 +15,6 @@ export const fetchFromSubgraph = async (query, variables = {}, chainId = null) =
 
         const secureConfig = getSecureSubqueryConfig(finalChainId);
 
-        console.log(`🔒 [Subgraph] Secure fetch for ${secureConfig.NETWORK_NAME} (${finalChainId})`);
 
         // Include chainId in the request body for the proxy to route correctly
         const requestBody = {
@@ -33,9 +32,6 @@ export const fetchFromSubgraph = async (query, variables = {}, chainId = null) =
         });
 
         if (!response.ok) {
-            console.log(`Error fetching from subgraph: ${response.statusText}`);
-            console.error('Response status:', response.status);
-            console.error('Response headers:', response.headers);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 

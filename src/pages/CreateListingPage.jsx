@@ -285,7 +285,7 @@ const CreateListingPage = ({ listings }) => {
       setIsLoading(false);
       setStatusMessage("");
       alert("✅ Listing created!");
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [isCreated, navigate]);
 

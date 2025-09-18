@@ -1,81 +1,215 @@
-# React + Vite
+# 🏛️ Liquid Liberty Market
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A decentralized marketplace with integrated LMKT token trading charts, built with React, Vite, and Ethereum smart contracts.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Development Setup
 
-## Expanding the ESLint configuration
+```bash
+# Install dependencies
+npm install
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Start development server
+npm run dev
 
-update frontend.....
-
-# re-deploying Contracts on Sepolia - Treasury Address todos
-
-### Update the Treasury address for the following files
-
-`subgraph.yaml` - this is for the subgraph chart  
-
+# Build for production
+npm run build
 ```
 
-    dataSources:
-  - kind: ethereum/contract
-    name: Treasury
-    network: sepolia
-    source:
-      address: "0xe758e36476376ccddf574144ab3e9a560d550de3"        # e.g. 0xYourSepoliaV2Pair / treasury address
-      abi: Treasury
-      startBlock: 9072300        # e.g. 5820000
+### Environment Variables
 
+Create a `.env` file with the following variables:
+
+```bash
+# Network Configuration
+VITE_DEPLOY_ENV=sepolia                    # sepolia | pulse | local
+
+# RPC URLs
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/your-key
+PULSE_RPC_URL=https://rpc.v4.testnet.pulsechain.com
+
+# Deployment Keys
+SIGNER_PRIVATE_KEY=your_private_key_for_deployment
+ACCOUNT_PRIVATE_KEY=your_account_private_key
+
+# API Keys
+SEPOLIA_API_KEY=your_etherscan_api_key
 ```
 
-`.env` - your environment variables  
+---
 
+## 📦 Smart Contract Deployment
+
+### 🎯 One-Command Deployment (Recommended)
+
+The enhanced deployment system automatically syncs contract addresses across all configuration files:
+
+```bash
+# Deploy to Sepolia + auto-sync all addresses
+npm run deploy:sepolia
+
+# Deploy to Pulse + auto-sync all addresses
+npm run deploy:pulse
+
+# Deploy to localhost for development
+npm run deploy:local
 ```
 
-VITE_TREASURY_ADDRESS=0xe758e36476376ccddf574144ab3e9a560d550de3
+### ⚙️ What Happens During Deployment
+
+1. **Deploys all contracts** to the specified network
+2. **Saves addresses** to `src/config/{network}/contract-addresses.json`
+3. **Saves ABIs** to `src/config/` directory
+4. **Auto-syncs addresses** to:
+   - `subgraph/lmkt-subquery/project.ts`
+   - `src/utils/secureNetworkConfig.js`
+5. **Creates backups** of modified files
+6. **Validates** all addresses before updating
+
+### 🔧 Manual Address Sync (if needed)
+
+```bash
+# Sync all networks
+npm run sync-addresses
+
+# Sync specific networks
+npm run sync-addresses:sepolia
+npm run sync-addresses:pulse
+npm run sync-addresses:local
 ```
 
-`contract-addresses.json`  feeds the  `contract-config`  
+---
 
-`contract-config`  
+## 📊 Subgraph Deployment
 
+After deploying contracts, update and deploy the subgraph for chart data:
+
+### Sepolia Subgraph
+
+```bash
+cd subgraph/lmkt-subquery
+
+# Build for Sepolia
+npm run build:sepolia
+
+# Publish to OnFinality
+npm run publish:sepolia
 ```
 
-{
-  "listingManager": "0xc3c55d9f114F9227dE23a19bF5c875d5824Ac6C1",
-  "treasury": "0xe758e36476376ccddf574144ab3e9a560d550de3",
-  "lmkt": "0x58ac848dAC12e40afc52851fB26B0eB68C547415",
-  "paymentProcessor": "0x8b16a1Edf9C9De827c165CF8919cC3F1E3476AA5",
-  "faucet": "0xb818B0f10f2e7A866A441bF719d20F5153a14eFa",
-  "priceOracleConsumer": "0x6F70E587b42Fa4C7b09cBc8e7A27807f348999EE",
-  "mockDai": "0xA794bf05d685345B1324262aa0d4cE7Ad3e17319"
-}
+### Pulse Subgraph
+
+```bash
+cd subgraph/lmkt-subquery
+
+# Build for Pulse
+npm run build:pulse
+
+# Publish to OnFinality
+npm run publish:pulse
 ```
 
-`subgraph-config` - this is the config helper that sets the value for:  
+---
 
-- `SUBQUERY_CONFIG.URL` - graph URL route
-- `SUBQUERY_CONFIG.PAIR_ADDRESS` - `Treasury address`
+## 🏗️ Architecture
+
+### Smart Contracts
+
+- **Treasury.sol** - Handles LMKT buy/sell swaps and emits `MKTSwap` events
+- **LMKT.sol** - ERC20 token contract
+- **PaymentProcessor.sol** - Handles marketplace payments
+- **ListingManager.sol** - Manages marketplace listings
+- **Faucet.sol** - Test token distribution
+
+### Frontend
+
+- **React + Vite** - Modern frontend stack
+- **TradingView Charts** - Professional trading interface
+- **Wagmi + Web3Modal** - Ethereum wallet integration
+- **Tailwind CSS** - Utility-first styling
+
+### Data Layer
+
+- **SubQuery/Subgraph** - Indexes blockchain events for charts
+- **OnFinality** - Hosted subgraph infrastructure
+- **GraphQL** - Query interface for chart data
+
+---
+
+## 📁 Project Structure
 
 ```
-
-// Subgraph + Pair configuration
-
-export const SUBQUERY_CONFIG = {
-  // TheGraph endpoint
-    URL: "https://api.studio.thegraph.com/query/119680/liberty-market-alpha/v0.0.7", make it your current version
-
-    // The Treasury contract being tracked
-    PAIR_ADDRESS: "0xe758e36476376ccddf574144ab3e9a560d550de3",
-
-    // Default fetch options
-    DEFAULT_INTERVAL: "60", // 1 minute candles
-    DEFAULT_CANDLE_LIMIT: 100,
-};
-
+├── src/
+│   ├── config/
+│   │   ├── sepolia/contract-addresses.json    # Sepolia addresses
+│   │   ├── pulse/contract-addresses.json      # Pulse addresses
+│   │   └── *.json                             # Contract ABIs
+│   ├── utils/secureNetworkConfig.js           # Network configurations
+│   └── ...
+├── scripts/
+│   ├── deploy.js                              # Enhanced deployment
+│   └── sync-addresses.js                      # Address sync utility
+├── subgraph/lmkt-subquery/
+│   ├── project.ts                             # Dynamic subgraph config
+│   └── ...
+└── contracts/                                 # Solidity contracts
 ```
-`Netlify` environment variables need to be updated to the new Treasury Address
+
+---
+
+## 🌐 Network Support
+
+| Network | Chain ID | Status |
+|---------|----------|--------|
+| Sepolia Testnet | 11155111 | ✅ Supported |
+| Pulse Testnet | 943 | ✅ Supported |
+| Localhost | 31337 | ✅ Supported |
+
+---
+
+## 🔒 Security Features
+
+- **No Unsafe Defaults** - All networks must be explicitly specified
+- **Address Validation** - All Ethereum addresses are validated before use
+- **Backup System** - Configuration files are backed up before updates
+- **Network Isolation** - Addresses are kept separate per network
+
+---
+
+## 🛠️ Development Tools
+
+```bash
+# Linting
+npm run lint
+
+# Contract verification
+npm run verify
+
+# Address synchronization
+npm run sync-addresses
+
+# Build production
+npm run build
+```
+
+---
+
+## 📚 Additional Resources
+
+- [Deployment Guide](./LMKT-deployment-guide.md) - Detailed deployment instructions
+- [Smart Contracts Documentation](./contracts/) - Contract specifications
+- [Subgraph Documentation](./subgraph/) - Chart data indexing
+
+---
+
+## 🎯 Key Features
+
+- **Automated Address Management** - No more manual configuration updates
+- **Multi-Network Support** - Deploy to Sepolia, Pulse, or localhost
+- **Real-time Trading Charts** - TradingView integration with live blockchain data
+- **Decentralized Marketplace** - List and trade items with crypto payments
+- **Token Economics** - LMKT token with automated market making
+
+---
+
+*This project uses an enhanced deployment system that automatically manages contract addresses across all configuration files. No more manual updates required!* 🎉

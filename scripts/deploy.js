@@ -4,13 +4,32 @@ import fs from "fs";
 import "dotenv/config";
 import process from "process";
 
-// --- Save contract addresses per network ---
-async function saveFrontendFiles(contracts) {
-  console.log("\n--- Saving configuration and ABIs to frontend ---");
+// Network name mapping based on chain ID and hardhat network config
+function getNetworkName(chainId, hardhatNetworkName) {
+  // Chain ID to network name mapping
+  const chainIdMapping = {
+    11155111: 'sepolia',
+    943: 'pulse',
+    31337: 'localhost'
+  };
 
-  // Get the current network name (e.g., 'sepolia', 'pulse', 'localhost')
-  const network = await ethers.provider.getNetwork();
-  const networkName = network.name || `chain-${network.chainId}`;
+  // Use chain ID mapping first
+  if (chainIdMapping[chainId]) {
+    return chainIdMapping[chainId];
+  }
+
+  // Fallback to hardhat network name if configured
+  if (hardhatNetworkName && hardhatNetworkName !== 'unknown') {
+    return hardhatNetworkName;
+  }
+
+  // Last resort - use chain ID
+  return `chain-${chainId}`;
+}
+
+// --- Save contract addresses per network ---
+async function saveFrontendFiles(contracts, networkName) {
+  console.log("\n--- Saving configuration and ABIs to frontend ---");
 
   const contractsDir = `./src/config/${networkName}`;
   if (!fs.existsSync(contractsDir)) {
@@ -61,6 +80,17 @@ async function saveAbisAtConfigRoot() {
 
 async function main() {
   console.log("🚀 Starting deployment of all contracts...");
+
+  // Get network information early
+  const network = await ethers.provider.getNetwork();
+  const hardhatNetworkName = hardhat.network.name;
+  const networkName = getNetworkName(Number(network.chainId), hardhatNetworkName);
+
+  console.log(`📍 Network Details:`);
+  console.log(`   Chain ID: ${network.chainId}`);
+  console.log(`   Hardhat Network: ${hardhatNetworkName}`);
+  console.log(`   Resolved Network Name: ${networkName}`);
+
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
@@ -181,9 +211,23 @@ async function main() {
     MockDai: mockDai,
     Faucet: faucet,
     MockPriceOracle: mockOracle,
-  });
+  }, networkName);
 
   await saveAbisAtConfigRoot();
+
+  // --- 6. SYNC ADDRESSES TO ALL CONFIGURATIONS ---
+  console.log("\n--- Syncing addresses to all configuration files ---");
+  console.log(`   🔄 Syncing addresses for network: ${networkName}`);
+  try {
+    const { syncNetwork } = await import("./sync-addresses.js");
+    await syncNetwork(networkName);
+    console.log("✅ Addresses synced to subgraph and frontend configurations");
+  } catch (error) {
+    console.warn("⚠️  Address sync failed (you may need to run manually):", error.message);
+    console.log(`   Network detected: ${networkName}`);
+    console.log(`   Run: node scripts/sync-addresses.js --network ${networkName}`);
+    console.log(`   Or run: npm run sync-addresses:${networkName}`);
+  }
 
   const priceFeed = await treasury.tokenPriceFeeds(mockDai.target);
   console.log("Treasury reports price feed for MockDAI:", priceFeed);
@@ -191,7 +235,7 @@ async function main() {
   const queryId = await treasury.tokenQueryIds(mockDai.target);
   console.log("Treasury reports queryId for MockDAI:", queryId);
 
-  console.log("\n✅ Deployment and configuration complete!");
+  console.log("\n✅ Deployment, configuration, and address sync complete!");
 }
 
 main().catch((error) => {

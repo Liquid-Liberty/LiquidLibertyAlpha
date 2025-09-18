@@ -21,6 +21,7 @@ import LocateVendorPage from "./pages/LocateVendorPage";
 import RewardsPage from "./pages/RewardsPage"; // --- IMPORT ADDED ---
 import NotFoundPage from "./pages/NotFoundPage";
 import { useContractConfig } from "./hooks/useContractConfig";
+import { useSubqueryConfig } from "./config/subgraph-config.js";
 
 function App() {
   const { listings, refreshListings } = useListings();
@@ -32,10 +33,13 @@ function App() {
   const [widget, setWidget] = useState(undefined);
   const [interval] = useState("5");
 
-  // Mock pool data (replace with real config when ready)
+  // Get secure treasury address for current network
+  const { TREASURY_ADDRESS, PAIR_ADDRESS } = useSubqueryConfig();
+
+  // Pool data with correct treasury address
   const mockPoolData = {
-    poolAddress: "0x1234567890123456789012345678901234567890",
-    baseMint: "0x1234567890123456789012345678901234567890",
+    poolAddress: TREASURY_ADDRESS, // Use actual treasury address instead of fake
+    baseMint: TREASURY_ADDRESS,
     quoteMint: "0x0987654321098765432109876543210987654321",
     price: 0.00012345,
     liquidity: 1000000,

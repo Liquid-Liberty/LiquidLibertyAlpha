@@ -87,11 +87,11 @@ export function GetDatafeedProvider(data, chainId) {
     console.log(`🔒 [Secure Config] url=${URL}`);
 
     // Validate we have the expected addresses for the network
-    if (chainId === 943 && TREASURY_ADDRESS !== '0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a') {
-      console.error(`🚨 Expected Pulse treasury 0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a, got ${TREASURY_ADDRESS}`);
+    if (chainId === 943 && TREASURY_ADDRESS !== '0xe12538Ab1990A3318395B7Cb0cE682741e68194E') {
+      console.error(`🚨 Expected Pulse treasury 0xe12538Ab1990A3318395B7Cb0cE682741e68194E, got ${TREASURY_ADDRESS}`);
     }
-    if (chainId === 11155111 && TREASURY_ADDRESS !== '0xC78b685192DD8164062705Cd8148df2CB2d1CB9E') {
-      console.error(`🚨 Expected Sepolia treasury 0xC78b685192DD8164062705Cd8148df2CB2d1CB9E, got ${TREASURY_ADDRESS}`);
+    if (chainId === 11155111 && TREASURY_ADDRESS !== '0x7F77768fb73bA33606EB569966C109cD5CFe0F09') {
+      console.error(`🚨 Expected Sepolia treasury 0x7F77768fb73bA33606EB569966C109cD5CFe0F09, got ${TREASURY_ADDRESS}`);
     }
   } catch (error) {
     console.error("🚨 Secure datafeed config error:", error.message);
