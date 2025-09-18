@@ -430,13 +430,7 @@ export function GetDatafeedProvider(data, chainId) {
 
       // start polling
       poll();
-      poll();
       const everyMs = 30 * 1000; // 30 seconds
-      subscriberIntervals[subscriberUID] = window.setInterval(poll, everyMs);
-      // const everyMs = Math.max(
-      //   1000,
-      //   Math.min(5000, Math.floor(getIntervalMs(resolution) / 2))
-      // );
       subscriberIntervals[subscriberUID] = window.setInterval(poll, everyMs);
     },
 
