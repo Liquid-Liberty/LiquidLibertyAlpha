@@ -1,7 +1,7 @@
 // src/constants.ts
 // ⚡ AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
 // Generated for network: pulse
-// Generated at: 2025-09-18T17:26:43.635Z
+// Generated at: 2025-09-18T17:42:15.845Z
 
 // Network-specific constants - hardcoded at build time
 export const TREASURY_ADDRESS = "0xd8069526e71767b2d46fc079f0a2a3797b8a4ac2";
