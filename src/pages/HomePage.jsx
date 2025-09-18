@@ -100,57 +100,53 @@ const EulaModal = ({ onAccept }) => (
           these terms.
         </p>
         <h3 className="text-lg font-bold">1. Grant of License</h3>
-        [cite_start]
+
         <p>
           You are granted a non-exclusive, non-transferable license to use the
           Liberty Market software solely for your own purposes, subject to the
-          terms of this Agreement. [cite: 6, 14, 15] [cite_start]You may not
-          reverse engineer, decompile, or disassemble the software. [cite: 26]
-          [cite_start]You shall not permit any third party to use or have access
-          to the software. [cite: 25]
+          terms of this Agreement. You may not reverse engineer, decompile, or
+          disassemble the software. You shall not permit any third party to use
+          or have access to the software.
         </p>
         <h3 className="text-lg font-bold">2. Intellectual Property</h3>
-        [cite_start]
+
         <p>
           You acknowledge that the Licensor retains all right, title, and
-          interest in the Software. [cite: 31] [cite_start]The software
-          constitutes proprietary information and trade secrets of the Licensor.
-          [cite: 32] [cite_start]You agree to maintain all information in the
-          software in strict confidence. [cite: 33]
+          interest in the Software. The software constitutes proprietary
+          information and trade secrets of the Licensor. You agree to maintain
+          all information in the software in strict confidence.
         </p>
         <h3 className="text-lg font-bold">
           3. Warranties & Limitation of Liability
         </h3>
-        [cite_start]
+
         <p>
-          THE SOFTWARE IS PROVIDED "AS IS". [cite: 65] [cite_start]THE LICENSOR
-          EXCLUDES ALL IMPLIED WARRANTIES, INCLUDING WARRANTIES OF
-          MERCHANTABILITY AND FITNESS FOR ANY PURPOSE. [cite: 66, 67]
-          [cite_start]You assume the entire risk related to the use of the
-          Software. [cite: 70] [cite_start]The Licensor shall not be liable for
-          any consequential, incidental, or special damages, including lost
-          profits or lost savings. [cite: 72]
+          THE SOFTWARE IS PROVIDED "AS IS". THE LICENSOR EXCLUDES ALL IMPLIED
+          WARRANTIES, INCLUDING WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+          ANY PURPOSE. You assume the entire risk related to the use of the
+          Software. The Licensor shall not be liable for any consequential,
+          incidental, or special damages, including lost profits or lost
+          savings.
         </p>
         <h3 className="text-lg font-bold">4. Term and Termination</h3>
-        [cite_start]
+
         <p>
-          The license is perpetual unless terminated. [cite: 47]
-          [cite_start]This Agreement will terminate immediately if you breach
-          your obligations. [cite: 48] [cite_start]Upon termination, you must
-          discontinue all use of the software and destroy all copies. [cite: 50,
-          52]
+          The license is perpetual unless terminated. This Agreement will
+          terminate immediately if you breach your obligations. Upon
+          termination, you must discontinue all use of the software and destroy
+          all copies.
         </p>
         <h3 className="text-lg font-bold">5. Dispute Resolution</h3>
-        [cite_start]
+
         <p>
           Any claim or dispute arising out of this Agreement shall be arbitrated
-          in the State of New York. [cite: 87]
+          in the State of New York.
         </p>
         <h3 className="text-lg font-bold">6. Governing Law</h3>
-        [cite_start]
+
         <p>
           This Agreement shall be governed by the internal laws of the State of
-          Texas. [cite: 119]
+          Texas.
         </p>
       </div>
       <button
@@ -211,14 +207,14 @@ const HomePage = () => {
   const [showEula, setShowEula] = useState(false);
 
   useEffect(() => {
-        // Check if disclaimer already accepted for this session
-        const accepted = sessionStorage.getItem("disclaimerAccepted");
-        if (accepted === "true") {
-            setShowDisclaimer(false);
-        } else {
-            setShowDisclaimer(true);
-        }
-    }, []);
+    // Check if disclaimer already accepted for this session
+    const accepted = sessionStorage.getItem("disclaimerAccepted");
+    if (accepted === "true") {
+      setShowDisclaimer(false);
+    } else {
+      setShowDisclaimer(true);
+    }
+  }, []);
 
   // --- Handler for the first modal ---
   const handleAcceptDisclaimer = () => {
