@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { serviceCategories } from '../data/mockData';
+import { useParams, useNavigate } from 'react-router-dom';
 import AdSidebar from '../components/AdSidebar';
 import { formatCategoryTitle } from '../utils/formatters';
 import { useListings } from '../context/ListingsContext';
@@ -13,6 +12,7 @@ const ListingDetailPage = () => {
   const { lmktConfig, treasuryConfig, paymentProcessorConfig } = useContractConfig();
   const { id } = useParams();
   const { listings, loading, error, refreshListings } = useListings();
+  const navigate = useNavigate();
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
 
@@ -40,8 +40,9 @@ const ListingDetailPage = () => {
       setStatusMessage("");
       alert("Purchase successful!");
       refreshListings();
+      navigate("/for-sale");
     }
-  }, [isBought, refreshListings]);
+  }, [isBought, navigate]);
 
   if (loading) return <div className="text-center py-20 font-display text-2xl">Loading listing...</div>;
   if (error) return <div className="text-center py-20 text-red-500">{error}</div>;

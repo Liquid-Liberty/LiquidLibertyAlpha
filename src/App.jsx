@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import {
   useAccount,
@@ -44,8 +44,8 @@ function App() {
   // Get secure treasury address for current network
   const { TREASURY_ADDRESS, PAIR_ADDRESS } = useSubqueryConfig();
 
-  // Pool data with correct treasury address
-  const mockPoolData = {
+  // Pool data with correct treasury address - memoized to prevent chart re-renders
+  const mockPoolData = useMemo(() => ({
     poolAddress: TREASURY_ADDRESS, // Use actual treasury address instead of fake
     baseMint: TREASURY_ADDRESS,
     quoteMint: "0x0987654321098765432109876543210987654321",
@@ -59,7 +59,7 @@ function App() {
     dex: "Uniswap",
     dexImage: "/uniswap.png",
     v24hUSD: 25000,
-  };
+  }), [TREASURY_ADDRESS]);
 
   const { data: faucetHash, writeContract: requestTokens } = useWriteContract();
   const { isSuccess: isFaucetSuccess } = useWaitForTransactionReceipt({
@@ -257,7 +257,7 @@ function App() {
           />
           {/* --- ROUTE ADDED --- */}
           <Route path="/rewards" element={<RewardsPage />} />
-          
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
