@@ -2,8 +2,8 @@
 import fetch from 'node-fetch';
 
 const PULSE_URL = "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart";
-const EXPECTED_TREASURY = "0xe12538Ab1990A3318395B7Cb0cE682741e68194E";
-const CURRENT_TREASURY = "0xe12538Ab1990A3318395B7Cb0cE682741e68194E";
+const EXPECTED_TREASURY = "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2";
+const CURRENT_TREASURY = "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2";
 
 const testQuery = `
   query GetPairs {

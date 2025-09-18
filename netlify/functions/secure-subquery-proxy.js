@@ -5,13 +5,13 @@ const { getAddress, isAddress } = require('ethers');
 const SECURE_SERVER_CONFIG = Object.freeze({
   11155111: Object.freeze({
     name: "sepolia",
-    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
+    treasury: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9",
     subqueryUrl: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
     rateLimitPerMinute: 100
   }),
   943: Object.freeze({
     name: "pulse",
-    treasury: "0xe12538Ab1990A3318395B7Cb0cE682741e68194E",
+    treasury: "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2",
     subqueryUrl: "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart",
     rateLimitPerMinute: 100
   }),

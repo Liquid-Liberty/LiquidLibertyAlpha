@@ -10,12 +10,12 @@ console.log(`Environment: ${deployEnv}`);
 
 const config = {
   sepolia: {
-    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
+    treasury: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9",
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
     chainId: "11155111"
   },
   pulse: {
-    treasury: "0xe12538Ab1990A3318395B7Cb0cE682741e68194E",
+    treasury: "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2",
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
     chainId: "943"
   }

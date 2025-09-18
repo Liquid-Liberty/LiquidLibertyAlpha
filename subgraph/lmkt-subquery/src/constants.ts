@@ -1,12 +1,12 @@
 // src/constants.ts
 // ⚡ AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
 // Generated for network: pulse
-// Generated at: 2025-09-18T08:43:18.656Z
+// Generated at: 2025-09-18T17:42:15.845Z
 
 // Network-specific constants - hardcoded at build time
-export const TREASURY_ADDRESS = "0xe12538ab1990a3318395b7cb0ce682741e68194e";
-export const LMKT_ADDRESS = "0x2b5a9618eb6886d23dd7276b436ac98c20427716";
-export const MDAI_ADDRESS = "0xb1bcac95d4eec3ad216acd3261cc1845a193e590";
+export const TREASURY_ADDRESS = "0xd8069526e71767b2d46fc079f0a2a3797b8a4ac2";
+export const LMKT_ADDRESS = "0x39b691dc0e7aeb1daa0291d9f561b9b75e2ecd8d";
+export const MDAI_ADDRESS = "0x5c4c434fd6aaa6a0afb826339d85cc067c033dd1";
 
 // Log the embedded network for debugging
 console.log(`🔗 Constants hardcoded for network: pulse`);
