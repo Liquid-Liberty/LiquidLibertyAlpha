@@ -90,8 +90,8 @@ export function GetDatafeedProvider(data, chainId) {
     if (chainId === 943 && TREASURY_ADDRESS !== '0xe12538Ab1990A3318395B7Cb0cE682741e68194E') {
       console.error(`🚨 Expected Pulse treasury 0xe12538Ab1990A3318395B7Cb0cE682741e68194E, got ${TREASURY_ADDRESS}`);
     }
-    if (chainId === 11155111 && TREASURY_ADDRESS !== '0x7F77768fb73bA33606EB569966C109cD5CFe0F09') {
-      console.error(`🚨 Expected Sepolia treasury 0x7F77768fb73bA33606EB569966C109cD5CFe0F09, got ${TREASURY_ADDRESS}`);
+    if (chainId === 11155111 && TREASURY_ADDRESS !== '0x002144A5B56b6b3774774499B7AB04ED9E872dB9') {
+      console.error(`🚨 Expected Sepolia treasury 0x002144A5B56b6b3774774499B7AB04ED9E872dB9, got ${TREASURY_ADDRESS}`);
     }
   } catch (error) {
     console.error("🚨 Secure datafeed config error:", error.message);

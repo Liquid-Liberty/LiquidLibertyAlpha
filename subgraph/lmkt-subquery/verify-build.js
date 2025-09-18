@@ -4,7 +4,7 @@ const path = require('path');
 
 const EXPECTED_ADDRESSES = {
   sepolia: {
-    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
+    treasury: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9",
     name: "Sepolia"
   },
   pulse: {

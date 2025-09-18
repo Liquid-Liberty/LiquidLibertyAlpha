@@ -5,7 +5,7 @@ const { getAddress, isAddress } = require('ethers');
 const SECURE_SERVER_CONFIG = Object.freeze({
   11155111: Object.freeze({
     name: "sepolia",
-    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
+    treasury: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9",
     subqueryUrl: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
     rateLimitPerMinute: 100
   }),

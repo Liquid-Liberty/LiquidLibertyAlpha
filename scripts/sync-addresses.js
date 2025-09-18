@@ -2,6 +2,7 @@
 import fs from "fs";
 import path from "path";
 import { isAddress } from "ethers";
+import process from "process";
 
 /**
  * Address Synchronization Utility

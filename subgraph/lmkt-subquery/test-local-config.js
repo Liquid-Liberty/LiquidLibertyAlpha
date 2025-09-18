@@ -10,7 +10,7 @@ console.log(`Environment: ${deployEnv}`);
 
 const config = {
   sepolia: {
-    treasury: "0x7F77768fb73bA33606EB569966C109cD5CFe0F09",
+    treasury: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9",
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
     chainId: "11155111"
   },
