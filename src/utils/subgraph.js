@@ -3,8 +3,16 @@ import { getSecureSubqueryConfig } from '../config/secureSubgraphConfig.js';
 
 export const fetchFromSubgraph = async (query, variables = {}, chainId = null) => {
     try {
-        // SECURE: Validate chainId and get secure configuration
-        const finalChainId = chainId || Number(import.meta.env.VITE_CHAIN_ID) || 11155111;
+        // SECURE: Validate chainId is provided - no defaults to prevent wrong network queries
+        if (!chainId) {
+            throw new Error('🚨 chainId is required for secure subgraph queries. Ensure useChainId() from wagmi is properly connected.');
+        }
+
+        const finalChainId = parseInt(chainId);
+        if (isNaN(finalChainId)) {
+            throw new Error(`🚨 Invalid chainId: ${chainId}. Must be a valid number.`);
+        }
+
         const secureConfig = getSecureSubqueryConfig(finalChainId);
 
         console.log(`🔒 [Subgraph] Secure fetch for ${secureConfig.NETWORK_NAME} (${finalChainId})`);
@@ -53,7 +61,11 @@ export const fetchFromSubgraph = async (query, variables = {}, chainId = null) =
  * @param {number} chainId - Chain ID to determine which network to query
  * @returns {Promise<Array>} - Array of OHLCV data points
  */
-export const fetchLMKTData = async (pairAddress, interval, limit = 1000, chainId = null) => {
+export const fetchLMKTData = async (pairAddress, interval, limit = 1000, chainId) => {
+    // SECURE: Validate required parameters
+    if (!chainId) {
+        throw new Error('🚨 chainId is required for fetchLMKTData. Pass chainId from useChainId() hook.');
+    }
     const query = `{
           candles(
             first: 100, 
@@ -105,7 +117,11 @@ export const fetchLMKTData = async (pairAddress, interval, limit = 1000, chainId
  * @param {number} chainId - Chain ID to determine which network to query
  * @returns {Promise<Object>} - Current token statistics
  */
-export const fetchLMKTCurrentStats = async (pairAddress, chainId = null) => {
+export const fetchLMKTCurrentStats = async (pairAddress, chainId) => {
+    // SECURE: Validate required parameters
+    if (!chainId) {
+        throw new Error('🚨 chainId is required for fetchLMKTCurrentStats. Pass chainId from useChainId() hook.');
+    }
     const query = `
         query GetLMKTCurrentStats($pairAddress: String!) {
             candles(

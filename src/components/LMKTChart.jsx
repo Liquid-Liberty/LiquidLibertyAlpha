@@ -27,12 +27,16 @@ const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
         if (pairAddress !== "0x0000000000000000000000000000000000000000" && chainId) {
             fetchSubgraphData();
             fetchCurrentStats();
+        } else if (!chainId) {
+            console.warn('🔗 No chainId detected. Please connect your wallet to view chart data.');
+            setError('Please connect your wallet to view chart data');
+            setLoading(false);
         }
     }, [pairAddress, interval, chainId]);
 
     const fetchCurrentStats = async () => {
         try {
-            const stats = await fetchLMKTCurrentStats(pairAddress);
+            const stats = await fetchLMKTCurrentStats(pairAddress, chainId);
             if (stats) {
                 setCurrentStats(stats);
             }
@@ -48,13 +52,19 @@ const LMKTChart = ({ pairAddress = LMKT_CONFIG.PAIR_ADDRESS }) => {
             
             // Try to fetch real data from subgraph
             try {
-                const data = await fetchLMKTData(pairAddress, interval, 100); // Fetch last 100 candles
+                const data = await fetchLMKTData(pairAddress, interval, 100, chainId); // Fetch last 100 candles
                 if (data && data.length > 0) {
                     setChartData(data);
                     setLoading(false);
                     return;
                 }
             } catch (subgraphError) {
+                // Check if it's a chainId validation error
+                if (subgraphError.message.includes('🚨 chainId is required')) {
+                    setError('Wallet connection required for live chart data');
+                    setLoading(false);
+                    return;
+                }
                 console.warn('Subgraph fetch failed, using mock data:', subgraphError);
             }
             

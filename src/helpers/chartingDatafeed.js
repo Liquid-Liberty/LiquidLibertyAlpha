@@ -85,6 +85,14 @@ export function GetDatafeedProvider(data, chainId) {
     console.log(`🔒 [Secure Config] network=${NETWORK_NAME}, chainId=${chainId}`);
     console.log(`🔒 [Secure Config] treasury=${TREASURY_ADDRESS}, pair=${PAIR_ADDRESS}`);
     console.log(`🔒 [Secure Config] url=${URL}`);
+
+    // Validate we have the expected addresses for the network
+    if (chainId === 943 && TREASURY_ADDRESS !== '0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a') {
+      console.error(`🚨 Expected Pulse treasury 0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a, got ${TREASURY_ADDRESS}`);
+    }
+    if (chainId === 11155111 && TREASURY_ADDRESS !== '0xC78b685192DD8164062705Cd8148df2CB2d1CB9E') {
+      console.error(`🚨 Expected Sepolia treasury 0xC78b685192DD8164062705Cd8148df2CB2d1CB9E, got ${TREASURY_ADDRESS}`);
+    }
   } catch (error) {
     console.error("🚨 Secure datafeed config error:", error.message);
     throw new Error(`Datafeed configuration failed: ${error.message}`);
@@ -127,7 +135,7 @@ export function GetDatafeedProvider(data, chainId) {
         volume_precision: 6,
         has_no_volume: false,
         liquidity: data.liquidity,
-        pairAddress: data.poolAddress,
+        pairAddress: PAIR_ADDRESS || data.poolAddress, // Use secure config first
         source: "All pairs",
       };
 
@@ -142,12 +150,20 @@ export function GetDatafeedProvider(data, chainId) {
       onErrorCallback
     ) => {
       try {
+        // DEBUG: Log all available pair address sources
+        console.log(`🔍 [PairAddress Debug] PAIR_ADDRESS from config: ${PAIR_ADDRESS}`);
+        console.log(`🔍 [PairAddress Debug] symbolInfo?.pairAddress: ${symbolInfo?.pairAddress}`);
+        console.log(`🔍 [PairAddress Debug] symbolInfo?.address: ${symbolInfo?.address}`);
+        console.log(`🔍 [PairAddress Debug] data.poolAddress: ${data.poolAddress}`);
+
         const pairAddress = cleanPairAddress(
           PAIR_ADDRESS ||
             symbolInfo?.pairAddress ||
             symbolInfo?.address ||
             data.poolAddress
         );
+
+        console.log(`🎯 [PairAddress Final] Using pairAddress: ${pairAddress}`);
         const intervalParam = mapResolutionToSeconds(resolution);
 
         // TradingView Charting Library passes from/to in seconds (not milliseconds)
@@ -303,12 +319,20 @@ export function GetDatafeedProvider(data, chainId) {
       onRealtimeCallback,
       subscriberUID
     ) => {
+      // DEBUG: Log all available pair address sources for subscribeBars
+      console.log(`🔍 [SubscribeBars Debug] PAIR_ADDRESS from config: ${PAIR_ADDRESS}`);
+      console.log(`🔍 [SubscribeBars Debug] symbolInfo?.pairAddress: ${symbolInfo?.pairAddress}`);
+      console.log(`🔍 [SubscribeBars Debug] symbolInfo?.address: ${symbolInfo?.address}`);
+      console.log(`🔍 [SubscribeBars Debug] data.poolAddress: ${data.poolAddress}`);
+
       const pairAddress = cleanPairAddress(
         PAIR_ADDRESS ||
           symbolInfo?.pairAddress ||
           symbolInfo?.address ||
           data.poolAddress
       );
+
+      console.log(`🎯 [SubscribeBars Final] Using pairAddress: ${pairAddress}`);
       const intervalParam = mapResolutionToSeconds(resolution);
 
       const poll = async () => {
