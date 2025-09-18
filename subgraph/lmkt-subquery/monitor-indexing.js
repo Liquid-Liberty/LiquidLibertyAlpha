@@ -1,7 +1,35 @@
-// Monitor subgraph indexing progress and logging
+// Monitor subgraph indexing progress and logging (Multi-network support)
 const https = require('https');
 
-const PULSE_RPC = 'https://rpc.v4.testnet.pulsechain.com';
+const network = process.argv[2] || 'pulse'; // Default to pulse if no network specified
+
+const networkConfig = {
+  sepolia: {
+    rpc: 'https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu',
+    contracts: {
+      treasury: '0x002144A5B56b6b3774774499B7AB04ED9E872dB9',
+      paymentProcessor: '0x1AA8df52bE8b0b0898131E23592183687AC55E0b',
+      listingManager: '0x6c5675343f3c1D9003746f7871DCdc2E73E85A5A'
+    },
+    startBlock: 9229814
+  },
+  pulse: {
+    rpc: 'https://rpc.v4.testnet.pulsechain.com',
+    contracts: {
+      treasury: '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2',
+      paymentProcessor: '0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b',
+      listingManager: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'
+    },
+    startBlock: 22662405
+  }
+};
+
+if (!networkConfig[network]) {
+  console.error(`❌ Unknown network: ${network}. Use 'sepolia' or 'pulse'`);
+  process.exit(1);
+}
+
+const { rpc: RPC_URL, contracts, startBlock } = networkConfig[network];
 
 async function makeRPCCall(url, method, params) {
   return new Promise((resolve, reject) => {
@@ -54,13 +82,13 @@ async function makeRPCCall(url, method, params) {
 }
 
 async function getCurrentBlock() {
-  const blockHex = await makeRPCCall(PULSE_RPC, 'eth_blockNumber', []);
+  const blockHex = await makeRPCCall(RPC_URL, 'eth_blockNumber', []);
   return parseInt(blockHex, 16);
 }
 
 async function getRecentLogs(contractAddress, fromBlock, toBlock) {
   try {
-    const logs = await makeRPCCall(PULSE_RPC, 'eth_getLogs', [{
+    const logs = await makeRPCCall(RPC_URL, 'eth_getLogs', [{
       fromBlock: `0x${fromBlock.toString(16)}`,
       toBlock: `0x${toBlock.toString(16)}`,
       address: contractAddress
@@ -73,16 +101,10 @@ async function getRecentLogs(contractAddress, fromBlock, toBlock) {
 }
 
 async function monitorIndexingProgress() {
-  console.log('🚀 Monitoring Pulse Subgraph Indexing Progress...');
+  console.log(`🚀 Monitoring ${network.toUpperCase()} Subgraph Indexing Progress...`);
+  console.log(`📍 Network: ${network}`);
+  console.log(`🔗 RPC: ${RPC_URL}`);
   console.log(`🕒 Started at: ${new Date().toISOString()}`);
-
-  const contracts = {
-    treasury: '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2',
-    paymentProcessor: '0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b',
-    listingManager: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'
-  };
-
-  const startBlock = 226624050;
 
   while (true) {
     try {

@@ -1,7 +1,25 @@
-// Check subgraph indexing status on OnFinality
+// Check subgraph indexing status on OnFinality (Multi-network support)
 import fetch from 'node-fetch';
 
-const PULSE_URL = "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart";
+const network = process.argv[2] || 'pulse'; // Default to pulse if no network specified
+
+const networkConfig = {
+  sepolia: {
+    url: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
+    name: "Sepolia"
+  },
+  pulse: {
+    url: "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart",
+    name: "Pulse"
+  }
+};
+
+if (!networkConfig[network]) {
+  console.error(`❌ Unknown network: ${network}. Use 'sepolia' or 'pulse'`);
+  process.exit(1);
+}
+
+const { url: SUBGRAPH_URL, name: NETWORK_NAME } = networkConfig[network];
 
 async function checkIndexingStatus() {
   const metaQuery = `
@@ -19,7 +37,7 @@ async function checkIndexingStatus() {
   `;
 
   try {
-    const response = await fetch(PULSE_URL, {
+    const response = await fetch(SUBGRAPH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: metaQuery })
@@ -37,7 +55,7 @@ async function checkIndexingStatus() {
     }
 
     const metadata = data.data._metadata;
-    console.log('🔍 Pulse Subgraph Status:');
+    console.log(`🔍 ${NETWORK_NAME} Subgraph Status:`);
     console.log(`  Deployment ID: ${metadata.deploymentId || 'Not available'}`);
     console.log(`  Last Processed Height: ${metadata.lastProcessedHeight}`);
     console.log(`  Target Height: ${metadata.targetHeight}`);
