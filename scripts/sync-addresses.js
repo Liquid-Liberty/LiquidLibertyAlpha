@@ -259,6 +259,15 @@ function updateAdditionalFiles(network, addresses) {
     {
       path: "./subgraph/lmkt-subquery/test-endpoints.js",
       description: "Endpoint testing script"
+    },
+    // Additional monitoring and build scripts
+    {
+      path: "./subgraph/lmkt-subquery/monitor-indexing.js",
+      description: "Pulse indexing monitoring script"
+    },
+    {
+      path: "./subgraph/lmkt-subquery/scripts/generate-constants.js",
+      description: "Constants generation script"
     }
   ];
 
@@ -294,6 +303,12 @@ function updateAdditionalFiles(network, addresses) {
           "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c": "MockDai", // Old MockDai
           "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358": "LMKT", // Old LMKT
           "0xb43088061120cb3Bf13d19888FEFef31fDB52014": "ListingManager", // Another old listing manager reference
+          "0x7F77768fb73bA33606EB569966C109cD5CFe0F09": "Treasury", // Previous Sepolia treasury
+          "0x002144A5B56b6b3774774499B7AB04ED9E872dB9": "Treasury", // Current Sepolia treasury
+          "0x6c5675343f3c1D9003746f7871DCdc2E73E85A5A": "ListingManager", // Current Sepolia listing manager
+          "0x1AA8df52bE8b0b0898131E23592183687AC55E0b": "PaymentProcessor", // Current Sepolia payment processor
+          "0x2a2DfFe954225D6511740a0cc8ec92b944ca9181": "LMKT", // Current Sepolia LMKT
+          "0x1E3fae53e2CbE163fEbFc8Ab2aA2E8c9C43bC736": "MockDai", // Current Sepolia MockDai
         },
         pulse: {
           // Previous Pulse addresses that need updating
@@ -302,6 +317,16 @@ function updateAdditionalFiles(network, addresses) {
           "0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7": "PaymentProcessor", // Previous Pulse payment processor
           "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F": "LMKT", // Previous Pulse LMKT
           "0x3473b7D2f41E332Eb87d607ABe948d1EBDeCfC87": "MockDai", // Previous Pulse MockDai
+          "0xe12538Ab1990A3318395B7Cb0cE682741e68194E": "Treasury", // Previous Pulse treasury
+          "0x48FEb85273B7BAc5c85C3B89C21D91BCC4deb621": "ListingManager", // Previous Pulse listing manager
+          "0xa659F4f1611297ed382703798cEd30ddD41A4004": "PaymentProcessor", // Previous Pulse payment processor
+          "0x2b5A9618Eb6886D23Dd7276B436ac98C20427716": "LMKT", // Previous Pulse LMKT
+          "0xb1bCAc95d4eEC3aD216aCD3261cc1845A193e590": "MockDai", // Previous Pulse MockDai
+          "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2": "Treasury", // Current Pulse treasury
+          "0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e": "ListingManager", // Current Pulse listing manager
+          "0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b": "PaymentProcessor", // Current Pulse payment processor
+          "0x39B691Dc0E7AeB1DaA0291d9F561b9b75e2ECd8d": "LMKT", // Current Pulse LMKT
+          "0x5C4C434fd6Aaa6a0afB826339d85cc067C033Dd1": "MockDai", // Current Pulse MockDai
         }
       };
 
@@ -315,39 +340,62 @@ function updateAdditionalFiles(network, addresses) {
         }
       }
 
-      // Additionally, replace any occurrence of ALL current addresses with updated ones
-      // This handles cases where addresses might have been manually updated but need refreshing
-      for (const [contractName, newAddress] of Object.entries(addresses)) {
-        // Skip if we don't have a new address
-        if (!newAddress) continue;
+      // Skip global environment variable replacement for .env files
+      // Network-specific env variable updates are handled later in the network-specific section
+      if (file.path !== './.env') {
+        // Additionally, replace any occurrence of ALL current addresses with updated ones
+        // This handles cases where addresses might have been manually updated but need refreshing
+        for (const [contractName, newAddress] of Object.entries(addresses)) {
+          // Skip if we don't have a new address
+          if (!newAddress) continue;
 
-        // Create patterns for different contract naming conventions
-        const contractPatterns = [
-          contractName,
-          contractName.toLowerCase(),
-          contractName.toUpperCase(),
-          // Convert camelCase to snake_case for environment variables
-          contractName.replace(/([A-Z])/g, '_$1').toUpperCase(),
-        ];
+          // Create patterns for different contract naming conventions
+          const contractPatterns = [
+            contractName,
+            contractName.toLowerCase(),
+            contractName.toUpperCase(),
+            // Convert camelCase to snake_case for environment variables
+            contractName.replace(/([A-Z])/g, '_$1').toUpperCase(),
+          ];
 
-        contractPatterns.forEach(pattern => {
-          // Replace in environment variable format: CONTRACT_NAME_ADDRESS=0x...
-          const envPattern = new RegExp(`${pattern}_ADDRESS=0x[a-fA-F0-9]{40}`, 'g');
-          newContent = newContent.replace(envPattern, `${pattern}_ADDRESS=${newAddress}`);
-        });
+          contractPatterns.forEach(pattern => {
+            // Replace in environment variable format: CONTRACT_NAME_ADDRESS=0x...
+            const envPattern = new RegExp(`${pattern}_ADDRESS=0x[a-fA-F0-9]{40}`, 'g');
+            newContent = newContent.replace(envPattern, `${pattern}_ADDRESS=${newAddress}`);
+          });
+        }
       }
 
       // Handle network-specific environment variable updates
       if (file.path === './.env') {
+        // Read current deployment environment
+        const currentDeployEnv = content.match(/VITE_DEPLOY_ENV=(\w+)/)?.[1] || 'sepolia';
+
         if (network === 'sepolia') {
           newContent = newContent.replace(
             /SEPOLIA_TREASURY_ADDRESS=.*/g,
             `SEPOLIA_TREASURY_ADDRESS=${addresses.Treasury}`
           );
-          newContent = newContent.replace(
-            /VITE_TREASURY_ADDRESS=.*/g,
-            `VITE_TREASURY_ADDRESS=${addresses.Treasury}`
-          );
+
+          // Only update VITE addresses if current deployment env is sepolia
+          if (currentDeployEnv === 'sepolia') {
+            newContent = newContent.replace(
+              /VITE_TREASURY_ADDRESS=.*/g,
+              `VITE_TREASURY_ADDRESS=${addresses.Treasury}`
+            );
+            newContent = newContent.replace(
+              /VITE_LISTING_MANAGER_ADDRESS=.*/g,
+              `VITE_LISTING_MANAGER_ADDRESS=${addresses.ListingManager}`
+            );
+            newContent = newContent.replace(
+              /VITE_LMKT_ADDRESS=.*/g,
+              `VITE_LMKT_ADDRESS=${addresses.LMKT}`
+            );
+            newContent = newContent.replace(
+              /VITE_DAI_ADDRESS=.*/g,
+              `VITE_DAI_ADDRESS=${addresses.MockDai}`
+            );
+          }
           newContent = newContent.replace(
             /SEPOLIA_LMKT_ADDRESS=.*/g,
             `SEPOLIA_LMKT_ADDRESS=${addresses.LMKT}`
@@ -385,6 +433,26 @@ function updateAdditionalFiles(network, addresses) {
             /PULSE_LISTING_MANAGER_ADDRESS=.*/g,
             `PULSE_LISTING_MANAGER_ADDRESS=${addresses.ListingManager}`
           );
+
+          // Only update VITE addresses if current deployment env is pulse
+          if (currentDeployEnv === 'pulse') {
+            newContent = newContent.replace(
+              /VITE_TREASURY_ADDRESS=.*/g,
+              `VITE_TREASURY_ADDRESS=${addresses.Treasury}`
+            );
+            newContent = newContent.replace(
+              /VITE_LISTING_MANAGER_ADDRESS=.*/g,
+              `VITE_LISTING_MANAGER_ADDRESS=${addresses.ListingManager}`
+            );
+            newContent = newContent.replace(
+              /VITE_LMKT_ADDRESS=.*/g,
+              `VITE_LMKT_ADDRESS=${addresses.LMKT}`
+            );
+            newContent = newContent.replace(
+              /VITE_DAI_ADDRESS=.*/g,
+              `VITE_DAI_ADDRESS=${addresses.MockDai}`
+            );
+          }
           // Update additional Pulse-specific variables
           newContent = newContent.replace(
             /PULSE_RPC_URL=.*/g,

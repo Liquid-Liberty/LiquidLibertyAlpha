@@ -77,9 +77,9 @@ async function monitorIndexingProgress() {
   console.log(`🕒 Started at: ${new Date().toISOString()}`);
 
   const contracts = {
-    treasury: '0xe12538Ab1990A3318395B7Cb0cE682741e68194E',
-    paymentProcessor: '0xa659F4f1611297ed382703798cEd30ddD41A4004',
-    listingManager: '0x48FEb85273B7BAc5c85C3B89C21D91BCC4deb621'
+    treasury: '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2',
+    paymentProcessor: '0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b',
+    listingManager: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'
   };
 
   const startBlock = 22610000;

@@ -24,9 +24,9 @@ describe('Secure Network Configuration', () => {
 
       expect(config.name).toBe('pulse');
       expect(config.chainId).toBe(943);
-      expect(config.treasury).toBe('0xe12538Ab1990A3318395B7Cb0cE682741e68194E');
+      expect(config.treasury).toBe('0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2');
       expect(config.isTestnet).toBe(true);
-      expect(config.pairAddress).toBe('0xe12538Ab1990A3318395B7Cb0cE682741e68194E');
+      expect(config.pairAddress).toBe('0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2');
     });
 
     test('should throw error for unsupported chain', () => {
@@ -45,7 +45,7 @@ describe('Secure Network Configuration', () => {
   describe('getSecureTreasuryAddress', () => {
     test('should return correct treasury addresses', () => {
       expect(getSecureTreasuryAddress(11155111)).toBe('0x002144A5B56b6b3774774499B7AB04ED9E872dB9');
-      expect(getSecureTreasuryAddress(943)).toBe('0xe12538Ab1990A3318395B7Cb0cE682741e68194E');
+      expect(getSecureTreasuryAddress(943)).toBe('0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2');
     });
 
     test('should maintain proper checksums', () => {
@@ -63,7 +63,7 @@ describe('Secure Network Configuration', () => {
   describe('getSecurePairAddress', () => {
     test('should return lowercase treasury addresses', () => {
       expect(getSecurePairAddress(11155111)).toBe('0x002144A5B56b6b3774774499B7AB04ED9E872dB9');
-      expect(getSecurePairAddress(943)).toBe('0xe12538Ab1990A3318395B7Cb0cE682741e68194E');
+      expect(getSecurePairAddress(943)).toBe('0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2');
     });
 
     test('should never return mixed case for pair addresses', () => {

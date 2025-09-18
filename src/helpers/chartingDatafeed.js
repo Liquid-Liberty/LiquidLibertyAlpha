@@ -87,8 +87,8 @@ export function GetDatafeedProvider(data, chainId) {
     console.log(`🔒 [Secure Config] url=${URL}`);
 
     // Validate we have the expected addresses for the network
-    if (chainId === 943 && TREASURY_ADDRESS !== '0xe12538Ab1990A3318395B7Cb0cE682741e68194E') {
-      console.error(`🚨 Expected Pulse treasury 0xe12538Ab1990A3318395B7Cb0cE682741e68194E, got ${TREASURY_ADDRESS}`);
+    if (chainId === 943 && TREASURY_ADDRESS !== '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2') {
+      console.error(`🚨 Expected Pulse treasury 0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2, got ${TREASURY_ADDRESS}`);
     }
     if (chainId === 11155111 && TREASURY_ADDRESS !== '0x002144A5B56b6b3774774499B7AB04ED9E872dB9') {
       console.error(`🚨 Expected Sepolia treasury 0x002144A5B56b6b3774774499B7AB04ED9E872dB9, got ${TREASURY_ADDRESS}`);

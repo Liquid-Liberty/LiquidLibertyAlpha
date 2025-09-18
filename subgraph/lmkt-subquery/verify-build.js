@@ -8,7 +8,7 @@ const EXPECTED_ADDRESSES = {
     name: "Sepolia"
   },
   pulse: {
-    treasury: "0xe12538Ab1990A3318395B7Cb0cE682741e68194E",
+    treasury: "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2",
     name: "Pulse"
   },
   local: {

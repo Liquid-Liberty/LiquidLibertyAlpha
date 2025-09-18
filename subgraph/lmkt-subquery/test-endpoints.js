@@ -6,7 +6,7 @@ const PULSE_URL = "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-
 
 // Expected treasury addresses
 const SEPOLIA_TREASURY = "0x002144A5B56b6b3774774499B7AB04ED9E872dB9";
-const PULSE_TREASURY = "0xe12538Ab1990A3318395B7Cb0cE682741e68194E";
+const PULSE_TREASURY = "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2";
 
 const testQuery = `
   query GetPairs {

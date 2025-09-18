@@ -21,7 +21,7 @@ const SECURE_NETWORK_CONFIG = Object.freeze({
   943: Object.freeze({
     name: "pulse",
     chainId: 943,
-    treasury: "0xe12538Ab1990A3318395B7Cb0cE682741e68194E",
+    treasury: "0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2",
     expectedRpcPattern: /pulse/i,
     subqueryUrl: "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart",
     isTestnet: true
