@@ -75,6 +75,8 @@ export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
         interval,
         locale: "en",
         theme: "dark",
+        style: 3, // ✅ CHANGED: 3 corresponds to a line chart
+        timezone: "America/New_York", // ✅ ADDED: Sets timezone to EST
         disabled_features: [
           "header_symbol_search",
           "header_compare",
@@ -95,8 +97,11 @@ export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
             "paneProperties.horzGridProperties.color": "#1A1A1A",
             "mainSeriesProperties.priceScale.precision": 6,
             "mainSeriesProperties.priceScale.minTick": 0.000001,
+            "mainSeriesProperties.priceScale.autoScale": true, // ✅ ADDED: Ensures price scale fits data
           });
-        } catch (_) {'error'}
+        } catch (_) {
+          "error";
+        }
         window.__tvWidget = tv;
         setWidget?.(tv);
         onLoaded?.();
