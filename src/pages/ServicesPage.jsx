@@ -2,15 +2,31 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { serviceCategories } from '../data/categories';
 import { useListings } from '../context/ListingsContext';
+import { localAds } from '../data/ads';
+import AdBanner from '../components/AdBanner';
+
 
 const ServicesPage = () => {
     const { listings, loading, error } = useListings();
     const serviceListings = listings.filter(listing => listing.listingType === 'ServiceOffered');
+      //Marketing
+      const adKey = 'shillBanner'
+      const selectedAd = localAds[adKey];
+      const adImages = import.meta.glob('../assets/marketing/*', { eager: true, as: 'url' });
+      const matchedImage = Object.entries(adImages).find(([path]) =>
+          path.endsWith(selectedAd.imagePath)
+      );
+      const resolvedAd = {
+          ...selectedAd,
+          imageUrl: matchedImage?.[1] || '',
+      }
 
     return (
         <div className="container mx-auto px-6 py-12">
             <div className="bg-stone-50/95 p-8 md:p-12 rounded-lg shadow-lg">
                 <h1 className="text-4xl font-display font-bold text-center text-zinc-800 mb-8">Browse Services</h1>
+
+                <AdBanner ad={resolvedAd} />
                 
                 {loading && (
                     <div className="text-center py-8">
