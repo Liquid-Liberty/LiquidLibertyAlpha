@@ -3,7 +3,17 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(node:*)",
-      "Bash(npm run sync-addresses:*)"
+      "Bash(npm run sync-addresses:*)",
+      "Bash(npx hardhat run:*)",
+      "Bash(npm run build:netlify:*)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(cat:*)",
+      "Bash(npm:*)",
+      "Bash(VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia npm run codegen)",
+      "Bash(VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia npx subql build)",
+      "Bash(VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run build:pulse)",
+      "Bash(VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run build)"
     ],
     "deny": [],
     "ask": []

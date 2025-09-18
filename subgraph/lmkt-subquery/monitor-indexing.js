@@ -77,12 +77,12 @@ async function monitorIndexingProgress() {
   console.log(`🕒 Started at: ${new Date().toISOString()}`);
 
   const contracts = {
-    treasury: '0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a',
-    paymentProcessor: '0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7',
-    listingManager: '0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3'
+    treasury: '0xe12538Ab1990A3318395B7Cb0cE682741e68194E',
+    paymentProcessor: '0xa659F4f1611297ed382703798cEd30ddD41A4004',
+    listingManager: '0x48FEb85273B7BAc5c85C3B89C21D91BCC4deb621'
   };
 
-  const startBlock = 22602590;
+  const startBlock = 22610000;
 
   while (true) {
     try {

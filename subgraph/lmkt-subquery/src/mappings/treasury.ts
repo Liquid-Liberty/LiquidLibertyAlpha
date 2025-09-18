@@ -5,7 +5,7 @@ import { PurchaseMadeLog } from "../types/abi-interfaces/PaymentProcessor";
 import { ListingCreatedLog } from "../types/abi-interfaces/ListingManager";
 import { Treasury__factory } from "../types/contracts";
 import { Candle, Pair, Token } from "../types";
-import { TREASURY_ADDRESS, LMKT_ADDRESS, MDAI_ADDRESS } from "../../project";
+import { TREASURY_ADDRESS, LMKT_ADDRESS, MDAI_ADDRESS } from "../constants";
 import { BigNumber } from "ethers";
 
 

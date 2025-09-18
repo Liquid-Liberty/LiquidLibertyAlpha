@@ -20,13 +20,13 @@ const NETWORK_CONFIG = {
   sepolia: {
     chainId: "11155111",
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
-    startBlock: 9176744,
+    startBlock: 9226564,
     subqueryDir: "sepolia"
   },
   pulse: {
     chainId: "943",
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
-    startBlock: 22602590,
+    startBlock: 22610000,
     subqueryDir: "pulse"
   },
   localhost: {
@@ -188,6 +188,225 @@ function updateSecureNetworkConfig(network, addresses) {
 }
 
 /**
+ * Update additional files that contain hardcoded addresses
+ */
+function updateAdditionalFiles(network, addresses) {
+  const config = NETWORK_CONFIG[network];
+
+  if (!config) {
+    throw new Error(`Unknown network: ${network}`);
+  }
+
+  const filesToUpdate = [
+    // Netlify function
+    {
+      path: "./netlify/functions/secure-subquery-proxy.js",
+      description: "Netlify proxy function"
+    },
+    // Test files
+    {
+      path: "./src/utils/__tests__/secureNetworkConfig.test.js",
+      description: "Network config tests"
+    },
+    // Charting datafeed validation
+    {
+      path: "./src/helpers/chartingDatafeed.js",
+      description: "Chart datafeed validation"
+    },
+    // Subgraph verification
+    {
+      path: "./subgraph/lmkt-subquery/verify-build.js",
+      description: "Subgraph build verification"
+    },
+    // Test config
+    {
+      path: "./subgraph/lmkt-subquery/test-local-config.js",
+      description: "Test configuration"
+    },
+    // Generated YAML files
+    {
+      path: "./subgraph/lmkt-subquery/project-sepolia.yaml",
+      description: "Generated Sepolia subgraph config",
+      networkSpecific: "sepolia"
+    },
+    {
+      path: "./subgraph/lmkt-subquery/src/project.sepolia.yaml",
+      description: "Source Sepolia subgraph config",
+      networkSpecific: "sepolia"
+    },
+    {
+      path: "./subgraph/lmkt-subquery/project-pulse.yaml",
+      description: "Generated Pulse subgraph config",
+      networkSpecific: "pulse"
+    },
+    {
+      path: "./subgraph/lmkt-subquery/src/project.pulse.yaml",
+      description: "Source Pulse subgraph config",
+      networkSpecific: "pulse"
+    },
+    // Environment configuration
+    {
+      path: "./.env",
+      description: "Environment variables file"
+    },
+    // Monitoring scripts
+    {
+      path: "./subgraph/lmkt-subquery/monitor.js",
+      description: "Subgraph monitoring script"
+    },
+    // Testing scripts
+    {
+      path: "./subgraph/lmkt-subquery/test-endpoints.js",
+      description: "Endpoint testing script"
+    }
+  ];
+
+  for (const file of filesToUpdate) {
+    // Skip files that don't exist
+    if (!fs.existsSync(file.path)) {
+      console.log(`⏭️  Skipping ${file.path} (file not found)`);
+      continue;
+    }
+
+    // Skip network-specific files for other networks
+    if (file.networkSpecific && file.networkSpecific !== network) {
+      continue;
+    }
+
+    try {
+      // Create backup
+      createBackup(file.path);
+
+      // Read file
+      let content = fs.readFileSync(file.path, 'utf8');
+
+      // Replace ALL contract addresses with their new values
+      let newContent = content;
+
+      // Define known old addresses that need to be replaced
+      const oldAddressMap = {
+        sepolia: {
+          // Previous Sepolia addresses that need updating
+          "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E": "Treasury", // Very old treasury
+          "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4": "PaymentProcessor", // Old payment processor
+          "0xc2FD2028e7a156744985f80f001366423A11dE67": "ListingManager", // Old listing manager
+          "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c": "MockDai", // Old MockDai
+          "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358": "LMKT", // Old LMKT
+          "0xb43088061120cb3Bf13d19888FEFef31fDB52014": "ListingManager", // Another old listing manager reference
+        },
+        pulse: {
+          // Previous Pulse addresses that need updating
+          "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a": "Treasury", // Previous Pulse treasury
+          "0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3": "ListingManager", // Previous Pulse listing manager
+          "0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7": "PaymentProcessor", // Previous Pulse payment processor
+          "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F": "LMKT", // Previous Pulse LMKT
+          "0x3473b7D2f41E332Eb87d607ABe948d1EBDeCfC87": "MockDai", // Previous Pulse MockDai
+        }
+      };
+
+      // Replace old addresses with new ones
+      if (oldAddressMap[network]) {
+        for (const [oldAddress, contractName] of Object.entries(oldAddressMap[network])) {
+          if (addresses[contractName]) {
+            const pattern = new RegExp(oldAddress, 'gi');
+            newContent = newContent.replace(pattern, addresses[contractName]);
+          }
+        }
+      }
+
+      // Additionally, replace any occurrence of ALL current addresses with updated ones
+      // This handles cases where addresses might have been manually updated but need refreshing
+      for (const [contractName, newAddress] of Object.entries(addresses)) {
+        // Skip if we don't have a new address
+        if (!newAddress) continue;
+
+        // Create patterns for different contract naming conventions
+        const contractPatterns = [
+          contractName,
+          contractName.toLowerCase(),
+          contractName.toUpperCase(),
+          // Convert camelCase to snake_case for environment variables
+          contractName.replace(/([A-Z])/g, '_$1').toUpperCase(),
+        ];
+
+        contractPatterns.forEach(pattern => {
+          // Replace in environment variable format: CONTRACT_NAME_ADDRESS=0x...
+          const envPattern = new RegExp(`${pattern}_ADDRESS=0x[a-fA-F0-9]{40}`, 'g');
+          newContent = newContent.replace(envPattern, `${pattern}_ADDRESS=${newAddress}`);
+        });
+      }
+
+      // Handle network-specific environment variable updates
+      if (file.path === './.env') {
+        if (network === 'sepolia') {
+          newContent = newContent.replace(
+            /SEPOLIA_TREASURY_ADDRESS=.*/g,
+            `SEPOLIA_TREASURY_ADDRESS=${addresses.Treasury}`
+          );
+          newContent = newContent.replace(
+            /VITE_TREASURY_ADDRESS=.*/g,
+            `VITE_TREASURY_ADDRESS=${addresses.Treasury}`
+          );
+          newContent = newContent.replace(
+            /SEPOLIA_LMKT_ADDRESS=.*/g,
+            `SEPOLIA_LMKT_ADDRESS=${addresses.LMKT}`
+          );
+          newContent = newContent.replace(
+            /SEPOLIA_MDAI_ADDRESS=.*/g,
+            `SEPOLIA_MDAI_ADDRESS=${addresses.MockDai}`
+          );
+          newContent = newContent.replace(
+            /SEPOLIA_PAYMENT_PROCESSOR_ADDRESS=.*/g,
+            `SEPOLIA_PAYMENT_PROCESSOR_ADDRESS=${addresses.PaymentProcessor}`
+          );
+          newContent = newContent.replace(
+            /SEPOLIA_LISTING_MANAGER_ADDRESS=.*/g,
+            `SEPOLIA_LISTING_MANAGER_ADDRESS=${addresses.ListingManager}`
+          );
+        } else if (network === 'pulse') {
+          newContent = newContent.replace(
+            /PULSE_TREASURY_ADDRESS=.*/g,
+            `PULSE_TREASURY_ADDRESS=${addresses.Treasury}`
+          );
+          newContent = newContent.replace(
+            /PULSE_LMKT_ADDRESS=.*/g,
+            `PULSE_LMKT_ADDRESS=${addresses.LMKT}`
+          );
+          newContent = newContent.replace(
+            /PULSE_MDAI_ADDRESS=.*/g,
+            `PULSE_MDAI_ADDRESS=${addresses.MockDai}`
+          );
+          newContent = newContent.replace(
+            /PULSE_PAYMENT_PROCESSOR_ADDRESS=.*/g,
+            `PULSE_PAYMENT_PROCESSOR_ADDRESS=${addresses.PaymentProcessor}`
+          );
+          newContent = newContent.replace(
+            /PULSE_LISTING_MANAGER_ADDRESS=.*/g,
+            `PULSE_LISTING_MANAGER_ADDRESS=${addresses.ListingManager}`
+          );
+          // Update additional Pulse-specific variables
+          newContent = newContent.replace(
+            /PULSE_RPC_URL=.*/g,
+            `PULSE_RPC_URL=https://rpc.v4.testnet.pulsechain.com`
+          );
+        }
+      }
+
+      // Only write if content actually changed
+      if (newContent !== content) {
+        fs.writeFileSync(file.path, newContent);
+        console.log(`✅ Updated ${file.description}: ${file.path}`);
+      } else {
+        console.log(`ℹ️  No changes needed in: ${file.path}`);
+      }
+
+    } catch (error) {
+      console.warn(`⚠️  Failed to update ${file.path}: ${error.message}`);
+    }
+  }
+}
+
+/**
  * Sync addresses for a single network
  */
 function syncNetwork(network) {
@@ -200,6 +419,7 @@ function syncNetwork(network) {
     // Update all dependent files
     updateSubgraphProject(network, addresses);
     updateSecureNetworkConfig(network, addresses);
+    updateAdditionalFiles(network, addresses);
 
     console.log(`✅ Successfully synced ${network} addresses`);
 

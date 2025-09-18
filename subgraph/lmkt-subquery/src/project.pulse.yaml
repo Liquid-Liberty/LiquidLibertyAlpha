@@ -16,11 +16,11 @@ network:
   chainId: '943'
 dataSources:
   - kind: ethereum/Runtime
-    startBlock: 22602584
+    startBlock: 22610000
     options:
       abi: Treasury
-      address: "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a"
-      lmktAddress: "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F"
+      address: "0xe12538Ab1990A3318395B7Cb0cE682741e68194E"
+      lmktAddress: "0x2b5A9618Eb6886D23Dd7276B436ac98C20427716"
     assets:
       Treasury:
         file: ./abis/Treasury.json
