@@ -20,7 +20,7 @@ dataSources:
     startBlock: 22602590
     options:
       abi: Treasury
-      address: '0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a'
+      address: '0xe12538Ab1990A3318395B7Cb0cE682741e68194E'
     assets:
       Treasury:
         file: ./abis/Treasury.json
@@ -33,7 +33,7 @@ dataSources:
     startBlock: 22602590
     options:
       abi: PaymentProcessor
-      address: '0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7'
+      address: '0xa659F4f1611297ed382703798cEd30ddD41A4004'
     assets:
       PaymentProcessor:
         file: ./abis/PaymentProcessor.json
@@ -49,7 +49,7 @@ dataSources:
     startBlock: 22602590
     options:
       abi: ListingManager
-      address: '0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3'
+      address: '0x48FEb85273B7BAc5c85C3B89C21D91BCC4deb621'
     assets:
       ListingManager:
         file: ./abis/ListingManager.json

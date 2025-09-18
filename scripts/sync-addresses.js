@@ -286,20 +286,21 @@ function updateAdditionalFiles(network, addresses) {
       // Define known old addresses that need to be replaced
       const oldAddressMap = {
         sepolia: {
-          // Known old Sepolia addresses from previous deployments
-          "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E": "Treasury", // Old treasury
+          // Previous Sepolia addresses that need updating
+          "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E": "Treasury", // Very old treasury
           "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4": "PaymentProcessor", // Old payment processor
           "0xc2FD2028e7a156744985f80f001366423A11dE67": "ListingManager", // Old listing manager
           "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c": "MockDai", // Old MockDai
-          "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358": "LMKT", // Old LMKT (from env backup)
+          "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358": "LMKT", // Old LMKT
           "0xb43088061120cb3Bf13d19888FEFef31fDB52014": "ListingManager", // Another old listing manager reference
         },
         pulse: {
-          // Known incorrect Pulse addresses (currently using Sepolia addresses!)
-          "0x7F77768fb73bA33606EB569966C109cD5CFe0F09": "Treasury", // Wrong: using Sepolia treasury
-          "0x85F30D0cE7376fCF47E2386fdE86BBD072C00201": "LMKT", // Wrong: using Sepolia LMKT
-          "0xE521F93061b1e8F2DefAC380525edADb7bB19bA4": "PaymentProcessor", // Wrong: using Sepolia payment processor
-          "0x220c186b8996CF54f3e724C188DDbF63DFf1bf5D": "ListingManager", // Wrong: using Sepolia listing manager
+          // Previous Pulse addresses that need updating
+          "0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a": "Treasury", // Previous Pulse treasury
+          "0x827949C9d3034f84DAB5f7DD6C9032591dEC84D3": "ListingManager", // Previous Pulse listing manager
+          "0xEF5FB8dcB0fC1a6CD7C7681Db979cd20FC46CAA7": "PaymentProcessor", // Previous Pulse payment processor
+          "0x8e1f781763D550adDAA9F1869B6bae3f86e87b4F": "LMKT", // Previous Pulse LMKT
+          "0x3473b7D2f41E332Eb87d607ABe948d1EBDeCfC87": "MockDai", // Previous Pulse MockDai
         }
       };
 

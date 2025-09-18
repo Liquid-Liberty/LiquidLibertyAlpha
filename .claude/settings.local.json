@@ -8,7 +8,8 @@
       "Bash(npm run build:netlify:*)",
       "Bash(grep:*)",
       "Bash(xargs cat:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm:*)"
     ],
     "deny": [],
     "ask": []
