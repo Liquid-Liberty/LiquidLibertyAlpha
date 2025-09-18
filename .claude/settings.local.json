@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(node:*)",
+      "Bash(npm run sync-addresses:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -44,3 +44,6 @@ ignition/deployments/chain-31337
 
 # Local Netlify folder
 .netlify
+
+# Backup files (organized backup system)
+backups/

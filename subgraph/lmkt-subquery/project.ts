@@ -52,10 +52,10 @@ const config = {
   sepolia: {
     rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/tD-k4CLtNfq88JYH280Wu",
     treasury: "0xC78b685192DD8164062705Cd8148df2CB2d1CB9E",
-    lmkt: "0xE5De8015E7cd41F5d053461EDA9480CF3dA4f358",
+    lmkt: "0x7bFA165c4e5a7E449378e18ec1259631E1080277",
     paymentProcessor: "0xBC13B31e7eF9E9a72E7a4c5A902eDc3D9a7413e4",
     listingManager: "0xc2FD2028e7a156744985f80f001366423A11dE67",
-    mDAI: "0xd25200BF1C6507A25b78F78E1459338cf1Ec217c",
+    mDAI: "0xB9e8957A043080aF1EF785192B5C050a50628CCB",
     chainId: "11155111",
     startBlock: 9176744,
   },
