@@ -1,139 +1,127 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from "react";
+import { GetDatafeedProvider } from "../helpers/chartingDatafeed.js";
+import { useChainId } from "wagmi";
 
-// Icons for the fullscreen button
-const EnterFullscreenIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path fillRule="evenodd" d="M15 3.75a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0V5.56l-3.97 3.97a.75.75 0 11-1.06-1.06L13.19 4.5H9.75a.75.75 0 010-1.5h4.5A.75.75 0 0115 3.75zM9 15.75a.75.75 0 01.75.75v3.44l3.97-3.97a.75.75 0 111.06 1.06L10.81 21H14.25a.75.75 0 010 1.5H9.75a.75.75 0 01-.75-.75v-4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
-    </svg>
-);
+class MockWebsocketClient {
+  close() {}
+}
 
-const ExitFullscreenIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path fillRule="evenodd" d="M5.25 9a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5H6.56l3.97 3.97a.75.75 0 11-1.06 1.06L5.5 10.81V14.25a.75.75 0 01-1.5 0V9.75A.75.75 0 015.25 9zM18.75 15a.75.75 0 01.75.75v3.44l-3.97-3.97a.75.75 0 10-1.06 1.06l3.97 3.97H15.75a.75.75 0 010 1.5h4.5a.75.75 0 01.75-.75v-4.5a.75.75 0 01-.75-.75z" clipRule="evenodd" />
-    </svg>
-);
+const LIB_PATH = "/tradingview/charting_library/";
 
-const defaultProps = {
-    symbol: 'LiquidLiberty',
-    libraryPath: '/tradingview/charting_library/',
-    chartsStorageUrl: 'https://saveload.tradingview.com',
-    chartsStorageApiVersion: '1.1',
-    fullscreen: false,
-    autosize: false,
-};
+// ensure hidden "parking lot" div exists in DOM
+function ensureParkingLot() {
+  let lot = document.getElementById("tv-parking-lot");
+  if (!lot) {
+    lot = document.createElement("div");
+    lot.id = "tv-parking-lot";
+    Object.assign(lot.style, {
+      position: "fixed",
+      left: "-99999px",
+      top: "-99999px",
+      width: "1px",
+      height: "1px",
+      overflow: "hidden",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(lot);
+  }
+  return lot;
+}
 
+export const TVChart = ({ setWidget, data, interval = "5", onLoaded }) => {
+  const containerRef = useRef(null);
+  const chainId = useChainId();
 
-const TradingViewChart = ({ symbol }) => {
-    const containerRef = useRef(null);
-    const scriptLoadedRef = useRef(false);
-    const [isFullscreen] = useState(false);
+  useEffect(() => {
+    const lot = ensureParkingLot();
 
-    // Create a stable, unique ID by replacing invalid characters. This fixes the querySelector bug.
-    const chartContainerId = `tradingview_${symbol.replace(/[:/]/g, '_')}`;
+    // If widget exists, just move its container into place
+    const attachExisting = () => {
+      if (window.__tvContainer && containerRef.current) {
+        containerRef.current.appendChild(window.__tvContainer);
+        requestAnimationFrame(() => window.__tvWidget?.resize?.());
+        return true;
+      }
+      return false;
+    };
 
-    useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
+    // Init if needed
+    const initWidget = () => {
+      if (attachExisting()) return;
 
-        const createWidget = () => {
-            if (typeof window.TradingView !== 'undefined') {
-                container.innerHTML = ''; // Clear previous widget to prevent duplicates
-                new window.TradingView.widget({
-                    enabled_features: ["custom_resolutions"],
-                    overrides: {
-                        'mainSeriesProperties.statusViewStyle.showExchange': false,
-                        'mainSeriesProperties.priceScale.autoScale': true,
-                        volumePaneSize: 'small',
-                        keep_object_tree_widget_in_right_toolbar: true,
-                    },
-                    studies_overrides: {
-                        'volume.volume.ma.visible': false,
-                    },
-                    loading_screen: {
-                        backgroundColor: '#000000',
-                    },
-                    width: "100%",
-                    height: "100%",
-                    symbol: symbol,
-                    interval: "D",
-                    timezone: "America/New_York",
-                    theme: "dark",
-                    style: "3",
-                    locale: "en",
-                    toolbar_bg: "#f1f3f6",
-                    enable_publishing: false,
-                    hide_side_toolbar: false,
-                    allow_symbol_change: false,
-                    details: false,
-                    hotlist: false,
-                    calendar: false,
-                    charts_storage_url: defaultProps.chartsStorageUrl,
-                    charts_storage_api_version: '1.1',
-                    fullscreen: defaultProps.fullscreen,
-                    autosize: defaultProps.autosize,
-                    container_id: chartContainerId,
-                    custom_css_url: '/tradingview/styles/custom.css',
-                    disabled_features: ['header_symbol_search', 'header_compare', 'display_market_status', 'header_saveload', 'timeframes_toolbar', 'chart_template_storage'],
-                    custom_formatters: {
-                        timeFormatter: {
-                            format: (date) => {
-                                const _format_str = '%h:%m';
-                                return _format_str
-                                    .replace('%h', date.getHours().toString().padStart(2, '0'))
-                                    .replace('%m', date.getMinutes().toString().padStart(2, '0'))
-                                    .replace('%s', date.getSeconds().toString().padStart(2, '0'));
-                            },
-                            formatLocal: (date) => {
-                                const _format_str = '%h:%m';
-                                return _format_str
-                                    .replace('%h', date.getHours().toString().padStart(2, '0'))
-                                    .replace('%m', date.getMinutes().toString().padStart(2, '0'))
-                                    .replace('%s', date.getSeconds().toString().padStart(2, '0'));
-                            },
-                        },
-                        dateFormatter: {
-                            format: (date) => {
-                                return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
-                            },
-                            formatLocal: (date) => {
-                                return date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
-                            },
-                        },
-                        priceFormatterFactory: () => {
-                            // This function needs to be defined or imported elsewhere in your project
-                            // For example: const formatNumber = (price) => price.toFixed(6);
-                            return { format: (price) => formatNumber(price) };
-                        },
-                    },
-                });
-            }
-        };
+      if (!window.TradingView?.widget) {
+        const t = setInterval(() => {
+          if (window.TradingView?.widget) {
+            clearInterval(t);
+            initWidget();
+          }
+        }, 50);
+        return;
+      }
 
-        if (!scriptLoadedRef.current) {
-            const script = document.createElement("script");
-            script.src = "https://s3.tradingview.com/tv.js";
-            script.type = "text/javascript";
-            script.async = true;
-            script.onload = () => {
-                scriptLoadedRef.current = true;
-                createWidget();
-            };
-            document.body.appendChild(script);
-        } else {
-            createWidget();
+      const container = document.createElement("div");
+      container.style.width = "100%";
+      container.style.height = "100%";
+      containerRef.current.appendChild(container);
+      window.__tvContainer = container;
+
+      const df = GetDatafeedProvider(data, chainId);
+
+      const tv = new window.TradingView.widget({
+        symbol: "CUSTOM:LMKTUSD",
+        datafeed: df,
+        container,
+        library_path: LIB_PATH,
+        interval,
+        locale: "en",
+        theme: "dark",
+        style: 3, // ✅ CHANGED: 3 corresponds to a line chart
+        timezone: "America/New_York", // ✅ ADDED: Sets timezone to EST
+        disabled_features: [
+          "header_symbol_search",
+          "header_compare",
+          "display_market_status",
+          "header_saveload",
+          "timeframes_toolbar",
+          "chart_template_storage",
+          "header_fullscreen_button",
+          "header_settings",
+        ],
+      });
+
+      tv.onChartReady(() => {
+        try {
+          tv.applyOverrides({
+            "paneProperties.background": "#0f0f0f",
+            "paneProperties.vertGridProperties.color": "#1A1A1A",
+            "paneProperties.horzGridProperties.color": "#1A1A1A",
+            "mainSeriesProperties.priceScale.precision": 6,
+            "mainSeriesProperties.priceScale.minTick": 0.000001,
+            "mainSeriesProperties.priceScale.autoScale": true, // ✅ ADDED: Ensures price scale fits data
+          });
+        } catch (_) {
+          "error";
         }
+        window.__tvWidget = tv;
+        setWidget?.(tv);
+        onLoaded?.();
+      });
+    };
 
-    }, [symbol, isFullscreen, chartContainerId]);
+    initWidget();
 
-    const fullscreenClasses = isFullscreen
-        ? "fixed inset-0 z-50 bg-stone-900 p-4"
-        : "relative w-full h-full";
+    // When unmounting (routing away), park the container instead of destroying it
+    return () => {
+      if (window.__tvContainer && lot && window.__tvContainer.parentNode !== lot) {
+        lot.appendChild(window.__tvContainer);
+      }
+    };
+  }, [data, interval, setWidget, onLoaded]);
 
-    return (
-        <div className={fullscreenClasses}>
-            <div id={chartContainerId} ref={containerRef} className="w-full h-full" />
-        </div>
-    );
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full min-h-[500px] overflow-hidden rounded-md"
+    />
+  );
 };
-
-export default TradingViewChart;
