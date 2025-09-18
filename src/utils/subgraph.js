@@ -1,13 +1,35 @@
-import { SUBQUERY_CONFIG } from '../config/subgraph-config';
+// MIGRATED TO SECURE SYSTEM
+import { getSecureSubqueryConfig } from '../config/secureSubgraphConfig.js';
 
-export const fetchFromSubgraph = async (query, variables = {}) => {
+export const fetchFromSubgraph = async (query, variables = {}, chainId = null) => {
     try {
-        const response = await fetch(SUBQUERY_CONFIG.URL, {
+        // SECURE: Validate chainId is provided - no defaults to prevent wrong network queries
+        if (!chainId) {
+            throw new Error('🚨 chainId is required for secure subgraph queries. Ensure useChainId() from wagmi is properly connected.');
+        }
+
+        const finalChainId = parseInt(chainId);
+        if (isNaN(finalChainId)) {
+            throw new Error(`🚨 Invalid chainId: ${chainId}. Must be a valid number.`);
+        }
+
+        const secureConfig = getSecureSubqueryConfig(finalChainId);
+
+        console.log(`🔒 [Subgraph] Secure fetch for ${secureConfig.NETWORK_NAME} (${finalChainId})`);
+
+        // Include chainId in the request body for the proxy to route correctly
+        const requestBody = {
+            query,
+            variables,
+            chainId: finalChainId
+        };
+
+        const response = await fetch(secureConfig.URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -36,9 +58,14 @@ export const fetchFromSubgraph = async (query, variables = {}) => {
  * @param {string} pairAddress - The pair address for LMKT
  * @param {string} interval - Time interval (e.g., "1h", "4h", "1d")
  * @param {number} limit - Number of candles to fetch (default: 100)
+ * @param {number} chainId - Chain ID to determine which network to query
  * @returns {Promise<Array>} - Array of OHLCV data points
  */
-export const fetchLMKTData = async (pairAddress, interval, limit = 1000) => {
+export const fetchLMKTData = async (pairAddress, interval, limit = 1000, chainId) => {
+    // SECURE: Validate required parameters
+    if (!chainId) {
+        throw new Error('🚨 chainId is required for fetchLMKTData. Pass chainId from useChainId() hook.');
+    }
     const query = `{
           candles(
             first: 100, 
@@ -62,7 +89,7 @@ export const fetchLMKTData = async (pairAddress, interval, limit = 1000) => {
             limit,
             pairAddress,
             interval
-        });
+        }, chainId);
         
         // Transform the data to match our chart format
         if (data.candles) {
@@ -87,9 +114,14 @@ export const fetchLMKTData = async (pairAddress, interval, limit = 1000) => {
 /**
  * Fetch current LMKT token stats from latest candle
  * @param {string} pairAddress - The pair address for LMKT
+ * @param {number} chainId - Chain ID to determine which network to query
  * @returns {Promise<Object>} - Current token statistics
  */
-export const fetchLMKTCurrentStats = async (pairAddress) => {
+export const fetchLMKTCurrentStats = async (pairAddress, chainId) => {
+    // SECURE: Validate required parameters
+    if (!chainId) {
+        throw new Error('🚨 chainId is required for fetchLMKTCurrentStats. Pass chainId from useChainId() hook.');
+    }
     const query = `
         query GetLMKTCurrentStats($pairAddress: String!) {
             candles(
@@ -111,7 +143,7 @@ export const fetchLMKTCurrentStats = async (pairAddress) => {
     `;
 
     try {
-        const data = await fetchFromSubgraph(query, { pairAddress });
+        const data = await fetchFromSubgraph(query, { pairAddress }, chainId);
         
         if (data.candles && data.candles.length > 0) {
             const latestCandle = data.candles[0];

@@ -1,52 +1,33 @@
+// MIGRATED TO SECURE SYSTEM - Import secure handler
+import { handler as secureHandler } from './secure-subquery-proxy.js';
+
+// BACKWARD COMPATIBILITY: Route to secure handler
 export async function handler(event) {
+  console.log("🔄 Legacy proxy called - routing to secure handler");
+
+  // Add migration warning in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn("⚠️ Using legacy subquery-proxy.js - consider migrating to secure-subquery-proxy.js directly");
+  }
+
   try {
-    const body = JSON.parse(event.body);
-    const { query, variables, chainId: incomingChainId } = body;
-
-    const chainId = incomingChainId || 11155111;
-
-    // Map chainId → SubQuery URL
-    const subqueryUrls = {
-      11155111: "https://index-api.onfinality.io/sq/Liquid-Liberty/lmkt-chart",
-      943: "https://index-api.onfinality.io/sq/Liquid-Liberty/pulse-lmkt-chart",
-    };
-
-    const targetUrl = subqueryUrls[chainId];
-    if (!targetUrl) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: `Unsupported chainId: ${chainId}` }),
-      };
-    }
-
-    const response = await fetch(targetUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, variables }),
-    });
-
-    const data = await response.json();
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    };
+    return await secureHandler(event);
   } catch (error) {
-    console.error("Proxy error:", error);
+    console.error("🚨 Secure handler error:", error);
+
+    // Enhanced error response
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: "Proxy request failed",
+        error: "Secure proxy request failed",
         details: error.message,
+        timestamp: new Date().toISOString()
       }),
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
-      },
+        "X-Content-Type-Options": "nosniff"
+      }
     };
   }
 }

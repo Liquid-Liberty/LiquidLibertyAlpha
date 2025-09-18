@@ -6,10 +6,35 @@ import {
   EthereumHandlerKind,
 } from "@subql/types-ethereum";
 
-// Default to sepolia if nothing is set
-const deployEnv = (process.env.VITE_DEPLOY_ENV || "sepolia").toLowerCase();
+// Validate and set deployment environment
+const deployEnv = (process.env.VITE_DEPLOY_ENV || "").toLowerCase();
 
-console.log("Deploying SubQuery with ENV:", deployEnv);
+// Runtime vs Build-time detection
+const isRuntime = process.env.NODE_ENV === 'production' || process.env.SUBQL_NODE === 'true';
+
+// At build-time: Require explicit environment to prevent mistakes
+// At runtime: Allow fallback since config is already compiled
+if (!deployEnv && !isRuntime) {
+  throw new Error(
+    `❌ VITE_DEPLOY_ENV must be explicitly set during build!
+
+    Use one of:
+    - VITE_DEPLOY_ENV=sepolia (for Sepolia testnet)
+    - VITE_DEPLOY_ENV=pulse (for Pulse testnet)
+    - VITE_DEPLOY_ENV=local (for local development)
+
+    Example: VITE_DEPLOY_ENV=pulse npm run build`
+  );
+}
+
+// Runtime fallback: If no env set and we're at runtime, detect from context
+const finalDeployEnv = deployEnv || (isRuntime ? "pulse" : "sepolia");
+
+console.log("🚀 Deploying SubQuery with ENV:", finalDeployEnv);
+console.log("⚠️  Runtime detected:", isRuntime);
+if (isRuntime && !deployEnv) {
+  console.log("⚠️  Using runtime fallback environment");
+}
 
 const config = {
   local: {
@@ -44,14 +69,14 @@ const config = {
   },
 } as const;
 
-if (!(deployEnv in config)) {
+if (!(finalDeployEnv in config)) {
   throw new Error(
-    `❌ Unknown deployEnv: ${deployEnv} (expected 'local' | 'sepolia' | 'pulse')`
+    `❌ Unknown deployEnv: ${finalDeployEnv} (expected 'local' | 'sepolia' | 'pulse')`
   );
 }
 
 const { rpcUrl, treasury, lmkt, paymentProcessor, listingManager, mDAI, chainId, startBlock } = config[
-  deployEnv as keyof typeof config
+  finalDeployEnv as keyof typeof config
 ];
 
 console.log("  → RPC URL:", rpcUrl);
@@ -73,7 +98,7 @@ if (
   !chainId ||
   startBlock === undefined
 ) {
-  throw new Error(`❌ Missing env vars for ${deployEnv}:
+  throw new Error(`❌ Missing env vars for ${finalDeployEnv}:
     rpcUrl=${rpcUrl}
     treasuryAddress=${treasury}
     lmktAddress=${lmkt}
@@ -87,7 +112,7 @@ if (
 const project: EthereumProject = {
   specVersion: "1.0.0",
   version: "0.0.6", // Incremented version
-  name: `liquid-liberty-subquery-${deployEnv}`,
+  name: `liquid-liberty-subquery-${finalDeployEnv}`,
   description: "Subgraph for fetching OHLCV data for TradingView price charts",
   runner: {
     node: { name: "@subql/node-ethereum", version: "6.2.1" },

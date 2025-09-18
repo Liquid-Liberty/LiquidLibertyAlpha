@@ -8,6 +8,51 @@ import { Candle, Pair, Token } from "../types";
 import { TREASURY_ADDRESS, LMKT_ADDRESS, MDAI_ADDRESS } from "../../project";
 import { BigNumber } from "ethers";
 
+
+// Error handling utilities
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 1000,
+  operationName: string = "operation"
+): Promise<T> {
+  let lastError: Error = new Error("Unknown error");
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`[withRetry] 🔄 Attempting ${operationName} (attempt ${attempt}/${maxRetries})`);
+      const result = await operation();
+      logger.info(`[withRetry] ✅ ${operationName} succeeded on attempt ${attempt}`);
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      logger.warn(`[withRetry] ⚠️ ${operationName} failed on attempt ${attempt}: ${lastError.message}`);
+
+      if (attempt < maxRetries) {
+        logger.info(`[withRetry] ⏳ Waiting ${delayMs}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        delayMs *= 2; // Exponential backoff
+      }
+    }
+  }
+
+  logger.error(`[withRetry] ❌ ${operationName} failed after ${maxRetries} attempts. Last error: ${lastError.message}`);
+  throw lastError;
+}
+
+async function getTreasuryPriceWithRetry(blockTag: string | number, operationContext: string): Promise<number> {
+  return withRetry(
+    async () => {
+      const treasury = Treasury__factory.connect(TREASURY_ADDRESS, api);
+      const priceBigInt = await treasury.getLmktPriceInUsd({ blockTag });
+      return toDecimal(priceBigInt.toBigInt(), 8);
+    },
+    3,
+    1000,
+    `${operationContext} - treasury.getLmktPriceInUsd()`
+  );
+}
+
 // Candle intervals in seconds (1m, 5m, 15m, 1h, 4h, 1d)
 const INTERVALS: number[] = [60, 300, 900, 3600, 14400, 86400];
 
@@ -46,8 +91,12 @@ async function getOrCreatePair(
   token1Addr: string,
   blockTs: number
 ): Promise<Pair> {
-  const id = TREASURY_ADDRESS; // Always use Treasury address as the single pair ID for the chart
+  // Always use treasury address only
+  const id = TREASURY_ADDRESS.toLowerCase();
+  console.log("id within getOrCreatePair:", id);
+
   let pair = await Pair.get(id);
+  console.log("pair within getOrCreatePair:", pair);
 
   if (!pair) {
     const token0 = await getOrCreateToken(token0Addr);
@@ -74,9 +123,13 @@ async function updateCandle(
   forceTrade: boolean = false //flag to track new treasury fees
 ): Promise<void> {
   const id = `${pair.id}-${interval}-${bucketTs}`;
-  let c = await Candle.get(id);
+  console.log("id within updateCandle:", id);
+  logger.info(`[updateCandle] 🕯️ Processing candle ID: ${id}`);
 
+  let c = await Candle.get(id);
+  console.log("c within updateCandle:", c);
   if (!c) {
+    logger.info(`[updateCandle] 🆕 Creating new candle: interval=${interval}s, price=${price}, vol0=${vol0}, vol1=${vol1}`);
     c = Candle.create({
       id,
       pairId: pair.id,
@@ -90,7 +143,9 @@ async function updateCandle(
       volumeToken1: vol1,
       trades: forceTrade || vol0 > 0 || vol1 > 0 ? 1 : 0,
     });
+    logger.info(`[updateCandle] ✨ Created new candle with ${c.trades} trades`);
   } else {
+    logger.info(`[updateCandle] 📝 Updating existing candle: oldPrice=${c.close} -> newPrice=${price}, oldVol0=${c.volumeToken0} -> newVol0=${c.volumeToken0 + vol0}`);
     c.close = price;
     c.high = max(c.high, price);
     c.low = min(c.low, price);
@@ -99,16 +154,31 @@ async function updateCandle(
     if (forceTrade || vol0 > 0 || vol1 > 0) {
       c.trades += 1;
     }
+    logger.info(`[updateCandle] 🔄 Updated candle: OHLC=[${c.open}, ${c.high}, ${c.low}, ${c.close}], trades=${c.trades}`);
   }
 
-  await c.save();
+  try {
+    await c.save();
+    logger.info(`[updateCandle] 💾 Successfully saved candle ${id}`);
+  } catch (error) {
+    logger.error(`[updateCandle] 💥 Failed to save candle ${id}: ${error}`);
+    throw error;
+  }
 }
 
 // --- Handler 1: MKTSwap (Treasury) ---
 export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
+  logger.info(`[MKTSwap] 🚀 STARTING handler for block ${log.block.number}, tx ${log.transaction.hash}`);
+
   const blockTs = Number(log.block.timestamp);
   const args = log.args;
-  if (!args) return;
+  if (!args) {
+    logger.error(`[MKTSwap] ❌ No args in log for block ${log.block.number}`);
+    return;
+  }
+
+  // Dump args for ABI validation
+  logger.debug(`[MKTSwap] Raw args: ${JSON.stringify(args, null, 2)}`);
 
   const {
     sender,
@@ -120,112 +190,143 @@ export async function handleMKTSwap(log: MKTSwapLog): Promise<void> {
     isBuy,
   } = args;
 
+  // Defensive string conversion
+  const lmktAmountStr = lmktAmount ? lmktAmount.toString() : "undefined";
+  const collateralAmountStr = collateralAmount ? collateralAmount.toString() : "undefined";
+  const totalCollateralStr = totalCollateral ? totalCollateral.toString() : "undefined";
+  const circulatingSupplyStr = circulatingSupply ? circulatingSupply.toString() : "undefined";
+
   logger.info(
-    `[MKTSwap] block=${log.block.number}, tx=${
-      log.transaction.hash
-    }, sender=${sender}, token=${collateralToken}, lmkt=${lmktAmount.toString()}, collateral=${collateralAmount.toString()}, isBuy=${isBuy}`
+    `[MKTSwap] 📊 Event data: block=${log.block.number}, tx=${log.transaction.hash}, sender=${sender ?? "unknown"}, token=${collateralToken ?? "unknown"}, lmkt=${lmktAmountStr}, collateral=${collateralAmountStr}, isBuy=${isBuy}`
+  );
+
+  logger.info(
+    `[MKTSwap] 🏦 Treasury state: totalCollateral=${totalCollateralStr}, circulatingSupply=${circulatingSupplyStr}`
   );
 
   let price = 0;
-  // Calculate price directly from event data for Treasury swaps
-  if (circulatingSupply.gt(0) && totalCollateral.gt(0)) {
-    // We assume both totalCollateral and circulatingSupply have 18 decimals for this ratio
+  if (circulatingSupply && totalCollateral && circulatingSupply.gt(0) && totalCollateral.gt(0)) {
     price =
       toDecimal(totalCollateral.toBigInt(), 18) /
       toDecimal(circulatingSupply.toBigInt(), 18);
+    logger.info(`[MKTSwap] 💰 Calculated price: $${price.toFixed(8)}`);
+  } else {
+    logger.warn(`[MKTSwap] ⚠️ Cannot calculate price: circulatingSupply=${circulatingSupplyStr}, totalCollateral=${totalCollateralStr}`);
   }
 
-  const collateralAmountDec = toDecimal(collateralAmount.toBigInt(), 18);
-  const lmktAmountDec = toDecimal(lmktAmount.toBigInt(), 18);
+  const collateralAmountDec = collateralAmount ? toDecimal(collateralAmount.toBigInt(), 18) : 0;
+  const lmktAmountDec = lmktAmount ? toDecimal(lmktAmount.toBigInt(), 18) : 0;
 
-  const pair = await getOrCreatePair(collateralToken, LMKT_ADDRESS, blockTs);
+  logger.info(`[MKTSwap] 🔄 Converted amounts: collateral=${collateralAmountDec}, lmkt=${lmktAmountDec}`);
 
-  for (const interval of INTERVALS) {
-    const bucket = bucketStart(blockTs, interval);
-    await updateCandle(
-      pair,
-      interval,
-      bucket,
-      price,
-      collateralAmountDec,
-      lmktAmountDec,
-      false
-    );
+  try {
+    const pair = await getOrCreatePair(collateralToken ?? MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
+    logger.info(`[MKTSwap] 📈 Got/created pair: ${pair.id}`);
+
+    for (const interval of INTERVALS) {
+      const bucket = bucketStart(blockTs, interval);
+      logger.info(`[MKTSwap] 🕒 Processing interval ${interval}s, bucket=${bucket}, price=${price}`);
+
+      await updateCandle(pair, interval, bucket, price, collateralAmountDec, lmktAmountDec, false);
+      logger.info(`[MKTSwap] ✅ Updated candle for interval ${interval}s`);
+    }
+
+    logger.info(`[MKTSwap] 🎉 SUCCESSFULLY processed all intervals for block ${log.block.number}`);
+  } catch (error) {
+    logger.error(`[MKTSwap] 💥 ERROR processing event: ${error}`);
+    throw error;
   }
 }
 
 // --- Handler 2: PurchaseMade (PaymentProcessor) ---
 export async function handlePurchaseMade(log: PurchaseMadeLog): Promise<void> {
+  logger.info(`[PurchaseMade] 🚀 STARTING handler for block ${log.block.number}, tx ${log.transaction.hash}`);
+
   const blockTs = Number(log.block.timestamp);
   const args = log.args;
-  if (!args) return;
+  if (!args) {
+    logger.error(`[PurchaseMade] ❌ No args in log for block ${log.block.number}`);
+    return;
+  }
 
-  // For marketplace purchases, we get the price from the Treasury at this block
-  const treasury = Treasury__factory.connect(TREASURY_ADDRESS, api);
-  const priceBigInt = await treasury.getLmktPriceInUsd({
-    blockTag: log.block.hash,
-  });
+  logger.debug(`[PurchaseMade] Raw args: ${JSON.stringify(args, null, 2)}`);
 
-  // Treasury's getLmktPriceInUsd returns with 8 decimals
-  const price = toDecimal(priceBigInt.toBigInt(), 8);
+  const lmktAmountStr = args.lmktAmount ? args.lmktAmount.toString() : "undefined";
+  logger.info(`[PurchaseMade] 💰 Event data: lmktAmount=${lmktAmountStr}`);
 
-  // LMKT is volumeToken1, assuming 18 decimals
-  const lmktAmountDec = toDecimal(args.lmktAmount.toBigInt(), 18);
-  // Collateral is volumeToken0. We derive its value from the price.
-  const collateralAmountDec = lmktAmountDec * price;
+  try {
+    logger.info(`[PurchaseMade] 🏦 Calling treasury.getLmktPriceInUsd() at block ${log.block.number}`);
+    const price = await getTreasuryPriceWithRetry(log.block.hash, "PurchaseMade");
+    logger.info(`[PurchaseMade] 💲 Got price from treasury: $${price.toFixed(8)}`);
 
-  // Since the event doesn't specify collateral, we use the primary one for charting
-  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
+    const lmktAmountDec = args.lmktAmount ? toDecimal(args.lmktAmount.toBigInt(), 18) : 0;
+    const collateralAmountDec = lmktAmountDec * price;
 
-  for (const interval of INTERVALS) {
-    const bucket = bucketStart(blockTs, interval);
-    await updateCandle(
-      pair,
-      interval,
-      bucket,
-      price,
-      collateralAmountDec,
-      lmktAmountDec,
-      false
-    );
+    logger.info(`[PurchaseMade] 🔄 Calculated volumes: lmkt=${lmktAmountDec}, collateral=${collateralAmountDec}`);
+
+    const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
+    logger.info(`[PurchaseMade] 📈 Got/created pair: ${pair.id}`);
+
+    for (const interval of INTERVALS) {
+      const bucket = bucketStart(blockTs, interval);
+      logger.info(`[PurchaseMade] 🕒 Processing interval ${interval}s, bucket=${bucket}, price=${price}`);
+
+      await updateCandle(pair, interval, bucket, price, collateralAmountDec, lmktAmountDec, false);
+      logger.info(`[PurchaseMade] ✅ Updated candle for interval ${interval}s`);
+    }
+
+    logger.info(`[PurchaseMade] 🎉 SUCCESSFULLY processed all intervals for block ${log.block.number}`);
+  } catch (error) {
+    logger.error(`[PurchaseMade] 💥 ERROR processing event: ${error}`);
+    throw error;
   }
 }
 
 // --- Handler 3: ListingCreated (ListingManager) ---
-export async function handleListingCreated(
-  log: ListingCreatedLog
-): Promise<void> {
+export async function handleListingCreated(log: ListingCreatedLog): Promise<void> {
+  logger.info(`[ListingCreated] 🚀 STARTING handler for block ${log.block.number}, tx ${log.transaction.hash}`);
+
   const blockTs = Number(log.block.timestamp);
   const args = log.args;
-  if (!args) return;
-  // Listing fees are deposited to the Treasury, changing the LMKT price.
-  // We fetch the new price
+  if (!args) {
+    logger.error(`[ListingCreated] ❌ No args in log for block ${log.block.number}`);
+    return;
+  }
+
+  logger.debug(`[ListingCreated] Raw args: ${JSON.stringify(args, null, 2)}`);
+
+  const feePaidStr = args.feePaid ? args.feePaid.toString() : "undefined";
+  logger.info(`[ListingCreated] 📋 Event data: feePaid=${feePaidStr}`);
+
   const treasury = Treasury__factory.connect(TREASURY_ADDRESS, api);
 
   let price = 0;
   try {
-    // Safer: use block number instead of hash
-    const priceBigInt = await treasury.getLmktPriceInUsd({
-      blockTag: log.block.number,
-    });
-
-    // Treasury's getLmktPriceInUsd returns with 8 decimals
-    price = toDecimal(priceBigInt.toBigInt(), 8);
+    logger.info(`[ListingCreated] 🏦 Calling treasury.getLmktPriceInUsd() at block ${log.block.number}`);
+    price = await getTreasuryPriceWithRetry(log.block.number, "ListingCreated");
+    logger.info(`[ListingCreated] 💲 Got price from treasury: $${price.toFixed(8)}`);
   } catch (e) {
-    logger.warn(
-      `[ListingCreated] Failed to fetch price at block=${log.block.number}, tx=${log.transaction.hash}. Defaulting price=0`
-    );
+    logger.warn(`[ListingCreated] ⚠️ Failed to fetch price at block=${log.block.number}, tx=${log.transaction.hash}. Defaulting price=0. Error: ${e}`);
   }
 
-  // Extract feePaid from event args (fee token is collateral)
-  const feeAmountDec = toDecimal(args.feePaid.toBigInt(), 18);
+  const feeAmountDec = args.feePaid ? toDecimal(args.feePaid.toBigInt(), 18) : 0;
+  logger.info(`[ListingCreated] 💳 Fee amount: ${feeAmountDec}`);
 
-  // The pair is still the primary collateral vs LMKT
-  const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
+  try {
+    const pair = await getOrCreatePair(MDAI_ADDRESS, LMKT_ADDRESS, blockTs);
+    logger.info(`[ListingCreated] 📈 Got/created pair: ${pair.id}`);
 
-  for (const interval of INTERVALS) {
-    const bucket = bucketStart(blockTs, interval);
-    // Update candle with new price, feePaid as collateral volume arguments
-    await updateCandle(pair, interval, bucket, price, feeAmountDec, 0, true);
+    for (const interval of INTERVALS) {
+      const bucket = bucketStart(blockTs, interval);
+      logger.info(`[ListingCreated] 🕒 Processing interval ${interval}s, bucket=${bucket}, price=${price}, fee=${feeAmountDec}`);
+
+      await updateCandle(pair, interval, bucket, price, feeAmountDec, 0, true);
+      logger.info(`[ListingCreated] ✅ Updated candle for interval ${interval}s (forced trade)`);
+    }
+
+    logger.info(`[ListingCreated] 🎉 SUCCESSFULLY processed all intervals for block ${log.block.number}`);
+  } catch (error) {
+    logger.error(`[ListingCreated] 💥 ERROR processing event: ${error}`);
+    throw error;
   }
 }

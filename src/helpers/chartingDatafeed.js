@@ -1,7 +1,6 @@
-// Simplified chartingDatafeed for demo purposes
+// Simplified chartingDatafeed for demo purposes - MIGRATED TO SECURE SYSTEM
 // Based on the main project's chartingDatafeed.ts
-import { SUBQUERY_CONFIG } from "../config/subgraph-config";
-import { getStaticSubqueryConfig } from "../config/subgraph-config";
+import { getStaticSubqueryConfig } from "../config/subgraph-config"; // Now secure
 
 // Resolutions user can pick in TradingView and how we convert to subgraph seconds
 export const SUPPORTED_RESOLUTIONS = ["1", "5", "15", "60", "240", "1D"];
@@ -66,13 +65,39 @@ const subscriberState = {};
 
 const cleanPairAddress = (addr) => {
   if (!addr) return addr;
-  return addr.includes("-") ? addr.split("-").pop() : addr;
+  // If it's already prefixed (e.g., "943-0x..."), keep as-is
+  if (/^\d+-0x[a-fA-F0-9]{40}$/.test(addr)) {
+    return addr;
+  }
+  // Otherwise, return plain lowercase address
+  return addr.toLowerCase();
 };
 
 export function GetDatafeedProvider(data, chainId) {
   console.log(`[Datafeed Init] chainId=${chainId}, pool=${data.poolAddress}`);
-  const { PAIR_ADDRESS, URL } = getStaticSubqueryConfig(chainId);
-  console.log(`[Config] chainId=${chainId}, resolvedPair=${PAIR_ADDRESS}, url=${URL}`);
+
+  // SECURE: Get validated configuration
+  let PAIR_ADDRESS, URL, NETWORK_NAME, TREASURY_ADDRESS;
+  try {
+    const secureConfig = getStaticSubqueryConfig(chainId);
+    ({ PAIR_ADDRESS, URL, NETWORK_NAME, TREASURY_ADDRESS } = secureConfig);
+
+    console.log(`🔒 [Secure Config] network=${NETWORK_NAME}, chainId=${chainId}`);
+    console.log(`🔒 [Secure Config] treasury=${TREASURY_ADDRESS}, pair=${PAIR_ADDRESS}`);
+    console.log(`🔒 [Secure Config] url=${URL}`);
+
+    // Validate we have the expected addresses for the network
+    if (chainId === 943 && TREASURY_ADDRESS !== '0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a') {
+      console.error(`🚨 Expected Pulse treasury 0x23f977b0BDC307ed98763cdB44a4B79dAa8d620a, got ${TREASURY_ADDRESS}`);
+    }
+    if (chainId === 11155111 && TREASURY_ADDRESS !== '0xC78b685192DD8164062705Cd8148df2CB2d1CB9E') {
+      console.error(`🚨 Expected Sepolia treasury 0xC78b685192DD8164062705Cd8148df2CB2d1CB9E, got ${TREASURY_ADDRESS}`);
+    }
+  } catch (error) {
+    console.error("🚨 Secure datafeed config error:", error.message);
+    throw new Error(`Datafeed configuration failed: ${error.message}`);
+  }
+
   return {
     onReady: (callback) => {
       setTimeout(() => callback(data_vars));
@@ -82,10 +107,7 @@ export function GetDatafeedProvider(data, chainId) {
       onResultReadyCallback([]);
     },
 
-    resolveSymbol: async (
-      symbolName,
-      onSymbolResolvedCallback,
-    ) => {
+    resolveSymbol: async (symbolName, onSymbolResolvedCallback) => {
       const PRICE_DECIMALS = 6; // 6 decimals -> tick = 0.000001
       const PRICE_SCALE = 10 ** PRICE_DECIMALS;
 
@@ -113,7 +135,7 @@ export function GetDatafeedProvider(data, chainId) {
         volume_precision: 6,
         has_no_volume: false,
         liquidity: data.liquidity,
-        pairAddress: data.poolAddress,
+        pairAddress: PAIR_ADDRESS || data.poolAddress, // Use secure config first
         source: "All pairs",
       };
 
@@ -128,19 +150,34 @@ export function GetDatafeedProvider(data, chainId) {
       onErrorCallback
     ) => {
       try {
+        // DEBUG: Log all available pair address sources
+        console.log(`🔍 [PairAddress Debug] PAIR_ADDRESS from config: ${PAIR_ADDRESS}`);
+        console.log(`🔍 [PairAddress Debug] symbolInfo?.pairAddress: ${symbolInfo?.pairAddress}`);
+        console.log(`🔍 [PairAddress Debug] symbolInfo?.address: ${symbolInfo?.address}`);
+        console.log(`🔍 [PairAddress Debug] data.poolAddress: ${data.poolAddress}`);
+
         const pairAddress = cleanPairAddress(
-        PAIR_ADDRESS ||
-        symbolInfo?.pairAddress ||
-        symbolInfo?.address ||
-        data.poolAddress
+          PAIR_ADDRESS ||
+            symbolInfo?.pairAddress ||
+            symbolInfo?.address ||
+            data.poolAddress
         );
+
+        console.log(`🎯 [PairAddress Final] Using pairAddress: ${pairAddress}`);
         const intervalParam = mapResolutionToSeconds(resolution);
 
-        // TradingView Charting Library passes from/to in milliseconds
+        // TradingView Charting Library passes from/to in seconds (not milliseconds)
         const fromSec = periodParams.from
-          ? Math.floor(Number(periodParams.from)) - 2 * 24 * 60 * 60
+          ? Math.floor(Number(periodParams.from))
           : 0;
         const toSec = periodParams.to ? Math.floor(Number(periodParams.to)) : 0;
+
+        // Build time filter - include recent data by default
+        const timeFilter =
+          fromSec && toSec
+            ? `bucketStart: { greaterThanOrEqualTo: ${fromSec}, lessThanOrEqualTo: ${toSec} },`
+            : "";
+
         const query = `{
           candles(
             first: 1000,
@@ -148,7 +185,8 @@ export function GetDatafeedProvider(data, chainId) {
             filter: {
               pairId: { equalTo: "${pairAddress}" },
               interval: { equalTo: "${intervalParam}" },
-              volumeToken0: { greaterThan: 0 }
+              volumeToken0: { greaterThan: 0 },
+              ${timeFilter}
             }
           ) {
             nodes {
@@ -162,8 +200,18 @@ export function GetDatafeedProvider(data, chainId) {
           }
         }`;
 
-        const doFetch = async (q) => {
-          console.log(`[getBars] chainId=${chainId}, using pairId=${pairAddress}, interval=${intervalParam}`);
+        const doFetch = async (q, label = "primary") => {
+          console.log(
+            `[getBars] (${label}) chainId=${chainId}, using pairId=${pairAddress}, interval=${intervalParam}`
+          );
+          console.log(
+            `[getBars] (${label}) Requested range: from=${fromSec} (${new Date(
+              fromSec * 1000
+            ).toISOString()}) to=${toSec} (${new Date(
+              toSec * 1000
+            ).toISOString()})`
+          );
+
           const res = await fetch(URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -171,19 +219,39 @@ export function GetDatafeedProvider(data, chainId) {
           });
           const json = await res.json();
 
-          console.log("[SubQuery candles]", JSON.stringify(json?.data?.candles?.nodes, null, 2));
+          const candles = json?.data?.candles?.nodes ?? [];
 
-          return json?.data?.candles?.nodes ?? [];
+          if (candles.length > 0) {
+            const minTs = Math.min(
+              ...candles.map((c) => parseInt(c.bucketStart))
+            );
+            const maxTs = Math.max(
+              ...candles.map((c) => parseInt(c.bucketStart))
+            );
+            console.log(
+              `[getBars] (${label}) Returned candles=${
+                candles.length
+              }, Actual time range: ${minTs} (${new Date(
+                minTs * 1000
+              ).toISOString()}) → ${maxTs} (${new Date(
+                maxTs * 1000
+              ).toISOString()})`
+            );
+          } else {
+            console.log(`[getBars] (${label}) No candles returned`);
+          }
+
+          return candles;
         };
 
         // First try with time filter
         let candles = await doFetch(query);
-        // Fallback: if no data returned (common for 1m small windows), refetch without time filter
-        if ((!candles || candles.length === 0) && fromSec && toSec) {
+        // Fallback: if no data returned, refetch without time filter but get most recent data
+        if (!candles || candles.length === 0) {
           const fallbackQuery = `{
             candles(
               first: 1000,
-              orderBy: BUCKET_START_ASC,
+              orderBy: BUCKET_START_DESC,
               filter: {
                 pairId: { equalTo: "${pairAddress}" },
                 interval: { equalTo: "${intervalParam}" },
@@ -200,6 +268,9 @@ export function GetDatafeedProvider(data, chainId) {
               }
             }
           }`;
+          console.log(
+            `[getBars] Fallback query - fetching most recent candles`
+          );
           candles = await doFetch(fallbackQuery);
         }
 
@@ -214,10 +285,16 @@ export function GetDatafeedProvider(data, chainId) {
             volume: parseFloat(c.volumeToken0),
           }));
 
-          console.log("[Processed bars]", allBars);
+        const cutoffTs = 1757955600; // 2025-09-15T00:00:00Z
+        const filteredBars = allBars.filter((b) => b.time >= cutoffTs * 1000);
 
-        // Drop empty candles (no traded volume)
-        const nonEmptyBars = allBars.filter(
+        console.log(
+          `[Processed bars] kept=${filteredBars.length}, dropped=${
+            allBars.length - filteredBars.length
+          }`
+        );
+
+        const nonEmptyBars = filteredBars.filter(
           (b) => Number.isFinite(b.volume) && b.volume > 0
         );
 
@@ -240,14 +317,22 @@ export function GetDatafeedProvider(data, chainId) {
       symbolInfo,
       resolution,
       onRealtimeCallback,
-      subscriberUID,
+      subscriberUID
     ) => {
+      // DEBUG: Log all available pair address sources for subscribeBars
+      console.log(`🔍 [SubscribeBars Debug] PAIR_ADDRESS from config: ${PAIR_ADDRESS}`);
+      console.log(`🔍 [SubscribeBars Debug] symbolInfo?.pairAddress: ${symbolInfo?.pairAddress}`);
+      console.log(`🔍 [SubscribeBars Debug] symbolInfo?.address: ${symbolInfo?.address}`);
+      console.log(`🔍 [SubscribeBars Debug] data.poolAddress: ${data.poolAddress}`);
+
       const pairAddress = cleanPairAddress(
         PAIR_ADDRESS ||
-        symbolInfo?.pairAddress ||
-        symbolInfo?.address ||
-        data.poolAddress
+          symbolInfo?.pairAddress ||
+          symbolInfo?.address ||
+          data.poolAddress
       );
+
+      console.log(`🎯 [SubscribeBars Final] Using pairAddress: ${pairAddress}`);
       const intervalParam = mapResolutionToSeconds(resolution);
 
       const poll = async () => {

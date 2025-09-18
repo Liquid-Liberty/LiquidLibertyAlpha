@@ -28,6 +28,7 @@ const ADDRESS_FILES = { ...GLOB_A, ...GLOB_B };
 // Find by suffix so absolute vs relative path differences don't matter
 function getAddresses(networkName) {
   const suffix = `/config/${networkName}/contract-addresses.json`;
+  console.log("suffix within subgraph-config:", suffix);
   const key = Object.keys(ADDRESS_FILES).find((k) => k.endsWith(suffix));
 
   if (!key) {

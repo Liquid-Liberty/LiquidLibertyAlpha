@@ -3,6 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[dev]
+  command = "npm run dev"
+  port = 8888
+
 [build.environment]
   NODE_VERSION = "20"
 
