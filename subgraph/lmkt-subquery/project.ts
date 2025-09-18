@@ -6,37 +6,50 @@ import {
   EthereumHandlerKind,
 } from "@subql/types-ethereum";
 
-// Validate and set deployment environment
-const deployEnv = (process.env.VITE_DEPLOY_ENV || "").toLowerCase();
+// ⚡ STRICT BUILD-TIME NETWORK DETECTION - NO DEFAULTS ALLOWED
+// This must be set during build via BUILD_NETWORK environment variable
+const BUILD_TIME_NETWORK = process.env.BUILD_NETWORK || process.env.VITE_DEPLOY_ENV;
 
-// Runtime vs Build-time detection
-const isRuntime = process.env.NODE_ENV === 'production' || process.env.SUBQL_NODE === 'true';
-
-// SAFETY: Always require explicit environment - no unsafe defaults allowed
-if (!deployEnv) {
+// Fail fast at build time if no network specified
+if (!BUILD_TIME_NETWORK) {
   throw new Error(
-    `❌ VITE_DEPLOY_ENV must be explicitly set - no unsafe network defaults allowed!
+    `❌ BUILD ERROR: Network must be explicitly specified!
 
-    This prevents deploying to the wrong network due to fallback assumptions.
+    Missing BUILD_NETWORK environment variable in build script.
 
-    Use one of:
-    - VITE_DEPLOY_ENV=sepolia (for Sepolia testnet)
-    - VITE_DEPLOY_ENV=pulse (for Pulse testnet)
-    - VITE_DEPLOY_ENV=local (for local development)
+    Expected usage:
+    - BUILD_NETWORK=sepolia npm run build:sepolia
+    - BUILD_NETWORK=pulse npm run build:pulse
 
-    Example: VITE_DEPLOY_ENV=sepolia npm run build
+    Current environment:
+    BUILD_NETWORK: "${process.env.BUILD_NETWORK}"
+    VITE_DEPLOY_ENV: "${process.env.VITE_DEPLOY_ENV}"
 
-    Runtime detected: ${isRuntime}
-    Current deployEnv: "${deployEnv}"`
+    This build cannot proceed without explicit network specification.`
   );
 }
 
-// SAFE: Use only the explicitly provided environment
-const finalDeployEnv = deployEnv;
+// Embed the network as a compile-time constant
+const NETWORK = BUILD_TIME_NETWORK.toLowerCase();
+
+// Validate network is supported
+const SUPPORTED_NETWORKS = ['sepolia', 'pulse', 'local'];
+if (!SUPPORTED_NETWORKS.includes(NETWORK)) {
+  throw new Error(
+    `❌ BUILD ERROR: Unsupported network "${NETWORK}"
+
+    Supported networks: ${SUPPORTED_NETWORKS.join(', ')}
+
+    Check your build script and ensure BUILD_NETWORK is set correctly.`
+  );
+}
+
+// Use the embedded network constant
+const finalDeployEnv = NETWORK;
 
 console.log("🚀 Deploying SubQuery with ENV:", finalDeployEnv);
-console.log("✅ Network explicitly set - no unsafe fallbacks used");
-console.log("⚠️  Runtime detected:", isRuntime);
+console.log("✅ Network set:", finalDeployEnv);
+console.log("⚡ Build-time network embedded:", NETWORK);
 
 const config = {
   local: {
@@ -57,7 +70,7 @@ const config = {
     listingManager: "0x220c186b8996CF54f3e724C188DDbF63DFf1bf5D",
     mDAI: "0xA71f77eC57efB5FECe3D3DA7757E9F57946344EA",
     chainId: "11155111",
-    startBlock: 9176744,
+    startBlock: 9226564,
   },
   pulse: {
     rpcUrl: "https://rpc.v4.testnet.pulsechain.com",
@@ -67,7 +80,7 @@ const config = {
     listingManager: "0x48FEb85273B7BAc5c85C3B89C21D91BCC4deb621",
     mDAI: "0xb1bCAc95d4eEC3aD216aCD3261cc1845A193e590",
     chainId: "943",
-    startBlock: 22602590,
+    startBlock: 22610000,
   },
 } as const;
 
