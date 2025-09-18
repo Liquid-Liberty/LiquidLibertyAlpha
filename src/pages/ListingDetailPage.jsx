@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { serviceCategories } from '../data/mockData';
 import AdSidebar from '../components/AdSidebar';
 import { formatCategoryTitle } from '../utils/formatters';
 import { useListings } from '../context/ListingsContext';
