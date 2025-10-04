@@ -1,0 +1,49 @@
+{
+  "name": "liquid-liberty-subquery",
+  "version": "0.0.1",
+  "description": "Subgraph for fetching OHLCV data for TradingView price charts",
+  "main": "dist/index.js",
+  "scripts": {
+    "codegen": "subql codegen",
+    "build": "echo '❌ ERROR: Use specific build commands to prevent environment mistakes!' && echo 'Use: npm run build:sepolia, npm run build:pulse, or npm run build:local' && exit 1",
+    "clean": "rm -rf dist && rm -rf .subql && rm -rf node_modules/.cache",
+    "build:sepolia": "echo '🔍 Building for SEPOLIA network...' && npm run clean && cross-env VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia node scripts/generate-constants.js && cross-env VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia npm run codegen && cross-env VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia subql build",
+    "build:pulse": "echo '🔍 Building for PULSE network...' && npm run clean && cross-env VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse node scripts/generate-constants.js && cross-env VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run codegen && cross-env VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse subql build",
+    "build:local": "echo '🔍 Building for LOCAL network...' && npm run clean && cross-env VITE_DEPLOY_ENV=local BUILD_NETWORK=local node scripts/generate-constants.js && cross-env VITE_DEPLOY_ENV=local BUILD_NETWORK=local npm run codegen && cross-env VITE_DEPLOY_ENV=local BUILD_NETWORK=local subql build",
+    "build:multichain": "echo '⚠️ Multichain builds not supported in SubQuery SDK - build each network separately'",
+    "publish:pulse": "cross-env VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse subql publish",
+    "publish:sepolia": "cross-env VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia subql publish",
+    "publish:local": "cross-env VITE_DEPLOY_ENV=local BUILD_NETWORK=local subql publish",
+    "start:docker": "docker-compose pull && docker-compose up --remove-orphans",
+    "dev:docker": "npm run build && docker-compose pull && docker-compose up --remove-orphans",
+    "dev:local": "subql-node-ethereum -f . --watch",
+    "prepack": "rm -rf dist && npm run build",
+    "test": "npm run build && subql-node-ethereum test",
+    "build:develop": "cross-env NODE_ENV=develop npm run codegen && subql build"
+  },
+  "homepage": "https://github.com/YOUR_REPO/liquid-liberty-subquery",
+  "repository": "github:YOUR_REPO/liquid-liberty-subquery",
+  "files": [
+    "dist",
+    "schema.graphql",
+    "project.ts"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@subql/query": "^2.23.5",
+    "assert": "^2.0.0",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "@subql/cli": "^6.2.2",
+    "@subql/node-ethereum": "^6.2.1",
+    "@subql/testing": "latest",
+    "@subql/types": "^3.14.1",
+    "@subql/types-core": "^2.1.1",
+    "@subql/types-ethereum": "^4.2.2",
+    "cross-env": "^10.0.0",
+    "dotenv": "latest",
+    "typescript": "latest"
+  }
+}

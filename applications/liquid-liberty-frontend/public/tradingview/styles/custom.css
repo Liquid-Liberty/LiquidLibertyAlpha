@@ -1,0 +1,35 @@
+:root:not(.theme-dark) {
+	--tv-color-platform-background: #f7f7f7;
+	--tv-color-toolbar-button-text-active: #4338ca;
+	--tv-color-item-active-text: #4338ca;
+
+
+	--tv-color-popup-element-text-active: #15141a;
+	--tv-color-popup-element-background-active: #ececee;
+	--tv-color-popup-element-background-hover: #ececee;
+	--tv-color-popup-element-toolbox-text: #6366f1;
+	--tv-color-popup-element-toolbox-text-hover: #15141a;
+	--tv-color-popup-element-toolbox-text-active-hover: #15141a;
+	--tv-color-popup-element-toolbox-background-hover: #6366f1;
+	--tv-color-popup-element-toolbox-background-active-hover: #6366f1;
+}
+
+.theme-dark:root {
+	--tv-color-platform-background: transparent;
+	--tv-color-toolbar-button-text-active: #6366f1;
+	--tv-color-item-active-text: #6366f1;
+
+	--tv-color-pane-background: #121316;
+	--tv-color-popup-element-background-active: #353241;
+	--tv-color-popup-element-background-hover: #353241;
+	--tv-color-popup-element-toolbox-text: #6366f1;
+	--tv-color-popup-element-toolbox-text-hover: #ececee;
+	--tv-color-popup-element-toolbox-text-active-hover: #ececee;
+	--tv-color-popup-element-toolbox-background-hover: #6366f1;
+	--tv-color-popup-element-toolbox-background-active-hover: #6366f1;
+
+}
+
+html.theme-dark .chart-page{
+	background-color: #2B2B2B !important;
+}

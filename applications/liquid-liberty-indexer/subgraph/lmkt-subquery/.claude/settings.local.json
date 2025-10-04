@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(VITE_DEPLOY_ENV=pulse npm run codegen)",
+      "Bash(VITE_DEPLOY_ENV=pulse subql build)",
+      "Read(//e/Liquid Liberty/alpha/LiquidLibertyMarket/src/components/**)",
+      "Read(//e/Liquid Liberty/alpha/LiquidLibertyMarket/src/**)",
+      "Read(//e/Liquid Liberty/alpha/LiquidLibertyMarket/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

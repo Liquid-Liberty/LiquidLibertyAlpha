@@ -1,0 +1,55 @@
+{
+  "name": "liquid-liberty-indexer",
+  "version": "1.0.0",
+  "description": "Blockchain indexer for Liquid Liberty Marketplace - Indexes MKTSwap events to provide OHLCV chart data via GraphQL",
+  "main": "index.js",
+  "scripts": {
+    "graph:codegen": "cd subgraph && graph codegen",
+    "graph:build": "cd subgraph && graph build",
+    "graph:deploy": "cd subgraph && graph deploy --product hosted-service --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ chef-jojo/exchange-v3-lite subgraph.yaml",
+    "graph:deploy:hosted": "cd subgraph && graph deploy --product hosted-service",
+    "graph:create:local": "cd subgraph && graph create --node http://localhost:8020/ liquid-liberty",
+    "graph:remove:local": "cd subgraph && graph remove --node http://localhost:8020/ liquid-liberty",
+    "graph:deploy:local": "cd subgraph && graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 liquid-liberty",
+    "subquery:codegen": "cd subgraph/lmkt-subquery && npm run codegen",
+    "subquery:build:sepolia": "cd subgraph/lmkt-subquery && npm run build:sepolia",
+    "subquery:build:pulse": "cd subgraph/lmkt-subquery && npm run build:pulse",
+    "subquery:build:local": "cd subgraph/lmkt-subquery && npm run build:local",
+    "subquery:publish:sepolia": "cd subgraph/lmkt-subquery && npm run publish:sepolia",
+    "subquery:publish:pulse": "cd subgraph/lmkt-subquery && npm run publish:pulse",
+    "subquery:publish:local": "cd subgraph/lmkt-subquery && npm run publish:local",
+    "subquery:start:docker": "cd subgraph/lmkt-subquery && npm run start:docker",
+    "subquery:dev:docker": "cd subgraph/lmkt-subquery && npm run dev:docker",
+    "subquery:dev:local": "cd subgraph/lmkt-subquery && npm run dev:local"
+  },
+  "keywords": [
+    "blockchain",
+    "indexer",
+    "subgraph",
+    "subquery",
+    "graphql",
+    "ethereum",
+    "ohlcv",
+    "charts"
+  ],
+  "author": "Liquid Liberty",
+  "license": "MIT",
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.97.1",
+    "@graphprotocol/graph-ts": "^0.33.0",
+    "@subql/cli": "^6.2.2",
+    "@types/minimatch": "^6.0.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@subql/node-ethereum": "^6.2.1",
+    "@subql/query": "^2.23.5",
+    "@subql/testing": "latest",
+    "@subql/types": "^3.14.1",
+    "@subql/types-core": "^2.1.1",
+    "@subql/types-ethereum": "^4.2.2",
+    "cross-env": "^10.0.0",
+    "dotenv": "latest",
+    "ethers": "^5.7.2"
+  }
+}

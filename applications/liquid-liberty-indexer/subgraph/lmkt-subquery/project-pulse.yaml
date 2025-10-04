@@ -1,0 +1,64 @@
+# // Auto-generated , DO NOT EDIT
+specVersion: 1.0.0
+version: 0.0.6
+name: liquid-liberty-subquery-pulse
+description: Subgraph for fetching OHLCV data for TradingView price charts
+runner:
+  node:
+    name: '@subql/node-ethereum'
+    version: 6.2.1
+  query:
+    name: '@subql/query'
+    version: 2.23.5
+schema:
+  file: ./schema.graphql
+network:
+  chainId: '943'
+  endpoint: https://rpc.v4.testnet.pulsechain.com
+dataSources:
+  - kind: ethereum/Runtime
+    startBlock: 226624050
+    options:
+      abi: Treasury
+      address: '0xd8069526E71767B2d46fc079F0a2A3797b8a4AC2'
+    assets:
+      Treasury:
+        file: ./abis/Treasury.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleMKTSwap
+  - kind: ethereum/Runtime
+    startBlock: 226624050
+    options:
+      abi: PaymentProcessor
+      address: '0x88a099C9B1b25dF3f0e266Af1DEc8Ed0F2458f0b'
+    assets:
+      PaymentProcessor:
+        file: ./abis/PaymentProcessor.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handlePurchaseMade
+          filter:
+            topics:
+              - PurchaseMade(uint256,address,address,uint256)
+  - kind: ethereum/Runtime
+    startBlock: 226624050
+    options:
+      abi: ListingManager
+      address: '0x74341E36Ba04DBEb5dC62E2359F4Dde784525f6e'
+    assets:
+      ListingManager:
+        file: ./abis/ListingManager.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleListingCreated
+          filter:
+            topics:
+              - ListingCreated(uint256,address,uint8,uint256)
+repository: ''

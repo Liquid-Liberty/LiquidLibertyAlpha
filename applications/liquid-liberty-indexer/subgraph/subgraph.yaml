@@ -1,0 +1,28 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: Treasury
+    network: sepolia
+    source:
+      address: "0x28d95bfd1131abf3f76236962f39264e137cd5c5"        # e.g. 0xYourSepoliaV2Pair
+      abi: Treasury
+      startBlock: 9118590  # e.g. 5820000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Token
+        - Pair
+        - Candle
+      abis:
+        - name: Treasury
+          file: ./abis/Treasury.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: MKTSwap(indexed address,indexed address,uint256,uint256,uint256,uint256,bool)
+          handler: handleSwap
+      file: ./src/mapping.ts

@@ -1,0 +1,55 @@
+{
+  "name": "liquid-liberty-contracts",
+  "version": "1.0.0",
+  "description": "Ethereum smart contracts for Liquid Liberty Marketplace - LMKT token, Treasury AMM, and marketplace contracts",
+  "type": "module",
+  "scripts": {
+    "deploy:local": "npx --node-options=\"--require dotenv/config\" hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "npx --node-options=\"--require dotenv/config\" hardhat run scripts/deploy.js --network sepolia",
+    "deploy:pulse": "npx --node-options=\"--require dotenv/config\" hardhat run scripts/deploy.js --network pulse",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "verify": "node scripts/verify.js",
+    "sync-addresses": "node scripts/sync-addresses.js --all",
+    "sync-addresses:sepolia": "node scripts/sync-addresses.js --network sepolia",
+    "sync-addresses:pulse": "node scripts/sync-addresses.js --network pulse",
+    "sync-addresses:local": "node scripts/sync-addresses.js --network localhost"
+  },
+  "keywords": [
+    "ethereum",
+    "smart-contracts",
+    "marketplace",
+    "defi",
+    "amm",
+    "hardhat"
+  ],
+  "author": "Liquid Liberty",
+  "license": "MIT",
+  "dependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^4.9.6",
+    "@openzeppelin/hardhat-upgrades": "^3.0.3",
+    "@typechain/ethers-v6": "^0.5.1",
+    "@typechain/hardhat": "^9.1.0",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.14.4"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20",
+    "chai": "^4.5.0",
+    "hardhat": "^2.22.6",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.16",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,37 @@
+# // Auto-generated , DO NOT EDIT
+specVersion: 1.0.0
+version: 0.0.5
+name: liquid-liberty-subquery-sepolia
+description: Subgraph for fetching OHLCV data for TradingView price charts
+runner:
+  node:
+    name: '@subql/node-ethereum'
+    version: 6.2.1
+  query:
+    name: '@subql/query'
+    version: 2.23.5
+schema:
+  file: ./schema.graphql
+network:
+  chainId: '11155111'
+dataSources:
+  - kind: ethereum/Runtime
+    startBlock: 9229814
+    options:
+      abi: Treasury
+      address: "0x002144A5B56b6b3774774499B7AB04ED9E872dB9"
+      lmktAddress: "0x2a2DfFe954225D6511740a0cc8ec92b944ca9181"
+    assets:
+      Treasury:
+        file: ./abis/Treasury.json
+      ERC20:
+        file: ./abis/ERC20.json
+    mapping:
+      file: ./dist/index.js
+      handlers:
+        - kind: ethereum/LogHandler
+          handler: handleMKTSwap
+          filter:
+            topics:
+              - MKTSwap(address,address,uint256,uint256,uint256,uint256,bool)
+repository: ''
