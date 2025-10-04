@@ -1,0 +1,44 @@
+# Test-specific docker-compose configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.test.yml up
+
+services:
+  hardhat-node-test:
+    build:
+      context: ./applications/liquid-liberty-contracts
+      dockerfile: Dockerfile
+      target: test
+    container_name: ll-hardhat-test
+    command: ["npx", "hardhat", "test"]
+    networks:
+      - liquid-liberty
+
+  api-test:
+    build:
+      context: ./applications/liquid-liberty-api
+      dockerfile: Dockerfile
+      target: test
+    container_name: ll-api-test
+    command: ["npm", "test"]
+    networks:
+      - liquid-liberty
+
+  integration-tests:
+    build:
+      context: ./applications/platform-integration-tests
+      dockerfile: Dockerfile
+    container_name: ll-integration-tests
+    depends_on:
+      - hardhat-node
+      - api
+      - graphql-engine
+    environment:
+      - APPLICATIONS_FRONTEND_URL=http://host.docker.internal:5174
+      - APPLICATIONS_API_URL=http://api:8888/.netlify/functions
+      - APPLICATIONS_CONTRACTS_RPC=http://hardhat-node:8545
+      - APPLICATIONS_SUBQUERY_URL=http://graphql-engine:3000
+    volumes:
+      - ./applications/platform-integration-tests/tests:/app/tests
+      - ./applications/platform-integration-tests/test-results:/app/test-results
+    command: ["npm", "run", "test:api"]
+    networks:
+      - liquid-liberty

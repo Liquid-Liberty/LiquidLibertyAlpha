@@ -1,0 +1,28 @@
+# Development-specific docker-compose overrides
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  hardhat-node:
+    environment:
+      - HARDHAT_NETWORK=localhost
+      - DEBUG=true
+    command: ["npx", "hardhat", "node", "--hostname", "0.0.0.0", "--verbose"]
+
+  api:
+    environment:
+      - DEBUG=netlify:*
+      - NETLIFY_DEV=true
+    volumes:
+      - ./applications/liquid-liberty-api/netlify:/app/netlify:cached
+      - ./applications/liquid-liberty-api/.env:/app/.env:ro
+
+  subquery-node:
+    environment:
+      - LOG_LEVEL=debug
+    command:
+      - -f=/app
+      - --db-schema=app
+      - --workers=2
+      - --batch-size=10
+      - --unfinalized-blocks=true
+      - --log-level=debug

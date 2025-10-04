@@ -1,0 +1,45 @@
+{
+  "name": "platform-integration-tests",
+  "version": "1.0.0",
+  "description": "E2E and integration tests for Liquid Liberty platform - validates monorepo and applications parity",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:monorepo": "playwright test --grep @monorepo",
+    "test:applications": "playwright test --grep @applications",
+    "test:parity": "playwright test --grep @parity",
+    "test:api": "vitest run tests/api",
+    "test:api:watch": "vitest watch tests/api",
+    "test:contracts": "vitest run tests/contracts",
+    "test:all": "npm run test:api && npm run test",
+    "playwright:install": "playwright install",
+    "playwright:codegen": "playwright codegen"
+  },
+  "keywords": [
+    "e2e",
+    "integration-tests",
+    "playwright",
+    "supertest",
+    "testing",
+    "ethereum",
+    "dapp"
+  ],
+  "author": "Liquid Liberty",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^20",
+    "@types/supertest": "^6.0.2",
+    "chai": "^5.1.1",
+    "dotenv": "^16.3.1",
+    "ethers": "^6.14.4",
+    "supertest": "^7.0.0",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "axios": "^1.11.0"
+  }
+}

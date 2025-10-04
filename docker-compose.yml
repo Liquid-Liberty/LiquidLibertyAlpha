@@ -1,0 +1,140 @@
+services:
+  # PostgreSQL database for SubQuery indexer
+  postgres:
+    image: postgres:15-alpine
+    container_name: ll-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - liquid-liberty
+
+  # Hardhat local blockchain node
+  hardhat-node:
+    build:
+      context: ./applications/liquid-liberty-contracts
+      dockerfile: Dockerfile
+      target: development
+    container_name: ll-hardhat
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./applications/liquid-liberty-contracts/contracts:/app/contracts
+      - ./applications/liquid-liberty-contracts/scripts:/app/scripts
+      - ./applications/liquid-liberty-contracts/test:/app/test
+      - ./applications/liquid-liberty-contracts/.env:/app/.env
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - liquid-liberty
+
+  # Netlify serverless functions (API)
+  api:
+    build:
+      context: ./applications/liquid-liberty-api
+      dockerfile: Dockerfile
+      target: development
+    container_name: ll-api
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./applications/liquid-liberty-api/netlify:/app/netlify
+      - ./applications/liquid-liberty-api/.env:/app/.env
+    environment:
+      - NODE_ENV=development
+      - JSON_RPC_URL=http://hardhat-node:8545
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - liquid-liberty
+
+  # SubQuery indexer node
+  subquery-node:
+    image: subquerynetwork/subql-node-ethereum:latest
+    container_name: ll-subquery-node
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hardhat-node:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./applications/liquid-liberty-indexer/subgraph/lmkt-subquery:/app
+    command:
+      - -f=/app
+      - --db-schema=app
+      - --workers=4
+      - --batch-size=30
+      - --unfinalized-blocks=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - liquid-liberty
+
+  # SubQuery GraphQL engine
+  graphql-engine:
+    image: subquerynetwork/subql-query:latest
+    container_name: ll-graphql
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      subquery-node:
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    command:
+      - --name=app
+      - --playground
+      - --indexer=http://subquery-node:3000
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - liquid-liberty
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  liquid-liberty:
+    driver: bridge
