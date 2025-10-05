@@ -13,9 +13,35 @@
       "Bash(VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia npm run codegen)",
       "Bash(VITE_DEPLOY_ENV=sepolia BUILD_NETWORK=sepolia npx subql build)",
       "Bash(VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run build:pulse)",
-      "Bash(VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run build)"
+      "Bash(VITE_DEPLOY_ENV=pulse BUILD_NETWORK=pulse npm run build)",
+      "Read(//Users/zacharyjallen/.config/**)",
+      "Read(//Users/zacharyjallen/Library/**)",
+      "Bash(./scripts/setup-all.sh:*)",
+      "Bash(./scripts/docker-helpers.sh:*)",
+      "Bash(./scripts/start-all.sh:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/check-status.sh:*)",
+      "Bash(for dir in applications/*/)",
+      "Bash(do mkdir -p \"$dir.claude\")",
+      "Bash(done)",
+      "Bash(./.claude/post-session-hooks.sh:*)"
     ],
     "deny": [],
     "ask": []
+  },
+  "hooks": {
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/post-session-hooks.sh",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   }
 }

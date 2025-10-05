@@ -1,0 +1,55 @@
+services:
+  # API tests (can run in Docker)
+  api-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ll-tests-api
+    volumes:
+      - ./tests:/app/tests
+      - ./test-results:/app/test-results
+    environment:
+      - APPLICATIONS_API_URL=${APPLICATIONS_API_URL:-http://host.docker.internal:8888/.netlify/functions}
+      - APPLICATIONS_CONTRACTS_RPC=${APPLICATIONS_CONTRACTS_RPC:-http://host.docker.internal:8545}
+      - APPLICATIONS_SUBQUERY_URL=${APPLICATIONS_SUBQUERY_URL:-http://host.docker.internal:3000}
+    command: ["npm", "run", "test:api"]
+    networks:
+      - tests-net
+
+  # Contract tests
+  contract-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ll-tests-contracts
+    volumes:
+      - ./tests:/app/tests
+      - ./test-results:/app/test-results
+    environment:
+      - APPLICATIONS_CONTRACTS_RPC=${APPLICATIONS_CONTRACTS_RPC:-http://host.docker.internal:8545}
+      - MONOREPO_CONTRACTS_RPC=${MONOREPO_CONTRACTS_RPC:-http://host.docker.internal:8545}
+    command: ["npm", "run", "test:contracts"]
+    networks:
+      - tests-net
+
+  # E2E tests (requires GUI, better run locally)
+  # Included for completeness but should use: npm test
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ll-tests-e2e
+    volumes:
+      - ./tests:/app/tests
+      - ./test-results:/app/test-results
+      - ./playwright-report:/app/playwright-report
+    environment:
+      - APPLICATIONS_FRONTEND_URL=${APPLICATIONS_FRONTEND_URL:-http://host.docker.internal:5173}
+      - CI=true
+    command: ["npm", "test", "--", "--reporter=list"]
+    networks:
+      - tests-net
+
+networks:
+  tests-net:
+    driver: bridge

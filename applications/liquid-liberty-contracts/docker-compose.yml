@@ -1,0 +1,66 @@
+services:
+  hardhat-node:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: ll-contracts-hardhat
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./contracts:/app/contracts
+      - ./scripts:/app/scripts
+      - ./test:/app/test
+      - ./.env:/app/.env:ro
+    environment:
+      - NODE_ENV=development
+      - HARDHAT_NETWORK=localhost
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - contracts-net
+
+  # Test runner service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    container_name: ll-contracts-test
+    volumes:
+      - ./contracts:/app/contracts
+      - ./test:/app/test
+    command: ["npx", "hardhat", "test"]
+    networks:
+      - contracts-net
+
+  # Deploy service
+  deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deploy
+    container_name: ll-contracts-deploy
+    volumes:
+      - ./scripts:/app/scripts
+      - ./src/config:/app/src/config
+      - ./.env:/app/.env:ro
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    environment:
+      - HARDHAT_NETWORK=localhost
+    command: ["npx", "hardhat", "run", "scripts/deploy.js", "--network", "localhost"]
+    networks:
+      - contracts-net
+
+networks:
+  contracts-net:
+    driver: bridge
+
+volumes:
+  artifacts:
+  cache:

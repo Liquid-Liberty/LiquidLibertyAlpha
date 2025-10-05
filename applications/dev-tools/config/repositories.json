@@ -1,0 +1,60 @@
+{
+  "repositories": [
+    {
+      "name": "liquid-liberty-contracts",
+      "url": "https://github.com/Liquid-Liberty/liquid-liberty-contracts.git",
+      "branch": "main",
+      "directory": "applications/liquid-liberty-contracts",
+      "dependencies": true,
+      "port": 8545,
+      "startCommand": "npx hardhat node",
+      "healthCheck": "http://localhost:8545"
+    },
+    {
+      "name": "liquid-liberty-api",
+      "url": "https://github.com/Liquid-Liberty/liquid-liberty-api.git",
+      "branch": "main",
+      "directory": "applications/liquid-liberty-api",
+      "dependencies": true,
+      "port": 8888,
+      "startCommand": "netlify dev",
+      "healthCheck": "http://localhost:8888"
+    },
+    {
+      "name": "liquid-liberty-indexer",
+      "url": "https://github.com/Liquid-Liberty/liquid-liberty-indexer.git",
+      "branch": "main",
+      "directory": "applications/liquid-liberty-indexer",
+      "dependencies": true,
+      "port": 3000,
+      "startCommand": "cd subgraph/lmkt-subquery && npm run start:docker",
+      "healthCheck": "http://localhost:3000"
+    },
+    {
+      "name": "liquid-liberty-frontend",
+      "url": "https://github.com/Liquid-Liberty/liquid-liberty-frontend.git",
+      "branch": "main",
+      "directory": "applications/liquid-liberty-frontend",
+      "dependencies": true,
+      "port": 5173,
+      "startCommand": "npm run dev",
+      "healthCheck": "http://localhost:5173"
+    },
+    {
+      "name": "platform-integration-tests",
+      "url": "https://github.com/Liquid-Liberty/platform-integration-tests.git",
+      "branch": "main",
+      "directory": "applications/platform-integration-tests",
+      "dependencies": true,
+      "port": null,
+      "startCommand": null,
+      "healthCheck": null
+    }
+  ],
+  "startupOrder": [
+    "liquid-liberty-contracts",
+    "liquid-liberty-indexer",
+    "liquid-liberty-api",
+    "liquid-liberty-frontend"
+  ]
+}

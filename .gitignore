@@ -47,3 +47,4 @@ ignition/deployments/chain-31337
 
 # Backup files (organized backup system)
 backups/
+.claude/changelogs/

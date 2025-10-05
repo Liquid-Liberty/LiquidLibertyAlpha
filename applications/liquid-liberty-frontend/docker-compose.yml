@@ -1,0 +1,59 @@
+services:
+  # Development server
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: ll-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./.env:/app/.env:ro
+    environment:
+      - NODE_ENV=development
+      - VITE_HMR_HOST=localhost
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - frontend-net
+
+  # Test runner service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    container_name: ll-frontend-test
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    command: ["npm", "test", "--", "--run"]
+    networks:
+      - frontend-net
+
+  # Production build
+  prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ll-frontend-prod
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - frontend-net
+
+networks:
+  frontend-net:
+    driver: bridge

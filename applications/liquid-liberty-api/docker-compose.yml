@@ -1,0 +1,40 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: ll-api
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./netlify:/app/netlify
+      - ./.env:/app/.env:ro
+    environment:
+      - NODE_ENV=development
+      - NETLIFY_DEV=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - api-net
+
+  # Test runner service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    container_name: ll-api-test
+    volumes:
+      - ./netlify:/app/netlify
+      - ./tests:/app/tests
+    command: ["npm", "test", "--", "--run"]
+    networks:
+      - api-net
+
+networks:
+  api-net:
+    driver: bridge

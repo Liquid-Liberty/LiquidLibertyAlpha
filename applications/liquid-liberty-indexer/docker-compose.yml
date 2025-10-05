@@ -1,0 +1,88 @@
+services:
+  postgres:
+    build:
+      context: ./subgraph/lmkt-subquery
+      dockerfile: ./docker/pg-Dockerfile
+    container_name: ll-indexer-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - indexer-net
+
+  subquery-node:
+    image: subquerynetwork/subql-node-ethereum:latest
+    container_name: ll-indexer-node
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./subgraph/lmkt-subquery:/app
+    command:
+      - ${SUB_COMMAND:-}
+      - -f=/app
+      - --db-schema=app
+      - --workers=4
+      - --batch-size=30
+      - --unfinalized-blocks=true
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - indexer-net
+
+  graphql-engine:
+    image: subquerynetwork/subql-query:latest
+    container_name: ll-indexer-graphql
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      subquery-node:
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    command:
+      - --name=app
+      - --playground
+      - --indexer=http://subquery-node:3000
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - indexer-net
+
+networks:
+  indexer-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local

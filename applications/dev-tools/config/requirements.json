@@ -1,0 +1,45 @@
+{
+  "system": {
+    "node": {
+      "minVersion": "20.0.0",
+      "command": "node --version",
+      "installUrl": "https://nodejs.org/"
+    },
+    "npm": {
+      "minVersion": "10.0.0",
+      "command": "npm --version",
+      "installUrl": "https://www.npmjs.com/"
+    },
+    "git": {
+      "minVersion": "2.0.0",
+      "command": "git --version",
+      "installUrl": "https://git-scm.com/"
+    },
+    "docker": {
+      "minVersion": "20.0.0",
+      "command": "docker --version",
+      "installUrl": "https://www.docker.com/",
+      "optional": true
+    },
+    "docker-compose": {
+      "minVersion": "2.0.0",
+      "command": "docker-compose --version",
+      "installUrl": "https://docs.docker.com/compose/",
+      "optional": true
+    }
+  },
+  "optional": {
+    "hardhat": {
+      "command": "npx hardhat --version",
+      "description": "Ethereum development environment"
+    },
+    "netlify-cli": {
+      "command": "netlify --version",
+      "description": "Netlify CLI for functions"
+    },
+    "playwright": {
+      "command": "npx playwright --version",
+      "description": "E2E testing framework"
+    }
+  }
+}

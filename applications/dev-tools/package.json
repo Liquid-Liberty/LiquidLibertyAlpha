@@ -1,0 +1,25 @@
+{
+  "name": "dev-tools",
+  "version": "1.0.0",
+  "description": "Development tools and scripts for managing Liquid Liberty applications",
+  "scripts": {
+    "setup": "./scripts/setup-all.sh",
+    "update": "./scripts/pull-latest.sh",
+    "start": "./scripts/start-all.sh",
+    "start:manual": "./scripts/start-all.sh --manual",
+    "stop": "./scripts/stop-all.sh",
+    "status": "./scripts/check-status.sh",
+    "docker": "./scripts/docker-helpers.sh",
+    "docker:logs": "./scripts/docker-helpers.sh logs",
+    "docker:ps": "./scripts/docker-helpers.sh ps",
+    "docker:clean": "./scripts/docker-helpers.sh clean"
+  },
+  "keywords": [
+    "dev-tools",
+    "setup",
+    "automation",
+    "bash"
+  ],
+  "author": "Liquid Liberty",
+  "license": "MIT"
+}
