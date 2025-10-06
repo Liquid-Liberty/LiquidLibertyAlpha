@@ -92,10 +92,10 @@ async function main() {
 
   const repositories = [
     { name: 'Root', path: ROOT_DIR },
-    { name: 'Contracts', path: path.join(ROOT_DIR, 'applications/liquid-liberty-contracts') },
-    { name: 'API', path: path.join(ROOT_DIR, 'applications/liquid-liberty-api') },
-    { name: 'Frontend', path: path.join(ROOT_DIR, 'applications/liquid-liberty-frontend') },
-    { name: 'Indexer', path: path.join(ROOT_DIR, 'applications/liquid-liberty-indexer') },
+    { name: 'Contracts', path: path.join(ROOT_DIR, 'applications/marketplace-contracts') },
+    { name: 'API', path: path.join(ROOT_DIR, 'applications/core-api') },
+    { name: 'Frontend', path: path.join(ROOT_DIR, 'applications/marketplace-ui') },
+    { name: 'Indexer', path: path.join(ROOT_DIR, 'applications/marketplace-indexer') },
     { name: 'Integration Tests', path: path.join(ROOT_DIR, 'applications/platform-integration-tests') },
   ];
 

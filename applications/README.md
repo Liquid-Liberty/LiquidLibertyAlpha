@@ -4,7 +4,7 @@ This directory contains the Liquid Liberty Marketplace codebase separated into *
 
 ## 📦 Applications Overview
 
-### 1. [liquid-liberty-contracts](./liquid-liberty-contracts/) - Smart Contracts
+### 1. [marketplace-contracts](./marketplace-contracts/) - Smart Contracts
 **Ethereum smart contracts for the decentralized marketplace**
 
 - **Purpose**: Deploy and manage blockchain contracts
@@ -15,7 +15,7 @@ This directory contains the Liquid Liberty Marketplace codebase separated into *
 
 **Quick Start**:
 ```bash
-cd liquid-liberty-contracts
+cd marketplace-contracts
 npm install
 cp .env.example .env
 npm run deploy:sepolia
@@ -30,7 +30,7 @@ npm run deploy:sepolia
 
 ---
 
-### 2. [liquid-liberty-indexer](./liquid-liberty-indexer/) - Blockchain Indexer
+### 2. [marketplace-indexer](./marketplace-indexer/) - Blockchain Indexer
 **Indexes blockchain events and provides GraphQL API for chart data**
 
 - **Purpose**: Process blockchain events into queryable data
@@ -41,7 +41,7 @@ npm run deploy:sepolia
 
 **Quick Start**:
 ```bash
-cd liquid-liberty-indexer
+cd marketplace-indexer
 cd subgraph/lmkt-subquery
 npm install
 npm run build:sepolia
@@ -57,7 +57,7 @@ npm run publish:sepolia
 
 ---
 
-### 3. [liquid-liberty-api](./liquid-liberty-api/) - Serverless API
+### 3. [core-api](./core-api/) - Serverless API
 **Netlify serverless functions for backend operations**
 
 - **Purpose**: Provide backend services (IPFS, signatures, moderation)
@@ -68,7 +68,7 @@ npm run publish:sepolia
 
 **Quick Start**:
 ```bash
-cd liquid-liberty-api
+cd core-api
 npm install
 cp .env.example .env
 npm run dev
@@ -83,7 +83,7 @@ npm run dev
 
 ---
 
-### 4. [liquid-liberty-frontend](./liquid-liberty-frontend/) - Frontend DApp
+### 4. [marketplace-ui](./marketplace-ui/) - Frontend DApp
 **React decentralized application for the marketplace**
 
 - **Purpose**: User interface for marketplace and trading
@@ -94,7 +94,7 @@ npm run dev
 
 **Quick Start**:
 ```bash
-cd liquid-liberty-frontend
+cd marketplace-ui
 npm install
 cp .env.example .env
 npm run dev
@@ -150,7 +150,7 @@ Smart Contracts → Blockchain Events → Indexer → GraphQL API → Frontend
 
 ### Step 1: Deploy Smart Contracts
 ```bash
-cd liquid-liberty-contracts
+cd marketplace-contracts
 npm install
 cp .env.example .env
 # Edit .env with your configuration
@@ -160,7 +160,7 @@ npm run deploy:sepolia
 
 ### Step 2: Deploy Blockchain Indexer
 ```bash
-cd liquid-liberty-indexer/subgraph/lmkt-subquery
+cd marketplace-indexer/subgraph/lmkt-subquery
 npm install
 # Addresses already synced from contracts deployment
 npm run build:sepolia
@@ -170,7 +170,7 @@ npm run publish:sepolia
 
 ### Step 3: Deploy Serverless API
 ```bash
-cd liquid-liberty-api
+cd core-api
 npm install
 cp .env.example .env
 # Edit .env with contract addresses and Pinata keys
@@ -180,7 +180,7 @@ git push origin main  # Auto-deploys to Netlify
 
 ### Step 4: Deploy Frontend DApp
 ```bash
-cd liquid-liberty-frontend
+cd marketplace-ui
 npm install
 cp .env.example .env
 # Edit .env with API URL and indexer endpoint
@@ -230,23 +230,23 @@ VITE_SUBQUERY_SEPOLIA_URL=https://api.subquery.network/sq/.../sepolia
 ### Local Development (All Apps)
 ```bash
 # Terminal 1 - Start local blockchain
-cd liquid-liberty-contracts
+cd marketplace-contracts
 npx hardhat node
 
 # Terminal 2 - Deploy contracts locally
-cd liquid-liberty-contracts
+cd marketplace-contracts
 npm run deploy:local
 
 # Terminal 3 - Start indexer
-cd liquid-liberty-indexer/subgraph/lmkt-subquery
+cd marketplace-indexer/subgraph/lmkt-subquery
 npm run subquery:start:docker
 
 # Terminal 4 - Start API
-cd liquid-liberty-api
+cd core-api
 npm run dev
 
 # Terminal 5 - Start frontend
-cd liquid-liberty-frontend
+cd marketplace-ui
 npm run dev
 ```
 
@@ -254,14 +254,14 @@ npm run dev
 
 **Contracts**:
 ```bash
-cd liquid-liberty-contracts
+cd marketplace-contracts
 npm test
 npm run verify
 ```
 
 **Indexer**:
 ```bash
-cd liquid-liberty-indexer
+cd marketplace-indexer
 # Test GraphQL queries
 curl -X POST http://localhost:3000/graphql \
   -d '{"query": "{ candles { id } }"}'
@@ -269,14 +269,14 @@ curl -X POST http://localhost:3000/graphql \
 
 **API**:
 ```bash
-cd liquid-liberty-api
+cd core-api
 npm run test:signature
 npm run test:debug
 ```
 
 **Frontend**:
 ```bash
-cd liquid-liberty-frontend
+cd marketplace-ui
 npm run lint
 npm run build
 npm run preview
@@ -295,9 +295,9 @@ All applications support these networks:
 ## 🔄 Update Workflow
 
 ### When Contracts Change
-1. Deploy new contracts: `cd liquid-liberty-contracts && npm run deploy:sepolia`
+1. Deploy new contracts: `cd marketplace-contracts && npm run deploy:sepolia`
 2. Addresses auto-sync to indexer and frontend
-3. Rebuild indexer: `cd liquid-liberty-indexer/subgraph/lmkt-subquery && npm run build:sepolia`
+3. Rebuild indexer: `cd marketplace-indexer/subgraph/lmkt-subquery && npm run build:sepolia`
 4. Redeploy indexer: `npm run publish:sepolia`
 5. Update API env vars if needed
 6. Redeploy frontend: `git push`
@@ -420,35 +420,35 @@ Report issues at: [GitHub Issues](https://github.com/Liquid-Liberty/issues)
 ### Deploy Everything (Production)
 ```bash
 # 1. Contracts
-cd liquid-liberty-contracts && npm run deploy:sepolia
+cd marketplace-contracts && npm run deploy:sepolia
 
 # 2. Indexer
-cd ../liquid-liberty-indexer/subgraph/lmkt-subquery
+cd ../marketplace-indexer/subgraph/lmkt-subquery
 npm run build:sepolia && npm run publish:sepolia
 
 # 3. API (set env vars in Netlify, then)
-cd ../../../liquid-liberty-api && git push
+cd ../../../core-api && git push
 
 # 4. Frontend (set env vars in Netlify, then)
-cd ../liquid-liberty-frontend && git push
+cd ../marketplace-ui && git push
 ```
 
 ### Start Everything (Local Development)
 ```bash
 # Terminal 1: Blockchain
-cd liquid-liberty-contracts && npx hardhat node
+cd marketplace-contracts && npx hardhat node
 
 # Terminal 2: Deploy Contracts
-cd liquid-liberty-contracts && npm run deploy:local
+cd marketplace-contracts && npm run deploy:local
 
 # Terminal 3: Indexer
-cd liquid-liberty-indexer/subgraph/lmkt-subquery && npm run subquery:start:docker
+cd marketplace-indexer/subgraph/lmkt-subquery && npm run subquery:start:docker
 
 # Terminal 4: API
-cd liquid-liberty-api && npm run dev
+cd core-api && npm run dev
 
 # Terminal 5: Frontend
-cd liquid-liberty-frontend && npm run dev
+cd marketplace-ui && npm run dev
 ```
 
 ---

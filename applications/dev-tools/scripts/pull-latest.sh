@@ -89,10 +89,10 @@ main() {
 
     local repos=(
         "$ROOT_DIR:Root"
-        "$ROOT_DIR/applications/liquid-liberty-contracts:Contracts"
-        "$ROOT_DIR/applications/liquid-liberty-api:API"
-        "$ROOT_DIR/applications/liquid-liberty-frontend:Frontend"
-        "$ROOT_DIR/applications/liquid-liberty-indexer:Indexer"
+        "$ROOT_DIR/applications/marketplace-contracts:Contracts"
+        "$ROOT_DIR/applications/core-api:API"
+        "$ROOT_DIR/applications/marketplace-ui:Frontend"
+        "$ROOT_DIR/applications/marketplace-indexer:Indexer"
         "$ROOT_DIR/applications/platform-integration-tests:Integration Tests"
     )
 

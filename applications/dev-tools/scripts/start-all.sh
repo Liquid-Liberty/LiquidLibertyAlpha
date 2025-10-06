@@ -124,7 +124,7 @@ main() {
     # Start services in order
     start_service \
         "Hardhat Node" \
-        "$ROOT_DIR/applications/liquid-liberty-contracts" \
+        "$ROOT_DIR/applications/marketplace-contracts" \
         "npx hardhat node" \
         8545 \
         cyan \
@@ -132,7 +132,7 @@ main() {
 
     start_service \
         "Indexer (Docker)" \
-        "$ROOT_DIR/applications/liquid-liberty-indexer" \
+        "$ROOT_DIR/applications/marketplace-indexer" \
         "docker-compose up" \
         3000 \
         magenta \
@@ -140,7 +140,7 @@ main() {
 
     start_service \
         "API Functions" \
-        "$ROOT_DIR/applications/liquid-liberty-api" \
+        "$ROOT_DIR/applications/core-api" \
         "npx netlify dev" \
         8888 \
         yellow \
@@ -148,7 +148,7 @@ main() {
 
     start_service \
         "Frontend" \
-        "$ROOT_DIR/applications/liquid-liberty-frontend" \
+        "$ROOT_DIR/applications/marketplace-ui" \
         "npm run dev" \
         5173 \
         blue \

@@ -137,10 +137,10 @@ install_dependencies() {
     log "\n📦 Installing dependencies for all applications..." cyan
 
     local apps=(
-        "applications/liquid-liberty-contracts"
-        "applications/liquid-liberty-api"
-        "applications/liquid-liberty-frontend"
-        "applications/liquid-liberty-indexer"
+        "applications/marketplace-contracts"
+        "applications/core-api"
+        "applications/marketplace-ui"
+        "applications/marketplace-indexer"
         "applications/platform-integration-tests"
         "applications/dev-tools"
     )
@@ -177,10 +177,10 @@ setup_env_files() {
     log "\n🔧 Setting up environment files..." cyan
 
     local env_configs=(
-        "applications/liquid-liberty-contracts"
-        "applications/liquid-liberty-api"
-        "applications/liquid-liberty-frontend"
-        "applications/liquid-liberty-indexer/subgraph/lmkt-subquery"
+        "applications/marketplace-contracts"
+        "applications/core-api"
+        "applications/marketplace-ui"
+        "applications/marketplace-indexer/subgraph/lmkt-subquery"
         "applications/platform-integration-tests"
     )
 
@@ -208,9 +208,9 @@ display_next_steps() {
     log "  1. Edit .env files in each application with your configuration" blue
     log "" reset
     log "     Key files to edit:" yellow
-    log "       - applications/liquid-liberty-contracts/.env" reset
-    log "       - applications/liquid-liberty-api/.env" reset
-    log "       - applications/liquid-liberty-frontend/.env" reset
+    log "       - applications/marketplace-contracts/.env" reset
+    log "       - applications/core-api/.env" reset
+    log "       - applications/marketplace-ui/.env" reset
     log "" reset
     log "  2. Start all services using Docker:" blue
     log "     docker-compose up" green

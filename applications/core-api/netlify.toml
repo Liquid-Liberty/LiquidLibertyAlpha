@@ -1,11 +1,12 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  command = "echo 'No build required for serverless functions'"
+  publish = "."
   functions = "netlify/functions"
 
 [dev]
-  command = "npm run dev"
-  port = 8888
+  framework = "#static"
+  functionsPort = 8888
+  targetPort = 8888
 
 [build.environment]
   NODE_VERSION = "20"
@@ -23,5 +24,5 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["@pinata/sdk"]
-  included_files = ["netlify/functions/banned-words.json"]
+  included_files = ["lib/banned-words.js"]
 

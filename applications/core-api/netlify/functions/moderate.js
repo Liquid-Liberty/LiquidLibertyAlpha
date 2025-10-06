@@ -1,5 +1,5 @@
 import { Filter } from "content-checker";
-import { bannedWords } from "./banned-words.js";
+import { bannedWords } from "../../lib/banned-words.js";
 import { array as badwordsArray } from "badwords-list";
 
 const filter = new Filter({ openModeratorAPIKey: process.env.OPEN_MODERATOR_API_KEY });

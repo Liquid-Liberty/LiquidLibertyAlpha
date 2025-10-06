@@ -32,7 +32,7 @@ function log(message, color = 'reset') {
 const services = [
   {
     name: 'Hardhat Node',
-    cwd: path.join(ROOT_DIR, 'applications/liquid-liberty-contracts'),
+    cwd: path.join(ROOT_DIR, 'applications/marketplace-contracts'),
     command: 'npx',
     args: ['hardhat', 'node'],
     port: 8545,
@@ -42,7 +42,7 @@ const services = [
   },
   {
     name: 'Indexer (Docker)',
-    cwd: path.join(ROOT_DIR, 'applications/liquid-liberty-indexer'),
+    cwd: path.join(ROOT_DIR, 'applications/marketplace-indexer'),
     command: 'docker-compose',
     args: ['up'],
     port: 3000,
@@ -52,7 +52,7 @@ const services = [
   },
   {
     name: 'API Functions',
-    cwd: path.join(ROOT_DIR, 'applications/liquid-liberty-api'),
+    cwd: path.join(ROOT_DIR, 'applications/core-api'),
     command: 'npx',
     args: ['netlify', 'dev'],
     port: 8888,
@@ -62,7 +62,7 @@ const services = [
   },
   {
     name: 'Frontend',
-    cwd: path.join(ROOT_DIR, 'applications/liquid-liberty-frontend'),
+    cwd: path.join(ROOT_DIR, 'applications/marketplace-ui'),
     command: 'npm',
     args: ['run', 'dev'],
     port: 5173,

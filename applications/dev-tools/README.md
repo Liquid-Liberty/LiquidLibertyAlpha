@@ -224,20 +224,20 @@ Edit `config/repositories.json` to manage repositories:
 {
   "repositories": [
     {
-      "name": "liquid-liberty-contracts",
-      "url": "https://github.com/Liquid-Liberty/liquid-liberty-contracts.git",
+      "name": "marketplace-contracts",
+      "url": "https://github.com/Liquid-Liberty/marketplace-contracts.git",
       "branch": "main",
-      "directory": "applications/liquid-liberty-contracts",
+      "directory": "applications/marketplace-contracts",
       "port": 8545,
       "startCommand": "npx hardhat node",
       "healthCheck": "http://localhost:8545"
     }
   ],
   "startupOrder": [
-    "liquid-liberty-contracts",
-    "liquid-liberty-indexer",
-    "liquid-liberty-api",
-    "liquid-liberty-frontend"
+    "marketplace-contracts",
+    "marketplace-indexer",
+    "core-api",
+    "marketplace-ui"
   ]
 }
 ```
@@ -337,11 +337,11 @@ npm run update
 cd ../platform-integration-tests && npm run test:all
 
 # 3. Deploy contracts
-cd ../liquid-liberty-contracts
+cd ../marketplace-contracts
 npm run deploy:sepolia
 
 # 4. Deploy indexer
-cd ../liquid-liberty-indexer/subgraph/lmkt-subquery
+cd ../marketplace-indexer/subgraph/lmkt-subquery
 npm run build:sepolia && npm run publish:sepolia
 
 # 5. Deploy API & Frontend (auto-deploy on push)
@@ -409,25 +409,25 @@ npm install
 
 Required `.env` files:
 
-1. **applications/liquid-liberty-contracts/.env**
+1. **applications/marketplace-contracts/.env**
    ```
    SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
    SIGNER_PRIVATE_KEY=0x...
    ```
 
-2. **applications/liquid-liberty-api/.env**
+2. **applications/core-api/.env**
    ```
    PINATA_API_KEY=your_key
    PINATA_API_SECRET=your_secret
    ```
 
-3. **applications/liquid-liberty-frontend/.env**
+3. **applications/marketplace-ui/.env**
    ```
    VITE_PROJECT_ID=your_walletconnect_id
    VITE_API_BASE_URL=http://localhost:8888/.netlify/functions
    ```
 
-4. **applications/liquid-liberty-indexer/.env**
+4. **applications/marketplace-indexer/.env**
    ```
    BUILD_NETWORK=sepolia
    SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY

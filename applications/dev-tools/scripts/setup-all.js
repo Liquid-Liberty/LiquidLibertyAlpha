@@ -85,10 +85,10 @@ function installDependencies() {
   log('\n📦 Installing dependencies for all applications...', 'cyan');
 
   const apps = [
-    'applications/liquid-liberty-contracts',
-    'applications/liquid-liberty-api',
-    'applications/liquid-liberty-frontend',
-    'applications/liquid-liberty-indexer',
+    'applications/marketplace-contracts',
+    'applications/core-api',
+    'applications/marketplace-ui',
+    'applications/marketplace-indexer',
     'applications/platform-integration-tests',
     'applications/dev-tools',
   ];
@@ -121,22 +121,22 @@ function setupEnvironmentFiles() {
 
   const envConfigs = [
     {
-      dir: 'applications/liquid-liberty-contracts',
+      dir: 'applications/marketplace-contracts',
       example: '.env.example',
       target: '.env',
     },
     {
-      dir: 'applications/liquid-liberty-api',
+      dir: 'applications/core-api',
       example: '.env.example',
       target: '.env',
     },
     {
-      dir: 'applications/liquid-liberty-frontend',
+      dir: 'applications/marketplace-ui',
       example: '.env.example',
       target: '.env',
     },
     {
-      dir: 'applications/liquid-liberty-indexer/subgraph/lmkt-subquery',
+      dir: 'applications/marketplace-indexer/subgraph/lmkt-subquery',
       example: '.env.example',
       target: '.env',
     },
